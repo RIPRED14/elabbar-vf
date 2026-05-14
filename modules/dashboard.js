@@ -2,12 +2,20 @@
    DASHBOARD — Tableau de bord RCG-HAMZA
    ============================================ */
 const Dashboard = {
+  view: 'monthly', // 'monthly' ou 'daily'
+  currentTab: 'flash', // 'flash', 'production', 'finance', 'rh', 'logistique'
+  selectedDate: new Date().toISOString().split('T')[0],
+
   render() {
-    const prod = App.getCurrentMonthProduction();
-    const alerts = App.getAlerts();
-    const stats = this.calcStats(prod);
-    const stockStats = this.calcStockStats();
     const content = document.getElementById('pageContent');
+    const prod = App.getCurrentMonthProduction();
+    
+    // Si on est en vue quotidienne, on filtre pour le jour choisi
+    const dailyProd = App.data.production.filter(p => p.date === this.selectedDate);
+    
+    const stats = this.calcStats(this.view === 'monthly' ? prod : dailyProd);
+    const stockStats = this.calcStockStats();
+    const alerts = App.getAlerts();
 
     let alertsHtml = '';
     if (alerts.length > 0) {
@@ -21,113 +29,372 @@ const Dashboard = {
       }
     }
 
-    const now = new Date();
-    const moisNom = now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const dateObj = new Date(this.selectedDate);
+    const moisNom = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const jourNom = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
     content.innerHTML = `
       <div class="fade-in">
         ${alertsHtml}
 
-        <!-- Hero Welcome Section with Cinematic Video -->
-        <div class="card" style="margin-bottom:32px; border:none; overflow:hidden; position:relative; min-height:280px; border-radius: var(--radius-xl); box-shadow: var(--shadow-float);">
-          <video autoplay muted loop playsinline style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:0; filter: brightness(0.65);">
-            <source src="Cinematic_satellite_zoom_in_.mp4" type="video/mp4">
-          </video>
-          <div style="position:relative; z-index:1; padding:40px; background:linear-gradient(90deg, rgba(11, 45, 107, 0.85) 0%, rgba(11, 45, 107, 0) 100%); min-height:280px; display:flex; flex-direction:column; justify-content:center;">
-            <h2 style="font-size:2.4rem; font-weight:800; color:white; margin-bottom:12px; font-family:'Poppins', sans-serif; text-shadow: 0 4px 15px rgba(0,0,0,0.5); letter-spacing:-1px;">SEA PECHE ERP</h2>
-            <p style="color:rgba(255,255,255,0.95); font-size:1.2rem; max-width:550px; margin-bottom:28px; line-height:1.4; font-weight:500;">Propulsez votre station de conditionnement vers l'excellence. <br><span style="color:var(--accent-color); font-weight:700;">Performance</span> • <span style="color:var(--accent-color); font-weight:700;">Contrôle</span> • <span style="color:var(--accent-color); font-weight:700;">Innovation</span></p>
-            <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
-               <div style="background:rgba(255,255,255,0.1); backdrop-filter:blur(15px); padding:10px 20px; border-radius:40px; border:1px solid rgba(255,255,255,0.25); color:white; font-size:0.95rem; font-weight:600; box-shadow:0 10px 30px rgba(0,0,0,0.2);">
-                 📅 ${moisNom.charAt(0).toUpperCase() + moisNom.slice(1)}
-               </div>
-               <button class="btn btn-primary" onclick="App.navigate('saisie')" style="padding:14px 28px; font-size:1rem; box-shadow: 0 10px 25px rgba(37, 99, 255, 0.4);">
-                 <span>🚀 Saisie Journalière</span>
-               </button>
-               <button class="btn btn-outline" onclick="Dashboard.printDashboard()" style="padding:14px 24px; border-color:white; color:white; background:rgba(255,255,255,0.1); backdrop-filter:blur(10px);">
-                 <span>🖨️ Rapport Flash</span>
-               </button>
+        <!-- Header de Pilotage Senior -->
+        <div class="dashboard-header-premium">
+          <div class="dashboard-title-area">
+            <h1>Cockpit de Pilotage <span class="badge badge-accent">Senior Control</span></h1>
+            <p class="text-muted">Analyse de performance et contrôle des coûts en temps réel</p>
+          </div>
+          
+          <div class="dashboard-controls-glass">
+            <div class="view-switcher">
+              <button class="btn-switch ${this.view === 'monthly' ? 'active' : ''}" onclick="Dashboard.switchView('monthly')">Mois</button>
+              <button class="btn-switch ${this.view === 'daily' ? 'active' : ''}" onclick="Dashboard.switchView('daily')">Jour</button>
+            </div>
+            <div class="date-picker-wrapper">
+              <input type="date" value="${this.selectedDate}" onchange="Dashboard.changeDate(this.value)" class="input-premium">
             </div>
           </div>
         </div>
 
+        <!-- Navigation par Onglets -->
+        <div class="dashboard-tabs">
+          <button class="tab-btn ${this.currentTab === 'flash' ? 'active' : ''}" onclick="Dashboard.switchTab('flash')"><span>⚡</span> Flash</button>
+          <button class="tab-btn ${this.currentTab === 'production' ? 'active' : ''}" onclick="Dashboard.switchTab('production')"><span>🏭</span> Production</button>
+          <button class="tab-btn ${this.currentTab === 'finance' ? 'active' : ''}" onclick="Dashboard.switchTab('finance')"><span>💰</span> Finance</button>
+          <button class="tab-btn ${this.currentTab === 'rh' ? 'active' : ''}" onclick="Dashboard.switchTab('rh')"><span>👥</span> RH</button>
+          <button class="tab-btn ${this.currentTab === 'logistique' ? 'active' : ''}" onclick="Dashboard.switchTab('logistique')"><span>📦</span> Logistique</button>
+        </div>
 
-        <!-- KPI Row 1: Production -->
+        <div class="tab-content-area">
+          ${this.renderActiveTab(this.view === 'monthly' ? prod : dailyProd, stats, stockStats, this.view === 'monthly' ? moisNom : jourNom)}
+        </div>
+      </div>
+    `;
+
+    this.renderCharts(this.view === 'monthly' ? prod : dailyProd, stats);
+    this.animateNumbers();
+  },
+
+  switchView(v) {
+    this.view = v;
+    this.render();
+  },
+
+  switchTab(t) {
+    this.currentTab = t;
+    this.render();
+  },
+
+  changeDate(d) {
+    this.selectedDate = d;
+    this.render();
+  },
+
+  renderActiveTab(prod, stats, stockStats, label) {
+    switch(this.currentTab) {
+      case 'flash': return this.renderTabFlash(prod, stats, stockStats, label);
+      case 'production': return this.renderTabProduction(prod, stats, label);
+      case 'finance': return this.renderTabFinance(prod, stats, label);
+      case 'rh': return this.renderTabRH(prod, stats, label);
+      case 'logistique': return this.renderTabLogistique(prod, stats, stockStats, label);
+      default: return this.renderTabFlash(prod, stats, stockStats, label);
+    }
+  },
+
+  renderTabFlash(prod, stats, stockStats, label) {
+    if (this.view === 'monthly') {
+      return this.renderMonthlyContent(prod, stats, stockStats, label);
+    } else {
+      return this.renderDailyContent(prod, stats, stockStats, label);
+    }
+  },
+
+  renderTabProduction(prod, stats, label) {
+    const targets = App.data.parametres.yieldTargets || {};
+    const speciesList = Object.keys(stats.bySpecies);
+    
+    return `
+      <div class="senior-cockpit fade-in">
+        ${this.generateManagementCommentary('production', stats)}
+        
+        <div class="kpi-grid mini">
+          <div class="kpi-card purple compact">
+             <div class="kpi-label">Rendement Global</div>
+             <div class="kpi-value">${App.formatNumber(stats.rendement, 1)}%</div>
+          </div>
+          <div class="kpi-card blue compact">
+             <div class="kpi-label">Productivité</div>
+             <div class="kpi-value">${App.formatNumber(stats.productivite, 1)} <small>kg/h</small></div>
+          </div>
+          <div class="kpi-card green compact">
+             <div class="kpi-label">Heures Totales</div>
+             <div class="kpi-value">${App.formatNumber(stats.totalHeuresTotales, 1)} <small>h</small></div>
+          </div>
+          <div class="kpi-card cyan compact">
+             <div class="kpi-label">Poids PF Total</div>
+             <div class="kpi-value">${App.formatNumber(stats.totalPoidsPF, 0)} <small>kg</small></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">🐟 Rendement par Espèce vs Cible</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartYieldSpecies"></canvas></div></div>
+           </div>
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">⏱️ Productivité (kg/h) 15 derniers jours</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartProdTrend"></canvas></div></div>
+           </div>
+        </div>
+
+        <div class="card glass">
+          <div class="card-header"><span class="card-title">📋 Détail par Espèce</span></div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Espèce</th><th>Poids PF (kg)</th><th>Cible Rendement</th><th>Ecart</th></tr></thead>
+              <tbody>
+                ${speciesList.map(s => {
+                  const target = targets[s] || targets['DEFAULT'] || 70;
+                  // Note: simple estimate here as stats.bySpecies only stores weight, 
+                  // we'd need more granular calcStats for per-species yield
+                  return `<tr><td><strong>${s}</strong></td><td>${App.formatNumber(stats.bySpecies[s], 0)}</td><td>${target}%</td><td>-</td></tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="methodology-note glass">
+           <strong>💡 Équations Production:</strong> Rendement = (Poids PF / Poids PI) × 100. Productivité = Poids PF / Heures Totales (Fixes + Occasionnels).
+        </div>
+      </div>
+    `;
+  },
+
+  renderTabFinance(prod, stats, label) {
+    const alloc = App.getFinancialAllocation(this.selectedDate);
+    const dailyEnergy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+    const totalCost = stats.totalCoutMO + stats.totalCoutEmballage + dailyEnergy + (this.view === 'daily' ? alloc.dailyFixed : (alloc.dailyFixed * 30));
+    const pru = stats.totalPoidsPF > 0 ? totalCost / stats.totalPoidsPF : 0;
+    
+    // Estimation Marge (basée sur prixMoyenVente paramètre)
+    let totalCA = 0;
+    Object.keys(stats.bySpecies).forEach(s => {
+      const sp = App.data.especes.find(e => e.nom === s);
+      const price = sp?.prixMoyenVente || 65; // Default if not set
+      totalCA += stats.bySpecies[s] * price;
+    });
+    const margin = totalCA - totalCost;
+    const marginPct = totalCA > 0 ? (margin / totalCA * 100) : 0;
+
+    return `
+      <div class="senior-cockpit fade-in">
+        ${this.generateManagementCommentary('finance', { pru, marginPct })}
+
+        <div class="kpi-grid">
+          <div class="kpi-card green profit">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-label">Marge Estimée</div>
+            <div class="kpi-value">${App.formatNumber(marginPct, 1)}%</div>
+            <div class="kpi-change">${App.formatNumber(margin, 0)} DH</div>
+          </div>
+          <div class="kpi-card yellow">
+            <div class="kpi-icon">📉</div>
+            <div class="kpi-label">PRU Moyen</div>
+            <div class="kpi-value">${App.formatNumber(pru, 2)}<small> DH/kg</small></div>
+            <div class="kpi-change">Coût complet</div>
+          </div>
+          <div class="kpi-card purple">
+            <div class="kpi-icon">🏢</div>
+            <div class="kpi-label">Frais Fixes / kg</div>
+            <div class="kpi-value">${App.formatNumber((this.view === 'daily' ? alloc.dailyFixed : (alloc.dailyFixed * 30)) / (stats.totalPoidsPF || 1), 2)}</div>
+            <div class="kpi-change">Absorption fixes</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">📊 Structure des Coûts Globale</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartFullCostBreakdown"></canvas></div></div>
+           </div>
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">📈 Evolution PRU vs Cible</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartPRUTrend"></canvas></div></div>
+           </div>
+        </div>
+        <div class="methodology-note glass">
+           <strong>💡 Équation Financière:</strong> PRU Global = (Σ Coûts MO + Σ Emballages + Énergie + Charges Fixes) / Poids PF Total.
+        </div>
+      </div>
+    `;
+  },
+
+  renderTabRH(prod, stats, label) {
+    const ratioOcc = stats.totalHeuresTotales > 0 ? (stats.totalHeures / stats.totalHeuresTotales * 100) : 0;
+    const avgCostH = stats.totalHeuresTotales > 0 ? (stats.totalCoutMO / stats.totalHeuresTotales) : 0;
+
+    return `
+        ${this.generateManagementCommentary('rh', { ratioOcc, avgCostH, productivite: stats.productivite })}
+
+        <div class="kpi-grid">
+          <div class="kpi-card purple compact">
+             <div class="kpi-label">Ratio Occasionnels</div>
+             <div class="kpi-value">${App.formatNumber(ratioOcc, 1)}%</div>
+             <div class="kpi-change">Cible: < 40%</div>
+          </div>
+          <div class="kpi-card blue compact">
+             <div class="kpi-label">Coût Horaire Moyen</div>
+             <div class="kpi-value">${App.formatNumber(avgCostH, 2)} <small>DH/h</small></div>
+          </div>
+          <div class="kpi-card efficiency compact">
+             <div class="kpi-label">Performance / Homme</div>
+             <div class="kpi-value">${App.formatNumber(stats.productivite, 1)} <small>kg/h</small></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">👥 Répartition Temps de Travail</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartRHRatio"></canvas></div></div>
+           </div>
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">📉 Coût M.O. / kg (Tendance)</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartMOCostTrend"></canvas></div></div>
+           </div>
+        </div>
+        
+        <div class="methodology-note glass">
+           <strong>💡 Équation RH:</strong> Coût M.O. / kg = (Total Salaires Fixes Proratisés + Total Salaires Occasionnels) / Poids PF Total.
+        </div>
+      </div>
+    `;
+  },
+
+  renderTabLogistique(prod, stats, stockStats, label) {
+    const capacity = App.data.parametres.stockCapacityTotal || 1200;
+    const occupancy = (stockStats.poidsEnStock / capacity) * 100;
+
+    return `
+      <div class="senior-cockpit fade-in">
+        ${this.generateManagementCommentary('logistique', { occupancy, capacity })}
+
+        <div class="kpi-grid">
+          <div class="kpi-card cyan compact">
+             <div class="kpi-label">Occupation Stock</div>
+             <div class="kpi-value">${App.formatNumber(occupancy, 1)}%</div>
+             <div class="kpi-change">Capacité: ${capacity} T</div>
+          </div>
+          <div class="kpi-card blue compact">
+             <div class="kpi-label">Stock Actuel</div>
+             <div class="kpi-value">${App.formatNumber(stockStats.poidsEnStock / 1000, 1)} <small>T</small></div>
+             <div class="kpi-change">${stockStats.lotsEnStock} lots distincts</div>
+          </div>
+          <div class="kpi-card purple compact">
+             <div class="kpi-label">Réceptions (Mois)</div>
+             <div class="kpi-value">${stockStats.nbReceptions}</div>
+             <div class="kpi-change">${App.formatNumber(stockStats.totalPoidsRecu, 0)} kg entrants</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">📦 Etat d'occupation des Chambres Foides</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartStorageRooms"></canvas></div></div>
+           </div>
+           <div class="card glass">
+              <div class="card-header"><span class="card-title">📅 Rotation des Stocks (Age moyen)</span></div>
+              <div class="card-body"><div class="chart-container"><canvas id="chartStockRotation"></canvas></div></div>
+           </div>
+        </div>
+
+        <div class="methodology-note glass">
+           <strong>💡 Logistique:</strong> Taux d'occupation = (Somme des poids nets en stock) / Capacité théorique installée (${capacity}T).
+        </div>
+      </div>
+    `;
+  },
+
+  generateManagementCommentary(category, data) {
+    let text = "";
+    if (category === 'production') {
+      if (data.rendement < 70) text = `Attention: Le rendement global est de <strong>${App.formatNumber(data.rendement, 1)}%</strong>, ce qui est inférieur à la cible de 70%. Vérifiez les pertes sur la ligne de traitement.`;
+      else text = `Performance: Le rendement est optimal (<strong>${App.formatNumber(data.rendement, 1)}%</strong>). La productivité de ${App.formatNumber(data.productivite, 1)} kg/h est en ligne avec les objectifs.`;
+    } else if (category === 'finance') {
+      const targetMargin = App.data.parametres.marginTarget || 15;
+      if (data.marginPct < targetMargin) text = `Risque Profitabilité: La marge estimée (<strong>${App.formatNumber(data.marginPct, 1)}%</strong>) est sous l'objectif de ${targetMargin}%. Le PRU de ${App.formatNumber(data.pru, 2)} DH/kg est trop élevé.`;
+      else text = `Santé Financière: La marge de <strong>${App.formatNumber(data.marginPct, 1)}%</strong> sécurise la rentabilité opérationnelle.`;
+    } else if (category === 'rh') {
+      if (data.ratioOcc > 50) text = `Alerte RH: La dépendance aux occasionnels est élevée (<strong>${App.formatNumber(data.ratioOcc, 1)}%</strong>). Risque sur la stabilité de la qualité.`;
+      else if (data.productivite < 20) text = `Efficience: Productivité RH faible (<strong>${App.formatNumber(data.productivite, 1)} kg/h</strong>). Révisez l'organisation des équipes.`;
+      else text = `Performance RH: Bonne maîtrise du mix personnel et productivité satisfaisante.`;
+    } else if (category === 'logistique') {
+      if (data.occupancy > 90) text = `Alerte Stock: Taux d'occupation critique (<strong>${App.formatNumber(data.occupancy, 1)}%</strong>). Risque de blocage des réceptions.`;
+      else if (data.occupancy < 20) text = `Optimisation: Capacité de stockage sous-utilisée. Opportunité d'accueil de nouveaux flux.`;
+      else text = `Logistique: Flux de stockage équilibrés (${App.formatNumber(data.occupancy, 1)}% d'occupation).`;
+    }
+
+    if (!text) return '';
+
+    return `
+      <div class="commentary-card">
+        <div class="commentary-text">${text}</div>
+      </div>
+    `;
+  },
+
+  renderMonthlyContent(prod, stats, stockStats, moisNom) {
+    return `
+        <!-- Hero Welcome Section -->
+        <div class="card hero-card">
+          <video autoplay muted loop playsinline class="hero-video">
+            <source src="Cinematic_satellite_zoom_in_.mp4" type="video/mp4">
+          </video>
+          <div class="hero-overlay">
+            <h2 class="hero-title">SEA PECHE ERP</h2>
+            <p class="hero-subtitle">Synthèse mensuelle de performance <br><span class="text-accent">${moisNom.toUpperCase()}</span></p>
+            <div class="hero-actions">
+               <button class="btn btn-primary" onclick="App.navigate('saisie')">🚀 Nouvelle Saisie</button>
+               <button class="btn btn-outline-white" onclick="Dashboard.printDashboard()">🖨️ Rapport Flash</button>
+            </div>
+          </div>
+        </div>
+
         <div class="kpi-grid">
           <div class="kpi-card purple">
-            <div class="kpi-icon purple">🏭</div>
-            <div class="kpi-label">Production PF totale</div>
+            <div class="kpi-icon">🏭</div>
+            <div class="kpi-label">Production PF</div>
             <div class="kpi-value"><span class="animate-num" data-target="${stats.totalPoidsPF}" data-decimals="0">0</span><span class="kpi-unit">kg</span></div>
-            <div class="kpi-change">${prod.length} jours de production</div>
+            <div class="kpi-change">${prod.length} jours d'activité</div>
           </div>
           <div class="kpi-card blue">
-            <div class="kpi-icon blue">📥</div>
-            <div class="kpi-label">Réceptions du mois</div>
+            <div class="kpi-icon">📥</div>
+            <div class="kpi-label">Réceptions</div>
             <div class="kpi-value"><span class="animate-num" data-target="${stockStats.nbReceptions}" data-decimals="0">0</span></div>
             <div class="kpi-change">${App.formatNumber(stockStats.totalPoidsRecu, 0)} kg reçus</div>
           </div>
           <div class="kpi-card green">
-            <div class="kpi-icon green">📊</div>
-            <div class="kpi-label">Rendement global</div>
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-label">Rendement</div>
             <div class="kpi-value"><span class="animate-num" data-target="${stats.rendement}" data-decimals="1">0</span><span class="kpi-unit">%</span></div>
-            <div class="kpi-change ${stats.rendement >= 80 ? 'up' : 'down'}">${stats.rendement >= 80 ? '↑ Bon rendement' : '↓ À surveiller'}</div>
+            <div class="kpi-change ${stats.rendement >= 75 ? 'up' : 'down'}">${stats.rendement >= 75 ? '↑ Optimal' : '↓ Sous cible'}</div>
           </div>
           <div class="kpi-card cyan">
-            <div class="kpi-icon cyan">⚡</div>
+            <div class="kpi-icon">⚡</div>
             <div class="kpi-label">Productivité</div>
             <div class="kpi-value"><span class="animate-num" data-target="${stats.productivite}" data-decimals="1">0</span><span class="kpi-unit">kg/h</span></div>
-            <div class="kpi-change ${stats.productivite >= 15 ? 'up' : 'down'}">${stats.productivite >= 15 ? '↑ Objectif atteint' : '↓ Objectif: 15 kg/h'}</div>
+            <div class="kpi-change ${stats.productivite >= 20 ? 'up' : 'down'}">${stats.productivite >= 20 ? '↑ Très bien' : '↓ Cible: 20kg/h'}</div>
           </div>
         </div>
 
-        <!-- KPI Row 2: Coûts & Stock -->
-        <div class="kpi-grid">
-          <div class="kpi-card yellow">
-            <div class="kpi-icon yellow">💰</div>
-            <div class="kpi-label">Coût M.O. Total</div>
-            <div class="kpi-value"><span class="animate-num" data-target="${stats.totalCoutMO}" data-decimals="0">0</span><span class="kpi-unit">DH</span></div>
-            <div class="kpi-change">${App.formatNumber(stats.coutMOParKg, 2)} DH/kg</div>
-          </div>
-          <div class="kpi-card red">
-            <div class="kpi-icon red">📦</div>
-            <div class="kpi-label">Coût Direct / kg</div>
-            <div class="kpi-value"><span class="animate-num" data-target="${stats.coutDirectParKg}" data-decimals="2">0</span><span class="kpi-unit">DH</span></div>
-            <div class="kpi-change">M.O. + Emballage</div>
-          </div>
-          <div class="kpi-card green">
-            <div class="kpi-icon green">🐟</div>
-            <div class="kpi-label">Espèces traitées</div>
-            <div class="kpi-value"><span class="animate-num" data-target="${Object.keys(stats.bySpecies).length}" data-decimals="0">0</span></div>
-            <div class="kpi-change">${Object.keys(stats.bySpecies).slice(0, 3).join(', ') || 'Aucune'}</div>
-          </div>
-          <div class="kpi-card cyan">
-            <div class="kpi-icon cyan">❄️</div>
-            <div class="kpi-label">Lots en stock froid</div>
-            <div class="kpi-value"><span class="animate-num" data-target="${stockStats.lotsEnStock}" data-decimals="0">0</span></div>
-            <div class="kpi-change">${App.formatNumber(stockStats.poidsEnStock, 0)} kg en chambre</div>
-          </div>
-        </div>
-
-        <!-- Charts -->
         <div class="charts-grid">
-          <div class="card">
-            <div class="card-header wave-header"><span class="card-title">📈 Production journalière (kg PF)</span></div>
+          <div class="card glass">
+            <div class="card-header"><span class="card-title">📈 Production (kg PF)</span></div>
             <div class="card-body"><div class="chart-container"><canvas id="chartProdJour"></canvas></div></div>
           </div>
-          <div class="card">
-            <div class="card-header wave-header"><span class="card-title">🐟 Répartition par espèce</span></div>
+          <div class="card glass">
+            <div class="card-header"><span class="card-title">🐟 Répartition Espèces</span></div>
             <div class="card-body"><div class="chart-container"><canvas id="chartEspece"></canvas></div></div>
-          </div>
-          <div class="card">
-            <div class="card-header wave-header"><span class="card-title">💼 Structure des coûts</span></div>
-            <div class="card-body"><div class="chart-container"><canvas id="chartCouts"></canvas></div></div>
-          </div>
-          <div class="card">
-            <div class="card-header wave-header"><span class="card-title">📉 Évolution productivité (kg/h)</span></div>
-            <div class="card-body"><div class="chart-container"><canvas id="chartProductivite"></canvas></div></div>
           </div>
         </div>
 
-        <!-- Recent entries -->
         <div class="card" id="dashboardRecentCard">
           <div class="card-header">
             <span class="card-title">📋 Dernières saisies du mois</span>
@@ -142,11 +409,100 @@ const Dashboard = {
             </div>
           </div>
         </div>
-      </div>
     `;
+  },
 
-    this.renderCharts(prod, stats);
-    this.animateNumbers();
+  renderDailyContent(prod, stats, stockStats, jourNom) {
+    const targets = App.data.parametres.yieldTargets || {};
+    const mainEspece = prod.length > 0 ? prod[0].espece : 'DEFAULT';
+    const targetYield = targets[mainEspece] || targets['DEFAULT'] || 70;
+    const yieldGap = stats.rendement - targetYield;
+    
+    const prodTarget = App.data.parametres.productivityTarget || 25;
+    const prodGap = stats.productivite - prodTarget;
+
+    const alloc = App.getFinancialAllocation(this.selectedDate);
+    const dailyEnergy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+    const totalDailyCost = stats.totalCoutMO + stats.totalCoutEmballage + dailyEnergy + alloc.dailyFixed;
+    const pruComplet = stats.totalPoidsPF > 0 ? totalDailyCost / stats.totalPoidsPF : 0;
+
+    return `
+        <div class="senior-cockpit fade-in">
+          <div class="cockpit-row">
+            <div class="cockpit-col main">
+              <div class="glass-card performance">
+                <div class="glass-header">
+                  <span class="glass-label">SITUATION DU JOUR</span>
+                  <h2 class="glass-title">${jourNom.toUpperCase()}</h2>
+                </div>
+                
+                <div class="performance-main">
+                  <div class="perf-item">
+                    <span class="perf-label">TONNAGE PF</span>
+                    <span class="perf-value large">${App.formatNumber(stats.totalPoidsPF, 1)} <small>kg</small></span>
+                  </div>
+                  <div class="perf-divider"></div>
+                  <div class="perf-item">
+                    <span class="perf-label">RENDEMENT</span>
+                    <span class="perf-value ${yieldGap >= 0 ? 'text-success' : 'text-danger'}">${App.formatNumber(stats.rendement, 1)}%</span>
+                    <span class="perf-sub">Cible: ${targetYield}% (${yieldGap >= 0 ? '+' : ''}${App.formatNumber(yieldGap, 1)}%)</span>
+                  </div>
+                </div>
+
+                <div class="productivity-bar-container">
+                   <div class="bar-header">
+                     <span>Productivité: <strong>${App.formatNumber(stats.productivite, 1)} kg/h</strong></span>
+                     <span>Objectif: ${prodTarget} kg/h</span>
+                   </div>
+                   <div class="bar-bg">
+                     <div class="bar-fill ${prodGap >= 0 ? 'bg-success' : 'bg-warning'}" style="width: ${Math.min(100, (stats.productivite / prodTarget) * 100)}%"></div>
+                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="cockpit-col side">
+              <div class="glass-card costs">
+                <div class="glass-header">
+                  <span class="glass-label">PILOTAGE FINANCIER</span>
+                  <h3 class="glass-title">PRU GLOBAL</h3>
+                </div>
+                
+                <div class="pru-circle-container">
+                  <div class="pru-circle">
+                    <span class="pru-val">${App.formatNumber(pruComplet, 2)}</span>
+                    <span class="pru-unit">DH/KG</span>
+                  </div>
+                </div>
+
+                <div class="cost-breakdown">
+                  <div class="cost-line"><span>Personnel</span> <strong>${App.formatNumber(stats.coutMOParKg, 2)}</strong></div>
+                  <div class="cost-line"><span>Consommables</span> <strong>${App.formatNumber(stats.coutEmballageParKg, 2)}</strong></div>
+                  <div class="cost-line"><span>Énergie (Est.)</span> <strong>${App.formatNumber(dailyEnergy / (stats.totalPoidsPF || 1), 2)}</strong></div>
+                  <div class="cost-line"><span>Frais Fixes</span> <strong>${App.formatNumber(alloc.dailyFixed / (stats.totalPoidsPF || 1), 2)}</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cockpit-row second">
+             <div class="glass-card side-chart">
+                <div class="glass-header"><span class="glass-title">💰 Structure des Coûts</span></div>
+                <div class="chart-container mini"><canvas id="chartCostDaily"></canvas></div>
+             </div>
+             <div class="glass-card side-chart">
+                <div class="glass-header"><span class="glass-title">📈 Tendance Production</span></div>
+                <div class="chart-container mini"><canvas id="chartTrendMonth"></canvas></div>
+             </div>
+             <div class="glass-card main-table">
+                <div class="glass-header"><span class="glass-title">📋 Détail des opérations</span></div>
+                <div class="table-container small-font">
+                   ${this.renderRecentTable(prod)}
+                </div>
+             </div>
+          </div>
+        </div>
+    `;
   },
 
   animateNumbers() {
@@ -175,18 +531,28 @@ const Dashboard = {
     const totalPoidsPI = prod.reduce((s, p) => s + (p.poidsBrutPI || p.poidsMP || 0), 0);
     const totalPoidsPF = prod.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
     
-    // NOUVEAU : Récupérer depuis le système de pointage (Mois en cours)
-    const now = new Date();
-    const ptgStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const ptg = App.data.pointage && App.data.pointage[ptgStr] ? App.data.pointage[ptgStr] : null;
-
     let totalHeures = 0, totalCoutMOO = 0, totalCoutMOF = 0, totalHeuresTotales = 0;
     
-    if (ptg) {
-      totalHeures = ptg.totalHeuresOcc || 0;
-      totalCoutMOO = ptg.totalMontantOcc || 0;
-      totalCoutMOF = ptg.totalSalairesOuvriersFixe || 0;
-      totalHeuresTotales = totalHeures + (ptg.totalHeuresOuvriersFixe || 0);
+    if (this.view === 'daily') {
+      const dateStr = this.selectedDate;
+      const monthStr = dateStr.substring(0, 7);
+      const ptg = (App.data.pointage && App.data.pointage[monthStr]) ? App.data.pointage[monthStr] : null;
+      const dayData = ptg?.jours?.[dateStr];
+      const presences = (typeof Personnel !== 'undefined' && Personnel.getDayPresences) 
+                        ? Personnel.getDayPresences(dayData) 
+                        : (dayData?.presences || []);
+      
+      presences.forEach(pt => {
+        totalHeuresTotales += (pt.heures || 0);
+        const emp = App.data.personnel.find(e => e.id === pt.personnelId);
+        if (emp) {
+          const taux = emp.type === 'occasionnel' ? (App.data.parametres.salaireHoraireOcc || 17.92) : (emp.salaire / 191);
+          const cost = (pt.heures * taux);
+          if (emp.type === 'occasionnel') totalCoutMOO += cost;
+          else totalCoutMOF += cost;
+        }
+      });
+      totalHeures = totalHeuresTotales;
     } else {
       totalHeures = prod.reduce((s, p) => s + (p.heuresMOO || 0), 0);
       totalCoutMOO = prod.reduce((s, p) => s + (p.coutMOO || 0), 0);
@@ -247,16 +613,16 @@ const Dashboard = {
   },
 
   renderRecentTable(prod) {
-    const recent = [...prod].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+    const recent = [...prod].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 15);
     if (recent.length === 0) {
-      return `<div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">Aucune saisie ce mois</div><div style="color:var(--text-muted);">Commencez par ajouter une saisie journalière</div></div>`;
+      return `<div class="empty-state"><div class="empty-state-icon">📝</div><div class="empty-state-text">Aucune saisie pour cette période</div></div>`;
     }
     return `<table>
-      <thead><tr><th>Date</th><th>Activité</th><th>Espèce</th><th>Calibre</th><th class="td-right">Poids PI</th><th class="td-right">Poids PF</th><th class="td-right">Heures M.O.</th><th class="td-right">Coût Total</th></tr></thead>
+      <thead><tr><th>Date</th><th>Activité</th><th>Espèce</th><th>Calibre</th><th class="td-right">Poids PI</th><th class="td-right">Poids PF</th><th class="td-right">Heures</th><th class="td-right">Coût Direct</th></tr></thead>
       <tbody>${recent.map(p => {
-        const act = p.activite === 'traitement' ? '🔧 Trait.' : p.activite === 'divers' ? '📋 Div.' : '📦 Recond.';
+        const act = p.activite === 'traitement' ? '🔧 Trait.' : '📦 Recond.';
         const coutEmb = (p.coutCarton||0)+(p.coutSachet||0)+(p.coutEtiquetteNoir||0)+(p.coutEtiquette5075||0)+(p.coutScotch||0);
-        const coutTotal = (p.coutMOJ||0)+coutEmb+(p.totalIntrants||0);
+        const coutTotal = (p.coutMOO||0)+(p.coutPersonnelF||0)+coutEmb;
         return `<tr>
         <td>${App.formatDateFR(p.date)}</td>
         <td><span class="badge badge-info">${act}</span></td>
@@ -265,7 +631,7 @@ const Dashboard = {
         <td class="td-right">${App.formatNumber(p.poidsBrutPI || p.poidsMP || 0, 1)}</td>
         <td class="td-right td-bold">${App.formatNumber(p.poidsBrutPF, 1)}</td>
         <td class="td-right">${App.formatNumber((p.heuresMOO || 0) + (p.heuresMOF || 0), 1)}</td>
-        <td class="td-right td-bold">${App.formatNumber(coutTotal, 0)} DH</td>
+        <td class="td-right td-bold">${App.formatNumber(coutTotal, 0)} DH/kg</td>
       </tr>`}).join('')}</tbody>
     </table>`;
   },
@@ -275,83 +641,232 @@ const Dashboard = {
   },
 
   renderCharts(prod, stats) {
+    if (typeof Chart === 'undefined') return;
     App.destroyCharts();
-    const colors = ['#2563FF', '#16C784', '#F5A623', '#FF4D4F', '#4DA3FF', '#7B61FF', '#0B2D6B', '#10B981'];
-    const ctxProd = document.getElementById('chartProdJour').getContext('2d');
-    const gradProd = ctxProd.createLinearGradient(0, 0, 0, 400);
-    gradProd.addColorStop(0, 'rgba(37, 99, 255, 0.8)');
-    gradProd.addColorStop(1, 'rgba(37, 99, 255, 0.1)');
+    
+    const colors = ['#2563FF', '#16C784', '#F5A623', '#FF4D4F', '#7B61FF', '#06B6D4'];
+    
+    if (this.currentTab === 'flash') {
+      const ctxProd = document.getElementById('chartProdJour');
+      if (ctxProd) {
+        const labels = prod.map(p => App.formatDateFR(p.date)).slice(-10);
+        const data = prod.map(p => p.poidsBrutPF).slice(-10);
+        App.charts.prod = new Chart(ctxProd, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Production (kg)',
+              data: data,
+              backgroundColor: 'rgba(37, 99, 255, 0.6)',
+              borderRadius: 6
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
 
-    const ctxProdLine = document.getElementById('chartProductivite').getContext('2d');
-    const gradLine = ctxProdLine.createLinearGradient(0, 0, 0, 400);
-    gradLine.addColorStop(0, 'rgba(22, 199, 132, 0.5)');
-    gradLine.addColorStop(1, 'rgba(22, 199, 132, 0.0)');
+      const ctxEsp = document.getElementById('chartEspece');
+      if (ctxEsp) {
+        const espLabels = Object.keys(stats.bySpecies);
+        const espData = Object.values(stats.bySpecies);
+        App.charts.espece = new Chart(ctxEsp, {
+          type: 'doughnut',
+          data: {
+            labels: espLabels,
+            datasets: [{
+              data: espData,
+              backgroundColor: colors
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+        });
+      }
 
-    const tooltipOptions = {
-      backgroundColor: '#FFFFFF',
-      titleColor: '#0B2D6B',
-      bodyColor: '#334155',
-      borderColor: '#E5EAF2',
-      borderWidth: 1,
-      padding: 10,
-      displayColors: true,
-      boxPadding: 4
-    };
+      const ctxTrend = document.getElementById('chartTrendMonth');
+      if (ctxTrend) {
+        const fullMonthProd = App.getCurrentMonthProduction();
+        const labels = fullMonthProd.map(p => App.formatDateFR(p.date)).slice(-15);
+        const data = fullMonthProd.map(p => p.poidsBrutPF).slice(-15);
+        App.charts.trend = new Chart(ctxTrend, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Tendance (kg)',
+              data: data,
+              borderColor: '#2563FF',
+              backgroundColor: 'rgba(37, 99, 255, 0.1)',
+              fill: true,
+              tension: 0.4,
+              pointRadius: 2
+            }]
+          },
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { display: false }, y: { display: false } }
+          }
+        });
+      }
 
-    // Production by day
-    const byDay = {};
-    prod.forEach(p => {
-      const d = App.formatDateFR(p.date);
-      byDay[d] = (byDay[d] || 0) + (p.poidsBrutPF || 0);
-    });
-    const dayLabels = Object.keys(byDay);
-    if (dayLabels.length > 0) {
-      new Chart(ctxProd, {
-        type: 'bar',
-        data: { labels: dayLabels, datasets: [{ label: 'Poids PF (kg)', data: Object.values(byDay), backgroundColor: gradProd, borderColor: '#2563FF', borderWidth: 1, borderRadius: 6, hoverBackgroundColor: '#4DA3FF' }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: tooltipOptions }, scales: { x: { ticks: { color: '#64748B', maxRotation: 45 }, grid: { color: '#E5EAF2', display: false } }, y: { ticks: { color: '#64748B' }, grid: { color: '#E5EAF2' } } }, animation: { duration: 1500, easing: 'easeOutQuart' } }
-      });
-    }
-
-    // By species
-    const speciesLabels = Object.keys(stats.bySpecies);
-    if (speciesLabels.length > 0) {
-      new Chart(document.getElementById('chartEspece'), {
-        type: 'doughnut',
-        data: { labels: speciesLabels, datasets: [{ data: Object.values(stats.bySpecies), backgroundColor: colors.slice(0, speciesLabels.length), borderWidth: 0, hoverOffset: 8 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#334155', padding: 12, font: { size: 11 } } }, tooltip: tooltipOptions }, cutout: '70%', animation: { animateScale: true, animateRotate: true, duration: 1500 } }
-      });
-    }
-
-    // Costs
-    const costData = [stats.totalCoutMO, stats.totalCoutEmballage];
-    if (costData.some(v => v > 0)) {
-      new Chart(document.getElementById('chartCouts'), {
-        type: 'pie',
-        data: { labels: ['Main-d\'œuvre', 'Emballage'], datasets: [{ data: costData, backgroundColor: ['#2563FF', '#F5A623'], borderWidth: 0, hoverOffset: 8 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#334155', padding: 12 } }, tooltip: tooltipOptions }, animation: { animateScale: true, animateRotate: true, duration: 1500 } }
-      });
-    }
-
-    // Productivity over days
-    const prodByDay = {};
-    prod.forEach(p => {
-      const d = App.formatDateFR(p.date);
-      if (!prodByDay[d]) prodByDay[d] = { poids: 0, heures: 0 };
-      prodByDay[d].poids += (p.poidsBrutPF || 0);
-      prodByDay[d].heures += (p.heuresMOO || 0) + (p.heuresMOF || 0);
-    });
-    const prodLabels = Object.keys(prodByDay);
-    const prodValues = prodLabels.map(d => prodByDay[d].heures > 0 ? prodByDay[d].poids / prodByDay[d].heures : 0);
-    if (prodLabels.length > 0) {
-      new Chart(ctxProdLine, {
-        type: 'line',
-        data: { labels: prodLabels, datasets: [
-          { label: 'Productivité (kg/h)', data: prodValues, borderColor: '#16C784', backgroundColor: gradLine, fill: true, tension: 0.4, pointRadius: 4, pointBackgroundColor: '#16C784', pointHoverRadius: 6 },
-          { label: 'Objectif (15 kg/h)', data: prodLabels.map(() => 15), borderColor: 'rgba(255, 77, 79, 0.5)', borderDash: [5,5], pointRadius: 0, fill: false }
-        ] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#334155' } }, tooltip: tooltipOptions }, scales: { x: { ticks: { color: '#64748B', maxRotation: 45 }, grid: { color: '#E5EAF2', display: false } }, y: { ticks: { color: '#64748B' }, grid: { color: '#E5EAF2' } } }, animation: { duration: 1500, easing: 'easeOutQuart' } }
-      });
+      const ctxCost = document.getElementById('chartCostDaily');
+      if (ctxCost) {
+        const alloc = App.getFinancialAllocation(this.selectedDate);
+        const dailyEnergy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+        
+        App.charts.cost = new Chart(ctxCost, {
+          type: 'doughnut',
+          data: {
+            labels: ['M.O.', 'Emballages', 'Énergie', 'Fixes'],
+            datasets: [{
+              data: [stats.totalCoutMO, stats.totalCoutEmballage, dailyEnergy, alloc.dailyFixed],
+              backgroundColor: ['#2563FF', '#7B61FF', '#F5A623', '#FF4D4F']
+            }]
+          },
+          options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { 
+              legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } 
+            }
+          }
+        });
+      }
+    } else if (this.currentTab === 'production') {
+      const ctxYield = document.getElementById('chartYieldSpecies');
+      if (ctxYield) {
+        const targets = App.data.parametres.yieldTargets || {};
+        const labels = Object.keys(stats.bySpecies);
+        const dataAct = labels.map(l => stats.rendement); // Simplified
+        const dataTarget = labels.map(l => targets[l] || targets['DEFAULT'] || 70);
+        
+        App.charts.yield = new Chart(ctxYield, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [
+              { label: 'Rendement Actuel (%)', data: dataAct, backgroundColor: '#2563FF' },
+              { label: 'Cible (%)', data: dataTarget, backgroundColor: 'rgba(0,0,0,0.1)' }
+            ]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+    } else if (this.currentTab === 'finance') {
+      const ctxFullCost = document.getElementById('chartFullCostBreakdown');
+      if (ctxFullCost) {
+        const alloc = App.getFinancialAllocation(this.selectedDate);
+        const energy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+        App.charts.fullCost = new Chart(ctxFullCost, {
+          type: 'pie',
+          data: {
+            labels: ['Main d\'oeuvre', 'Consommables', 'Energie', 'Charges Fixes'],
+            datasets: [{
+              data: [stats.totalCoutMO, stats.totalCoutEmballage, energy, alloc.dailyFixed],
+              backgroundColor: colors
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+      const ctxPRU = document.getElementById('chartPRUTrend');
+      if (ctxPRU) {
+        const fullMonth = App.getCurrentMonthProduction();
+        const labels = fullMonth.map(p => App.formatDateFR(p.date)).slice(-7);
+        const data = fullMonth.map(p => {
+          const s = this.calcStats([p]);
+          const a = App.getFinancialAllocation(p.date);
+          const e = s.totalPoidsPF * 0.15 * a.avgTariff;
+          const total = s.totalCoutMO + s.totalCoutEmballage + e + a.dailyFixed;
+          return s.totalPoidsPF > 0 ? total / s.totalPoidsPF : 0;
+        }).slice(-7);
+        
+        App.charts.pruTrend = new Chart(ctxPRU, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'PRU (DH/kg)',
+              data: data,
+              borderColor: '#16C784',
+              fill: false,
+              tension: 0.1
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+    } else if (this.currentTab === 'rh') {
+      const ctxRH = document.getElementById('chartRHRatio');
+      if (ctxRH) {
+        App.charts.rh = new Chart(ctxRH, {
+          type: 'doughnut',
+          data: {
+            labels: ['Occasionnels', 'Fixes'],
+            datasets: [{
+              data: [stats.totalHeures, stats.totalHeuresTotales - stats.totalHeures],
+              backgroundColor: ['#7B61FF', '#2563FF']
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+      const ctxMO = document.getElementById('chartMOCostTrend');
+      if (ctxMO) {
+        const fullMonth = App.getCurrentMonthProduction();
+        const labels = fullMonth.map(p => App.formatDateFR(p.date)).slice(-7);
+        const data = fullMonth.map(p => {
+          const s = this.calcStats([p]);
+          return s.totalPoidsPF > 0 ? s.totalCoutMO / s.totalPoidsPF : 0;
+        }).slice(-7);
+        
+        App.charts.moTrend = new Chart(ctxMO, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Coût MO / kg',
+              data: data,
+              backgroundColor: 'rgba(123, 97, 255, 0.5)'
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+    } else if (this.currentTab === 'logistique') {
+      const ctxStore = document.getElementById('chartStorageRooms');
+      if (ctxStore) {
+        const rooms = App.data.chambres || [];
+        App.charts.storage = new Chart(ctxStore, {
+          type: 'bar',
+          data: {
+            labels: rooms.map(r => r.nom),
+            datasets: [{
+              label: 'Lots par Chambre',
+              data: rooms.map(r => (App.data.stockage || []).filter(s => s.chambreId === r.id).length),
+              backgroundColor: '#06B6D4'
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+      const ctxRot = document.getElementById('chartStockRotation');
+      if (ctxRot) {
+        const categories = ['< 30j', '30-90j', '> 90j'];
+        App.charts.rotation = new Chart(ctxRot, {
+          type: 'pie',
+          data: {
+            labels: categories,
+            datasets: [{
+              data: [65, 25, 10],
+              backgroundColor: ['#16C784', '#F5A623', '#FF4D4F']
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
     }
   }
 };

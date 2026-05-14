@@ -379,7 +379,7 @@ const Saisie = {
                 <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="${eq.profil}" data-mo="profil"></td>
                 <td><input type="number" class="form-input" style="width:70px;padding:5px" value="${eq.nb}" data-mo="nb" onchange="Saisie.calc()"></td>
                 <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="${eq.heures}" data-mo="heures" onchange="Saisie.calc()"></td>
-                <td><input type="number" step="0.5" class="form-input" style="width:80px;padding:5px" value="${eq.taux}" data-mo="taux" onchange="Saisie.calc()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || p.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calc()"></td>
                 <td class="td-right td-bold" id="fCoutEq${i}">0.00</td>
                 <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
               </tr>`).join('')}
@@ -538,16 +538,21 @@ const Saisie = {
       
       const art = artInput.value.toUpperCase();
       if (condMatch && caissesPF > 0) {
+        const currentQte = parseFloat(qteInput.value) || 0;
         if (art.includes('CARTON')) {
-          qteInput.value = nbCartons;
+          if (!currentQte) qteInput.value = nbCartons;
         } else if (art.includes('SACHET')) {
-          qteInput.value = nbSachetsTotal;
+          if (!currentQte) qteInput.value = nbSachetsTotal;
         } else if (art.includes('50') && art.includes('75') || art.includes('ETIQUETTE') && !art.includes('NOIR')) {
-          qteInput.value = nbRouleaux.toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 45;
+          if (!currentQte) {
+            qteInput.value = nbRouleaux.toFixed(3);
+            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 45;
+          }
         } else if (art.includes('NOIR') || art.includes('TONER')) {
-          qteInput.value = nbToners.toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 78;
+          if (!currentQte) {
+            qteInput.value = nbToners.toFixed(3);
+            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 78;
+          }
         }
       }
 
@@ -599,7 +604,46 @@ const Saisie = {
     const elTotInt = document.getElementById('fTotalIntrants'); if(elTotInt) elTotInt.textContent = App.formatNumber(totalEmb) + ' DH';
     
     const elSumTotal = document.getElementById('sumTotal'); if(elSumTotal) elSumTotal.textContent = App.formatNumber(totalJ, 0) + ' DH';
-    const elSumParKg = document.getElementById('sumParKg'); if(elSumParKg) elSumParKg.textContent = App.formatNumber(parKg) + ' DH/kg';
+    
+    // --- Calcul Impact Facturation Intelligent (Reconditionnement) ---
+    const dateStr = document.getElementById('fDate')?.value || '';
+    const monthStr = dateStr ? dateStr.substring(0, 7) : new Date().toISOString().substring(0, 7);
+    
+    // 1. Tonnages
+    const allProdMois = (App.data.production || []).filter(p => (p.date||'').startsWith(monthStr));
+    const totalKgUsine = allProdMois.reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + poidsPF;
+    const totalKgActivite = allProdMois.filter(p => p.activite === 'reconditionnement' && p.id !== Saisie.editingId).reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + poidsPF;
+
+    // 2. Factures
+    const facturesMois = (App.data.factures || []).filter(f => (f.date||'').startsWith(monthStr));
+    
+    // Charges spécifiques (Reconditionnement + Emballage pour recond)
+    const chargesSpecifiques = facturesMois.filter(f => f.allocation === 'reconditionnement' || f.allocation === 'emballage').reduce((s, f) => s + (f.montant||0), 0);
+    const impactSpecifique = totalKgActivite > 0 ? (chargesSpecifiques / totalKgActivite) : 0;
+
+    // Charges générales
+    const chargesGenerales = facturesMois.filter(f => f.allocation === 'general' || !f.allocation).reduce((s, f) => s + (f.montant||0), 0);
+    const impactGeneral = totalKgUsine > 0 ? (chargesGenerales / totalKgUsine) : 0;
+
+    let coutFactureParKg = impactSpecifique + impactGeneral;
+    let isEstime = false;
+    if (coutFactureParKg === 0) {
+        coutFactureParKg = App.data.parametres.coutStructureEstime || 1.5;
+        isEstime = true;
+    }
+    // -------------------------------------------------------------
+
+    const prixRevientTotal = parKg + coutFactureParKg;
+    const elSumParKg = document.getElementById('sumParKg'); 
+    if(elSumParKg) {
+      elSumParKg.innerHTML = `${App.formatNumber(prixRevientTotal, 2)} DH/kg`;
+      if (coutFactureParKg > 0) {
+        elSumParKg.innerHTML += `<div style="font-size:11px;color:${isEstime?'#f59e0b':'#10b981'};font-weight:normal;margin-top:4px;">
+          ${isEstime ? '⚠️ Charges estimées' : '✅ Charges réelles'} : +${App.formatNumber(coutFactureParKg, 2)} DH/kg
+        </div>`;
+      }
+    }
+
     const rendEl = document.getElementById('sumRendementRec'); if (rendEl) rendEl.textContent = App.formatNumber(rendement, 2) + '%';
   },
 
@@ -614,23 +658,25 @@ const Saisie = {
     }
   },
 
-  addEquipeMO() {
-    const tbody = document.getElementById('fEquipesMO');
-    if (!tbody) return;
-    const rows = tbody.querySelectorAll('tr:not(:last-child)');
-    const idx = rows.length;
-    const totalRow = tbody.querySelector('tr:last-child');
+  addEquipeMO(tbodyId = 'fEquipesMO') {
+    const tbody = document.getElementById(tbodyId);
+    const idx = tbody.querySelectorAll('tr:not(:last-child)').length;
+    const lastRow = tbody.querySelector('tr:last-child');
     const tr = document.createElement('tr');
+    const defaultTaux = App.data.parametres.salaireHoraireOcc || 17.92;
+    const callback = tbodyId === 'tEquipesMO' ? 'Saisie.calcT()' : 'Saisie.calc()';
+    const prefix = tbodyId === 'tEquipesMO' ? 't' : 'f';
+
     tr.innerHTML = `
       <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="Ouvrière" data-mo="profil"></td>
-      <td><input type="number" class="form-input" style="width:70px;padding:5px" value="1" data-mo="nb" onchange="Saisie.calc()"></td>
-      <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="8" data-mo="heures" onchange="Saisie.calc()"></td>
-      <td><input type="number" step="0.5" class="form-input" style="width:80px;padding:5px" value="${App.data.parametres.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calc()"></td>
-      <td class="td-right td-bold" id="fCoutEq${idx}">0.00</td>
+      <td><input type="number" class="form-input" style="width:70px;padding:5px" value="1" data-mo="nb" onchange="${callback}"></td>
+      <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="8" data-mo="heures" onchange="${callback}"></td>
+      <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${defaultTaux}" data-mo="taux" onchange="${callback}"></td>
+      <td class="td-right td-bold" id="${prefix}CoutEq${idx}">0.00</td>
       <td><button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
     `;
-    tbody.insertBefore(tr, totalRow);
-    this.calc();
+    tbody.insertBefore(tr, lastRow);
+    if (tbodyId === 'tEquipesMO') this.calcT(); else this.calc();
   },
 
   removeEquipeMO(btn) {
@@ -1010,6 +1056,40 @@ const Saisie = {
 
             <div class="form-section">
               <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>🔹 Main-d'œuvre</span>
+                <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO('tEquipesMO')" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
+              </div>
+              
+              <div style="margin-bottom:15px;">
+                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
+                <div class="form-grid">
+                  <div class="form-group"><label class="form-label">Heures M.O. Fixe</label><input type="number" step="0.5" class="form-input" id="tHeuresMOF" value="${entry?entry.heuresMOF||8:8}" onchange="Saisie.calcT()"></div>
+                  <div class="form-group"><label class="form-label">Salaire H/F (Base 191h)</label><input type="number" step="0.01" class="form-input" id="tSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calcT()"></div>
+                  <div class="form-group"><label class="form-label">Coût Personnel Fixe</label><div class="form-computed" id="tCoutPF">0.00 DH</div></div>
+                </div>
+              </div>
+
+              <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Équipes Occasionnelles</div>
+              <table><thead><tr><th>Profil</th><th>Nb personnes</th><th>Heures/pers.</th><th>Taux Hor. (DH)</th><th>Coût Total</th><th style="width:30px"></th></tr></thead>
+              <tbody id="tEquipesMO">${(entry?.equipesMO || [{profil: 'Ouvrière', nb: 1, heures: 8, taux: App.data.parametres.salaireHoraireOcc}]).map((eq,i)=>`<tr>
+                <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="${eq.profil}" data-mo="profil"></td>
+                <td><input type="number" class="form-input" style="width:70px;padding:5px" value="${eq.nb}" data-mo="nb" onchange="Saisie.calcT()"></td>
+                <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="${eq.heures}" data-mo="heures" onchange="Saisie.calcT()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || App.data.parametres.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calcT()"></td>
+                <td class="td-right td-bold" id="tCoutEq${i}">0.00</td>
+                <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
+              </tr>`).join('')}
+              <tr style="background:rgba(99,102,241,0.05)"><td colspan="4" class="td-bold">Total M.O. Occasionnelle</td><td class="td-right td-bold" id="tCoutMOO">0.00 DH</td><td></td></tr>
+              </tbody></table>
+
+              <div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
+                <span class="form-computed" id="tCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
                 <span>🔹 Intrants</span>
                 <div style="display:flex;gap:6px;align-items:center;">
                   <select class="form-select" id="tIntrantSelect" style="width:220px;padding:6px;font-size:0.82rem" ${isSent ? 'disabled' : ''}>
@@ -1036,6 +1116,7 @@ const Saisie = {
               <h3 style="margin-bottom:14px;">📊 Résumé</h3>
               <div class="summary-row"><span class="summary-label">Rendement produits</span><span class="summary-value" id="sumRendement">0%</span></div>
               <div class="summary-row"><span class="summary-label">Rendement phase finale</span><span class="summary-value" id="sumRendFinal">0%</span></div>
+              <div class="summary-row"><span class="summary-label">Coût Main-d'œuvre</span><span class="summary-value" id="sumMO">0 DH</span></div>
               <div class="summary-row"><span class="summary-label">Total intrants</span><span class="summary-value" id="sumIntrants">0 DH</span></div>
               <div class="summary-row"><span class="summary-label">Prix de revient global</span><span class="summary-value summary-total" id="sumPrixRevient">0 DH/kg</span></div>
             </div>
@@ -1121,7 +1202,9 @@ const Saisie = {
         if (i === 0 && !qiInput.value && poidsMP > 0) {
           qiInput.value = poidsMP;
         } else if (i > 0) {
-          qiInput.value = prevQF_MP || '';
+          if (!qiInput.value || qiInput.value == "0") {
+            qiInput.value = prevQF_MP || '';
+          }
         }
       }
       const qi = parseFloat(qiInput?.value)||0;
@@ -1147,7 +1230,9 @@ const Saisie = {
           qiInput.value = prevQF_PF || '';
         } else {
           // Subsequent PF phases: gets previous PF phase's qteFinale
-          qiInput.value = prevQF_PF || '';
+          if (!qiInput.value || qiInput.value == "0") {
+            qiInput.value = prevQF_PF || '';
+          }
         }
       }
       const qi = parseFloat(qiInput?.value)||0;
@@ -1218,7 +1303,9 @@ const Saisie = {
       nbToners = nbRouleaux / 4;                          // ex: 0.731
       
       const caissesPFInput = document.getElementById('tCaissesPF');
-      if (caissesPFInput) caissesPFInput.value = nbCartons;
+      if (caissesPFInput && (!parseFloat(caissesPFInput.value) || caissesPFInput.value == "")) {
+        caissesPFInput.value = nbCartons;
+      }
     }
 
     let totalInt = 0;
@@ -1259,21 +1346,61 @@ const Saisie = {
     document.getElementById('sumRendement').textContent = App.formatNumber(rendement,2)+'%';
     document.getElementById('sumIntrants').textContent = App.formatNumber(totalInt,0)+' DH';
     
-    // --- Calcul Impact Facturation ---
+    // --- Calcul Impact Facturation Intelligent (Traitement) ---
     const dateStr = document.getElementById('tDate')?.value || '';
     const monthStr = dateStr ? dateStr.substring(0, 7) : new Date().toISOString().substring(0, 7);
-    const totalFacturesMois = (App.data.factures || []).filter(f => f.date.startsWith(monthStr)).reduce((s, f) => s + f.montant, 0);
-    const totalKgMois = (App.data.production || []).filter(p => p.date.startsWith(monthStr) && p.id !== Saisie.editingId).reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + currentPoidsPF;
-    const coutFactureParKg = totalKgMois > 0 ? (totalFacturesMois / totalKgMois) : 0;
+    
+    // 1. Tonnages
+    const allProdMois = (App.data.production || []).filter(p => (p.date||'').startsWith(monthStr));
+    const totalKgUsine = allProdMois.reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + currentPoidsPF;
+    const totalKgActivite = allProdMois.filter(p => p.activite === 'traitement' && p.id !== Saisie.editingId).reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + currentPoidsPF;
+
+    // 2. Factures
+    const facturesMois = (App.data.factures || []).filter(f => (f.date||'').startsWith(monthStr));
+    
+    // Charges spécifiques (Traitement + Emballage pour le traitement)
+    const chargesSpecifiques = facturesMois.filter(f => f.allocation === 'traitement' || f.allocation === 'emballage').reduce((s, f) => s + (f.montant||0), 0);
+    const impactSpecifique = totalKgActivite > 0 ? (chargesSpecifiques / totalKgActivite) : 0;
+
+    // Charges générales
+    const chargesGenerales = facturesMois.filter(f => f.allocation === 'general' || !f.allocation).reduce((s, f) => s + (f.montant||0), 0);
+    const impactGeneral = totalKgUsine > 0 ? (chargesGenerales / totalKgUsine) : 0;
+
+    let coutFactureParKg = impactSpecifique + impactGeneral;
+    let isEstime = false;
+    if (coutFactureParKg === 0) {
+        coutFactureParKg = App.data.parametres.coutStructureEstime || 1.5;
+        isEstime = true;
+    }
     // ---------------------------------
 
-    const baseCout = currentPoidsPF>0 ? (valeurMP+totalInt)/currentPoidsPF : 0;
+    // MAIN D'OEUVRE
+    let coutMOO = 0;
+    document.querySelectorAll('#tEquipesMO tr:not(:last-child)').forEach((row, i) => {
+      const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+      const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+      const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0;
+      const val = nb * heures * taux;
+      const valEl = document.getElementById('tCoutEq' + i);
+      if (valEl) valEl.textContent = App.formatNumber(val);
+      coutMOO += val;
+    });
+    const coutPF = v('tHeuresMOF') * v('tSalaireHF');
+    const coutMOJ = coutMOO + coutPF;
+    document.getElementById('tCoutPF').textContent = App.formatNumber(coutPF) + ' DH';
+    document.getElementById('tCoutMOO').textContent = App.formatNumber(coutMOO) + ' DH';
+    document.getElementById('tCoutMOJ').textContent = App.formatNumber(coutMOJ) + ' DH';
+
+    const baseCout = currentPoidsPF>0 ? (valeurMP+totalInt+coutMOJ)/currentPoidsPF : 0;
     const prixRevient = baseCout + coutFactureParKg;
     
     document.getElementById('sumPrixRevient').textContent = App.formatNumber(prixRevient,2)+' DH/kg';
     if (coutFactureParKg > 0) {
-       document.getElementById('sumPrixRevient').innerHTML += `<div style="font-size:11px;color:#f59e0b;font-weight:normal;margin-top:4px;">Inclus charges factures : +${App.formatNumber(coutFactureParKg, 2)} DH/kg</div>`;
+       document.getElementById('sumPrixRevient').innerHTML += `<div style="font-size:11px;color:${isEstime?'#f59e0b':'#10b981'};font-weight:normal;margin-top:4px;">
+        ${isEstime ? '⚠️ Charges estimées' : '✅ Charges réelles'} : +${App.formatNumber(coutFactureParKg, 2)} DH/kg
+       </div>`;
     }
+    document.getElementById('sumMO').textContent = App.formatNumber(coutMOJ, 0) + ' DH';
 
     // Last PF phase rendement
     const pfRows = document.querySelectorAll('#tPhasesPF tr');
@@ -1449,10 +1576,21 @@ const Saisie = {
       rendement: poidsMP>0?(poidsPF/poidsMP*100):0,
       totalIntrants: totalInt,
       coutFactureParKg,
-      prixRevient: prixRevientBase + coutFactureParKg,
+      prixRevient: prixRevientBase + (poidsPF > 0 ? (parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0)/poidsPF : 0) + coutFactureParKg,
+      // Main-d'œuvre
+      heuresMOF: v('tHeuresMOF'),
+      salaireHF: v('tSalaireHF'),
+      coutPersonnelF: v('tHeuresMOF') * v('tSalaireHF'),
+      equipesMO: Array.from(document.querySelectorAll('#tEquipesMO tr:not(:last-child)')).map(row => ({
+        profil: row.querySelector('[data-mo="profil"]')?.value || '',
+        nb: parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0,
+        heures: parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0,
+        taux: parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0
+      })),
+      coutMOO: parseFloat(document.getElementById('tCoutMOO')?.textContent.replace(/[^0-9.]/g,''))||0,
+      coutMOJ: parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0,
       // compat fields
-      poidsBrutPI: poidsMP, caissesPI:0, heuresMOO:0, heuresMOF:0,
-      coutMOO:0, coutPersonnelF:0, coutMOJ:0,
+      poidsBrutPI: poidsMP, caissesPI:0,
       coutCarton:0,coutSachet:0,coutEtiquetteNoir:0,coutEtiquette5075:0,coutScotch:0
     };
 
@@ -1675,14 +1813,25 @@ const Saisie = {
       const _valeurMPkg = _poidsPF > 0 ? valeurMP / _poidsPF : 0;
       const _coutIntrantsKg = _poidsPF > 0 ? totalIntrants / _poidsPF : 0;
       const _coutMOkg = _poidsPF > 0 ? (p.coutMOJ || 0) / _poidsPF : 0;
+      const _coutTotalKg = _poidsPF > 0 ? coutTotal / _poidsPF : 0;
 
-      // Coût factures du mois : total factures du mois / total kg traités du mois
+      // Coût factures intelligent
       const _dateMois = (p.date || '').substring(0, 7);
-      const _facturesMois = (App.data.factures || []).filter(f => (f.date || '').substring(0, 7) === _dateMois);
-      const _totalFacturesMois = _facturesMois.reduce((s, f) => s + (f.montant || 0), 0);
-      const _saisiesMois = (App.data.production || []).filter(pr => (pr.date || '').substring(0, 7) === _dateMois);
-      const _totalKgMois = _saisiesMois.reduce((s, pr) => s + (pr.poidsBrutPF || 0), 0);
-      const _coutFactureKg = _totalKgMois > 0 ? _totalFacturesMois / _totalKgMois : 0;
+      const _allFactures = (App.data.factures || []).filter(f => (f.date || '').substring(0, 7) === _dateMois);
+      const _allProd = (App.data.production || []).filter(pr => (pr.date || '').substring(0, 7) === _dateMois);
+      
+      const _kgUsine = _allProd.reduce((s, pr) => s + (pr.poidsBrutPF || 0), 0);
+      const _kgActivite = _allProd.filter(pr => pr.activite === p.activite).reduce((s, pr) => s + (pr.poidsBrutPF || 0), 0);
+
+      const _chargesSpec = _allFactures.filter(f => f.allocation === p.activite || f.allocation === 'emballage').reduce((s, f) => s + (f.montant || 0), 0);
+      const _chargesGen = _allFactures.filter(f => f.allocation === 'general' || !f.allocation).reduce((s, f) => s + (f.montant || 0), 0);
+
+      let _coutFactureKg = (_kgActivite > 0 ? _chargesSpec / _kgActivite : 0) + (_kgUsine > 0 ? _chargesGen / _kgUsine : 0);
+      let _isEstime = false;
+      if (_coutFactureKg === 0) {
+        _coutFactureKg = App.data.parametres.coutStructureEstime || 1.5;
+        _isEstime = true;
+      }
 
       const _prixRevientKg = _valeurMPkg + _coutIntrantsKg + _coutMOkg + _coutFactureKg;
 
@@ -1771,13 +1920,18 @@ const Saisie = {
             <tr>
               <td style="border:1px solid #000; padding:4px; font-weight:bold; background:#f5f5f5;">Coût M.O.</td>
               <td style="border:1px solid #000; padding:4px; text-align:right;">${App.formatNumber(_coutMOkg,2)} DH/kg</td>
-              <td style="border:1px solid #000; padding:4px; font-weight:bold; background:#f5f5f5;">Coût Emballage</td>
+              <td style="border:1px solid #000; padding:4px; font-weight:bold; background:#f5f5f5;">Coût Intrants</td>
               <td style="border:1px solid #000; padding:4px; text-align:right;">${App.formatNumber(_coutIntrantsKg,2)} DH/kg</td>
             </tr>
             <tr>
               <td style="border:1px solid #000; padding:4px; font-weight:bold; background:#f5f5f5;">Charges / Factures</td>
-              <td style="border:1px solid #000; padding:4px; text-align:right; color:#c00;">${App.formatNumber(_coutFactureKg,2)} DH/kg</td>
-              <td style="border:1px solid #000; padding:4px; font-size:9px; color:#555;" colspan="2">Factures ${_dateMois} : ${App.formatNumber(_totalFacturesMois,2)} DH / ${App.formatNumber(_totalKgMois,0)} kg</td>
+              <td style="border:1px solid #000; padding:4px; text-align:right; color:${_isEstime?'#f59e0b':'#c00'};">
+                ${App.formatNumber(_coutFactureKg,2)} DH/kg
+                ${_isEstime ? '<br><span style="font-size:8px; font-weight:normal;">(Estimation standard)</span>' : ''}
+              </td>
+              <td style="border:1px solid #000; padding:4px; font-size:9px; color:#555;" colspan="2">
+                ${_isEstime ? 'Factures non saisies pour ce mois.' : `Répartition intelligente (Spécifique + Général) pour ${_dateMois}`}
+              </td>
             </tr>
             <tr style="background:#222; color:#fff;">
               <td colspan="3" style="border:1px solid #000; padding:6px; font-weight:bold; text-align:right; font-size:12px;">PRIX DE REVIENT GLOBAL (DH/KG)</td>
@@ -2150,7 +2304,10 @@ Notes:
         if (el && val !== undefined && val !== null) el.value = val;
       };
 
-      setVal(prefix + 'Date', data.date);
+      if (data.date) {
+        setVal(prefix + 'Date', data.date);
+        if (prefix === 'f') this.onDateChange(); else this.onDateChangeT();
+      }
       setVal(prefix + 'Client', data.client);
       
       if (data.espece) {
@@ -2173,9 +2330,12 @@ Notes:
         this.onConditionnementChange();
       }
       
-      if (isTrt) this.calcT(); else this.calc();
-      this.refreshQR();
-      App.toast("Données IA appliquées", "success");
+      // Forcer le calcul final
+      setTimeout(() => {
+        if (isTrt) this.calcT(); else this.calc();
+        this.refreshQR();
+        App.toast("Données IA appliquées et synchronisées", "success");
+      }, 100);
     }, 250);
   },
 
@@ -2315,7 +2475,8 @@ Notes:
         rows[r].forEach((val, c) => {
           const h = String(val || '').toUpperCase().trim();
           if (h.includes('ESPECE') || h.includes('ESPÈCE')) colMap.espece = c;
-          else if (h.includes('NBR') && h.includes('CSS')) colMap.caissesPI = c;
+          else if (h.includes('NBR') && h.includes('CSS') && !h.includes('FINAL') && !colMap.caissesPI) colMap.caissesPI = c;
+          else if (h.includes('NBR') && h.includes('CSS') && h.includes('FINAL')) colMap.caissesPF = c;
           else if (h.includes('POIDS INITIAL') || h.includes('POIDS INIT')) colMap.poidsPI = c;
           else if (h.includes('MODE') && h.includes('TRAITEMENT')) colMap.modeTraitement = c;
           else if (h.includes('EVISCERATION') || h.includes('ÉVISCÉR')) colMap.poidsEvisceration = c;
@@ -2372,6 +2533,7 @@ Notes:
       // Per-row effectifs/heures (may be empty if merged)
       const rowEffectifs = parseFloat(rows[r][colMap.effectifs]) || sharedEffectifs;
       const rowHeures = parseFloat(rows[r][colMap.heures]) || sharedHeures;
+      const caissesPF = colMap.caissesPF !== undefined ? (parseFloat(rows[r][colMap.caissesPF]) || 0) : 0;
 
       // Determine activite
       let activite = 'reconditionnement';
@@ -2427,6 +2589,7 @@ Notes:
         modeEmballage,
         effectifs: rowEffectifs,
         heures: rowHeures,
+        caissesPF,
         rendement: poidsPI > 0 ? (poidsPF / poidsPI * 100) : 0
       });
     }
@@ -2641,7 +2804,7 @@ Notes:
         caissesPI: e.caissesPI,
         poidsBrutPI: e.poidsPI,
         poidsMP: e.poidsPI,
-        caissesPF: 0,
+        caissesPF: e.caissesPF || 0,
         poidsBrutPF: e.poidsPF,
         produitFini: (e.espece + ' ' + (isRecond ? 'Reconditionné' : 'Traité')).trim().toUpperCase(),
         conditionnement: e.conditionnement,

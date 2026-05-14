@@ -5,39 +5,56 @@ const Stockage = {
   applyAIData(data) {
     if (!data) return;
     this.currentTab = 'entrees';
+    
+    // Normalisation de la date
+    if (data.date) data.date = App.formatDateISO(data.date);
+
+    // Préparation des lignes avec Fuzzy Matching
+    if (data.lignes && data.lignes.length > 0) {
+      const speciesList = (App.data.especes || []).map(e => e.nom);
+      this.currentLignes = data.lignes.map(l => ({
+        ...this.emptyLigne(),
+        espece: App.AI.fuzzyMatch(l.espece, speciesList),
+        calibre: l.calibre || '',
+        nbCaisses: parseInt(l.nbCaisses) || 0,
+        quantite: parseFloat(l.quantite) || 0,
+        pdsNetTotal: parseFloat(l.quantite) || 0, // Par défaut Pds Net = Qté Reçue
+        pdsBrutMoy: (parseFloat(l.quantite) || 0) / (parseInt(l.nbCaisses) || 1)
+      }));
+    } else {
+      this.currentLignes = [this.emptyLigne()];
+    }
+
     this.render();
-    
-    // On simule l\'ouverture du formulaire d\'entrée avec les données IA
-    this.showForm();
-    
-    // On attend que le formulaire soit injecté dans le DOM
+    this.showForm(); // showForm utilisera this.currentLignes s'il est défini
+
+    // Injection des métadonnées dans le DOM
     setTimeout(() => {
-      const fDate = document.getElementById('eDate');
-      const fBateau = document.getElementById('eBateau');
-      const fClient = document.getElementById('eClient');
-      const fBL = document.getElementById('eBL');
+      const setVal = (id, val) => { 
+        const el = document.getElementById(id); 
+        if (el && val) el.value = val; 
+      };
 
-      if (fDate) fDate.value = data.date || new Date().toISOString().split('T')[0];
-      if (fBateau) fBateau.value = data.bateau || '';
-      if (fClient) fClient.value = data.client || data.fournisseur || '';
-      if (fBL) fBL.value = data.bl_numero || '';
-
-      // On injecte les lignes
-      if (data.lignes && data.lignes.length > 0) {
-        this.currentLignes = data.lignes.map(l => ({
-          id: Date.now() + Math.random(),
-          espece: l.espece || '',
-          calibre: l.calibre || '',
-          nbCaisses: parseInt(l.nbCaisses) || 0,
-          quantite: parseFloat(l.quantite) || 0,
-          pu: 0
-        }));
-        this.renderLignes();
-      }
+      setVal('sDateEntree', data.date);
+      setVal('sBateau', data.bateau);
+      setVal('sClient', data.client);
+      setVal('sFournisseur', data.fournisseur || data.client);
       
-      App.toast("Données de réception pré-remplies par l\'IA.", "info");
-    }, 100);
+      if (data.client) this.onClientChange();
+      this.calcTotals();
+      
+      App.toast("Données de réception injectées par l'IA.", "success");
+    }, 150);
   },
+
+  renderLignes() {
+    const body = document.getElementById('lignesBody');
+    if (!body) return;
+    const lines = this.currentLignes || [this.emptyLigne()];
+    body.innerHTML = lines.map((l, i) => this.renderLigneRow(l, i)).join('');
+    this.calcTotals();
+  },
+
   editingId: null,
   currentTab: 'entrees',
 
@@ -257,7 +274,17 @@ const Stockage = {
 
   showForm(entry = null) {
     this.editingId = entry ? entry.id : null;
-    const lignes = entry ? entry.lignes : [this.emptyLigne()];
+    
+    // Si on a des lignes pré-chargées (via IA) et qu'on n'édite pas une entrée existante
+    let lignes = [this.emptyLigne()];
+    if (entry) {
+      lignes = entry.lignes;
+    } else if (this.currentLignes && this.currentLignes.length > 0) {
+      lignes = this.currentLignes;
+      // On vide currentLignes après usage pour éviter les effets de bord au prochain showForm manuel
+      this.currentLignes = null; 
+    }
+    
     const container = document.getElementById('stockageFormContainer');
     const nextRef = entry ? entry.reference : this.generateRef();
 

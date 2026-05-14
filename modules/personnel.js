@@ -8,6 +8,59 @@ const Personnel = {
   currentDailyActivite: 'Traitement',
   currentFicheId: null,
   pendingScanData: null,
+
+  applyAIData(data) {
+    if (!data) return;
+    
+    // On bascule sur l'onglet journalier
+    this.currentTab = 'daily';
+    if (data.date) this.currentDailyDate = App.formatDateISO(data.date);
+    
+    const activite = data.activite || 'Traitement';
+    const dateAffichage = data.date || new Date().toLocaleDateString('fr-FR');
+    const titre = `Fiche ${activite} — ${dateAffichage}`;
+    
+    // Créer la fiche
+    this.addNewFiche(activite, titre);
+    
+    const employesIA = data.lignes || data.employes || [];
+    if (employesIA.length > 0) {
+      const fiche = this.getFiche(this.currentFicheId);
+      if (!fiche) return;
+
+      // 1. Initialiser TOUS les ouvriers actifs à 0 (évite les cases vides)
+      const ouvriers = App.data.personnel.filter(p => (p.type === 'ouvrier_fixe' || p.type === 'occasionnel') && p.actif);
+      fiche.presences = ouvriers.map(emp => ({ personnelId: emp.id, heures: 0, matinHeures: 0, soirHeures: 0 }));
+
+      // 2. Matching intelligent des heures extraites
+      let matchCount = 0;
+      employesIA.forEach(aiEmp => {
+        const nameToMatch = (aiEmp.nom || aiEmp.nomPrenom || "").toUpperCase().trim();
+        if (!nameToMatch) return;
+
+        const pres = fiche.presences.find(p => {
+          const emp = App.data.personnel.find(e => e.id === p.personnelId);
+          return emp && emp.nom.toUpperCase().includes(nameToMatch);
+        });
+
+        if (pres) {
+          const hours = parseFloat(aiEmp.heures) || 0;
+          pres.matinHeures = hours;
+          pres.heures = hours;
+          matchCount++;
+        }
+      });
+
+      this.recalcPointageMensuel(this.currentDailyDate.substring(0, 7));
+      this.render();
+      
+      if (matchCount > 0) {
+        App.toast(`${matchCount} employés pointés automatiquement via le scan.`, "success");
+      } else {
+        App.toast("Le scan a été importé, mais aucun nom n'a pu être matché avec la base de données.", "warning");
+      }
+    }
+  },
   
   // Onglets disponibles
   tabs: [
@@ -360,11 +413,11 @@ const Personnel = {
                     <td style="font-weight:600;">${emp.nom} ${emp.prenom||''}</td>
                     <td><input type="text" class="ptg-mini-input" value="${pres.matinEntree || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'matinEntree', this.value)"></td>
                     <td><input type="text" class="ptg-mini-input" value="${pres.matinSortie || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'matinSortie', this.value)"></td>
-                    <td style="background:rgba(37,99,235,0.05);"><input type="number" step="0.5" class="ptg-mini-input" value="${pres.matinHeures || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'matinHeures', this.value)"></td>
+                    <td style="background:rgba(37,99,235,0.05);"><input type="number" step="0.5" class="ptg-mini-input" value="${pres.matinHeures ?? 0}" onchange="Personnel.updateFicheField(${emp.id}, 'matinHeures', this.value)"></td>
                     <td><input type="text" class="ptg-mini-input" value="${pres.soirEntree || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'soirEntree', this.value)"></td>
                     <td><input type="text" class="ptg-mini-input" value="${pres.soirSortie || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'soirSortie', this.value)"></td>
-                    <td style="background:rgba(139,92,246,0.05);"><input type="number" step="0.5" class="ptg-mini-input" value="${pres.soirHeures || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'soirHeures', this.value)"></td>
-                    <td style="text-align:center; font-weight:800;">${pres.heures || 0}</td>
+                    <td style="background:rgba(139,92,246,0.05);"><input type="number" step="0.5" class="ptg-mini-input" value="${pres.soirHeures ?? 0}" onchange="Personnel.updateFicheField(${emp.id}, 'soirHeures', this.value)"></td>
+                    <td style="text-align:center; font-weight:800;">${pres.heures ?? 0}</td>
                   </tr>
                 `;
               }).join('')}

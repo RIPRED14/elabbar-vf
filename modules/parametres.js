@@ -81,7 +81,10 @@ const Parametres = {
         redevanceLocation: v('pRedLoc') ?? App.data.parametres.redevanceLocation,
         coutCarburant: v('pCarburant') ?? App.data.parametres.coutCarburant,
         coutPersonnelLogistique: v('pPersLog') ?? App.data.parametres.coutPersonnelLogistique,
+        coutStructureEstime: v('pCoutStrEstime') ?? App.data.parametres.coutStructureEstime,
         geminiApiKey: document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiApiKey,
+        groqApiKey: document.getElementById('pGroqKey')?.value ?? App.data.parametres.groqApiKey,
+        openRouterApiKey: document.getElementById('pOpenRouterKey')?.value ?? App.data.parametres.openRouterApiKey,
       };
     }
   },
@@ -92,8 +95,8 @@ const Parametres = {
         <div class="card-header"><span class="card-title">💰 Main-d'œuvre</span></div>
         <div class="card-body">
           <div class="form-grid">
-            <div class="form-group"><label class="form-label">Salaire horaire M.O. Occ. (DH)</label><input type="number" class="form-input" id="pSalaireOcc" value="${p.salaireHoraireOcc||17}"></div>
-            <div class="form-group"><label class="form-label">Heures mensuelles (fixe)</label><input type="number" class="form-input" id="pHeuresMens" value="${p.heuresMensuelles||208}"></div>
+            <div class="form-group"><label class="form-label">Salaire horaire M.O. Occ. (DH)</label><input type="number" class="form-input" id="pSalaireOcc" value="${p.salaireHoraireOcc||17.92}"></div>
+            <div class="form-group"><label class="form-label">Heures mensuelles (fixe)</label><input type="number" class="form-input" id="pHeuresMens" value="${p.heuresMensuelles||191}"></div>
             <div class="form-group"><label class="form-label">Salaire Qualité (DH/mois)</label><input type="number" class="form-input" id="pSalaireQualite" value="${p.salaireQualite||9000}"></div>
             <div class="form-group"><label class="form-label">Salaire Administration (DH/mois)</label><input type="number" class="form-input" id="pSalaireAdmin" value="${p.salaireAdmin||25000}"></div>
           </div>
@@ -119,6 +122,7 @@ const Parametres = {
           <div class="form-grid">
             <div class="form-group"><label class="form-label">Coût carburant (DH/mois)</label><input type="number" class="form-input" id="pCarburant" value="${p.coutCarburant||300}"></div>
             <div class="form-group"><label class="form-label">Personnel logistique (DH/mois)</label><input type="number" class="form-input" id="pPersLog" value="${p.coutPersonnelLogistique||4000}"></div>
+            <div class="form-group"><label class="form-label">Coût structure estimé (DH/kg)</label><input type="number" step="0.01" class="form-input" id="pCoutStrEstime" value="${p.coutStructureEstime||1.50}"></div>
           </div>
         </div>
       </div>
@@ -128,10 +132,29 @@ const Parametres = {
         <div class="card-body">
           <div class="form-grid">
             <div class="form-group" style="grid-column: span 2;">
-              <label class="form-label">Clé API Google Gemini (AI Studio)</label>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <label class="form-label" style="margin-bottom:0;">Clé API Google Gemini (Principal)</label>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" style="font-size:0.75rem; color:var(--accent-blue); text-decoration:none;">🔗 Récupérer la clé</a>
+              </div>
               <input type="password" class="form-input" id="pGeminiKey" value="${p.geminiApiKey||''}" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <label class="form-label" style="margin-bottom:0;">Clé API Groq (Fallback 1)</label>
+                <a href="https://console.groq.com/keys" target="_blank" style="font-size:0.75rem; color:var(--accent-blue); text-decoration:none;">🔗 Récupérer la clé</a>
+              </div>
+              <input type="password" class="form-input" id="pGroqKey" value="${p.groqApiKey||''}" placeholder="gsk_...">
+            </div>
+            <div class="form-group">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <label class="form-label" style="margin-bottom:0;">Clé API OpenRouter (Fallback 2)</label>
+                <a href="https://openrouter.ai/keys" target="_blank" style="font-size:0.75rem; color:var(--accent-blue); text-decoration:none;">🔗 Récupérer la clé</a>
+              </div>
+              <input type="password" class="form-input" id="pOpenRouterKey" value="${p.openRouterApiKey||''}" placeholder="sk-or-v1-...">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
               <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
-                Sert à analyser intelligemment les documents (Réception, Production, Facturation). Obtenez une clé gratuite sur <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent-blue)">Google AI Studio</a>.
+                Le système bascule automatiquement sur Groq ou OpenRouter si Gemini atteint son quota.
               </div>
             </div>
           </div>

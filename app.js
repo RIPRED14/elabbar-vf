@@ -20,6 +20,7 @@ window.addEventListener('unhandledrejection', function(event) {
 const App = {
   currentPage: 'dashboard',
   data: {},
+  charts: {},
 
   // --- Default Data ---
   defaults: {
@@ -136,9 +137,23 @@ const App = {
       tunnel3: { nom: 'Tunnel 03', surfaceToit: 80, surfaceSol: 32, tempSol: -1, epaisseur: 200, isolation: 0.18, moteurs: 160, dureeMoteurs: 8, projecteur: 150, dureeProj: 0.2, degivrage: 1, echangeAir: 0, tonnage: 160000 }
     },
     chambresHistory: [],
+    parametres: {
+      productivityTarget: 25,
+      yieldTargets: {
+        'OCTOPUS': 75,
+        'SEICHE': 72,
+        'CALAMAR': 78,
+        'CREVETTE': 45,
+        'DEFAULT': 70
+      },
+      stockCapacityTotal: 1200, // 400 * 3
+      fixedCostTarget: 3000, // Daily target
+      marginTarget: 15, // %
+    },
     especes: [
         {
             "nom": "ACEDIA",
+            "prixMoyenVente": 45,
             "calibres": [
                 "ACEDIA",
                 "ACEDIA G",
@@ -1039,8 +1054,8 @@ const App = {
         }
     ],
     parametres: {
-      salaireHoraireOcc: 16.95,
-      heuresMensuelles: 208,
+      salaireHoraireOcc: 17.92,
+      heuresMensuelles: 191,
       tarifHP: 1.45,   // Heures de Pointe (18h-22h)
       tarifHPl: 1.15,  // Heures Pleines (07h-18h)
       tarifHC: 0.85,   // Heures Creuses (22h-07h)
@@ -1054,7 +1069,18 @@ const App = {
       coutPersonnelLogistique: 4000,
       salaireQualite: 9000,
       salaireAdmin: 25000,
+      coutStructureEstime: 1.50, // Fallback si pas de factures saisies
       geminiApiKey: '',
+      groqApiKey: '',
+      openRouterApiKey: '',
+      productivityTarget: 25, // KG per hour target
+      yieldTargets: {
+        'OCTOPUS': 75,
+        'SEICHE': 72,
+        'CALAMAR': 78,
+        'CREVETTE': 45,
+        'DEFAULT': 70
+      }
     },
     production: [],
     mouvementsStock: [],
@@ -1758,6 +1784,23 @@ const App = {
     return { hOcc, hFixe, occCount, fixeCount };
   },
 
+  getFinancialAllocation(dateStr) {
+    if (!this.data.parametres) return { dailyFixed: 0, avgTariff: 1.15 };
+    const p = this.data.parametres;
+    
+    // 1. Calculate Monthly Fixed Base from Personnel
+    const adminSalaries = (this.data.personnel || []).filter(emp => emp.type === 'fixe_admin' && emp.actif).reduce((s, emp) => s + (emp.salaire || 0), 0);
+    const otherSalaries = (this.data.personnel || []).filter(emp => emp.type === 'fixe_autre' && emp.actif).reduce((s, emp) => s + (emp.salaire || 0), 0);
+    
+    // 26 working days for daily allocation
+    const dailyFixed = (adminSalaries + otherSalaries) / 26;
+    
+    // 2. Average ONEE Tariff
+    const avgTariff = ((p.tarifHP || 1.45) + (p.tarifHPl || 1.15) + (p.tarifHC || 0.85)) / 3;
+    
+    return { dailyFixed, avgTariff };
+  },
+
   init() {
     this.loadData();
     this.updateHeaderDate();
@@ -1772,6 +1815,14 @@ const App = {
     if (saved) {
       try {
         this.data = JSON.parse(saved);
+        // Migration logic
+        if (!this.data.parametres) this.data.parametres = { ...this.defaults.parametres };
+        if (this.data.parametres.groqApiKey === undefined) {
+          this.data.parametres.groqApiKey = this.defaults.parametres.groqApiKey;
+        }
+        if (this.data.parametres.openRouterApiKey === undefined || this.data.parametres.openRouterApiKey === '') {
+          this.data.parametres.openRouterApiKey = this.defaults.parametres.openRouterApiKey;
+        }
       } catch (err) {
         console.error('Données locales corrompues, réinitialisation.', err);
         this.data = JSON.parse(JSON.stringify(this.defaults));
@@ -1803,6 +1854,41 @@ const App = {
       // Patch: Force taux horaire occasionnel à 16.95
       if (this.data.parametres && (this.data.parametres.salaireHoraireOcc === 17 || this.data.parametres.salaireHoraireOcc === 16.8)) {
         this.data.parametres.salaireHoraireOcc = 16.95;
+        this.saveData();
+      }
+
+      // Senior Control Migration (V9)
+      if (!localStorage.getItem('gestprod_v9_senior_control_init')) {
+        if (!this.data.parametres) this.data.parametres = {};
+        if (this.data.parametres.productivityTarget === undefined) this.data.parametres.productivityTarget = 25;
+        if (!this.data.parametres.yieldTargets) {
+          this.data.parametres.yieldTargets = {
+            'OCTOPUS': 75,
+            'SEICHE': 72,
+            'CALAMAR': 78,
+            'CREVETTE': 45,
+            'DEFAULT': 70
+          };
+        }
+        localStorage.setItem('gestprod_v9_senior_control_init', 'true');
+        this.saveData();
+      }
+
+      // Enterprise Cockpit Migration (V10)
+      if (!localStorage.getItem('gestprod_v10_enterprise_init')) {
+        if (!this.data.parametres.stockCapacityTotal) this.data.parametres.stockCapacityTotal = 1200;
+        if (this.data.parametres.marginTarget === undefined) this.data.parametres.marginTarget = 15;
+        if (this.data.parametres.fixedCostTarget === undefined) this.data.parametres.fixedCostTarget = 3000;
+        
+        // Sync prices for species
+        this.data.especes.forEach(esp => {
+          if (esp.prixMoyenVente === undefined) {
+            const def = this.defaults.especes.find(e => e.nom === esp.nom);
+            esp.prixMoyenVente = def ? (def.prixMoyenVente || 50) : 50;
+          }
+        });
+        
+        localStorage.setItem('gestprod_v10_enterprise_init', 'true');
         this.saveData();
       }
     } else {
@@ -1951,6 +2037,26 @@ const App = {
     return date.toISOString().split('T')[0];
   },
 
+  formatDateISO(d) {
+    if (!d) return new Date().toISOString().split('T')[0];
+    // Gestion du format JJ/MM/AAAA
+    if (typeof d === 'string' && d.includes('/')) {
+      const parts = d.split('/');
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0');
+        const year = parts[2];
+        return `${year}-${month}-${day}`;
+      }
+    }
+    try {
+      const date = d instanceof Date ? d : new Date(d);
+      return date.toISOString().split('T')[0];
+    } catch(e) {
+      return new Date().toISOString().split('T')[0];
+    }
+  },
+
   formatDateFR(d) {
     if (!d) return '';
     const date = d instanceof Date ? d : new Date(d);
@@ -2018,16 +2124,57 @@ const App = {
   // --- AI Centralization ---
   AI: {
     async analyzeImage(file, prompt) {
-      const apiKey = App.data.parametres?.geminiApiKey;
-      if (!apiKey) throw new Error("Clé API Gemini manquante dans les Paramètres.");
+      const p = App.data.parametres;
+      
+      // Nettoyage de sécurité
+      if (App.data.bestAiModel && (App.data.bestAiModel.includes('2.5') || App.data.bestAiModel.includes('3.1'))) {
+        App.data.bestAiModel = null;
+      }
 
+      // 1. OPENROUTER - Priorité aux modèles gratuits généreux (Groq/Gemma via OpenRouter)
+      if (p?.openRouterApiKey) {
+        const models = [
+          "meta-llama/llama-3.2-11b-vision-instruct:free", // Rapide et efficace
+          "google/gemma-4-31b-it:free",                   // Nouveau 2026
+          "google/gemma-4-26b-a4b-it:free",               // Nouveau 2026
+          "openrouter/auto"                                // Routeur automatique intelligent
+        ];
+        
+        for (const modelId of models) {
+          try {
+            console.log(`Tentative OpenRouter avec : ${modelId}`);
+            return await this.analyzeWithOpenRouter(file, prompt, modelId);
+          } catch (error) {
+            console.warn(`Modèle ${modelId} échoué, essai suivant...`);
+          }
+        }
+      }
+
+      // 2. GEMINI DIRECT - En dernier recours car quota limité (2/min)
+      if (p?.geminiApiKey) {
+        try {
+          return await this.analyzeWithGemini(file, prompt);
+        } catch (error) {
+          console.warn("Gemini Direct failed.", error);
+        }
+      }
+
+      throw new Error("Désolé, tous les services IA sont actuellement surchargés. Réessayez dans 1 minute.");
+    },
+
+    async analyzeWithGemini(file, prompt) {
+      const apiKey = App.data.parametres?.geminiApiKey;
       if (!App.data.bestAiModel) {
         try {
           const mRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
           const mData = await mRes.json();
           if (mData.models) {
-             const available = mData.models.filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini"));
-             const pref = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-pro', 'gemini-2.0-pro', 'gemini-1.5-pro', 'gemini-pro'];
+             const available = mData.models.filter(m => 
+                m.supportedGenerationMethods?.includes("generateContent") && 
+                m.name.includes("gemini") &&
+                (m.name.includes("1.5-flash") || m.name.includes("2.0-flash") || m.name.includes("1.5-pro"))
+             );
+             const pref = ['gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'];
              for (let p of pref) {
                const found = available.find(m => m.name.includes(p));
                if (found) { App.data.bestAiModel = found.name.split('/').pop(); break; }
@@ -2036,9 +2183,9 @@ const App = {
                  App.data.bestAiModel = available[0].name.split('/').pop();
              }
           }
-        } catch(e) { console.warn("Model auto-discovery failed", e); }
+        } catch(e) {}
       }
-      const targetModel = App.data.bestAiModel || "gemini-2.5-flash";
+      const targetModel = App.data.bestAiModel || "gemini-1.5-flash";
 
       const base64Data = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -2057,20 +2204,71 @@ const App = {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || "Erreur de communication avec l'IA");
+        throw new Error(err.error?.message || "Gemini Error");
       }
 
       const result = await response.json();
-      let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("L'IA n'a retourné aucun résultat.");
-      
-      try {
-        text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-        return JSON.parse(text);
-      } catch (e) {
-        console.error("JSON parse error from AI:", text);
-        throw new Error("L'IA a retourné un format invalide.");
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+      return this.parseAIResponse(text);
+    },
+
+    async analyzeWithOpenRouter(file, prompt, model = "google/gemini-flash-1.5") {
+      const apiKey = App.data.parametres?.openRouterApiKey;
+      const base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'ELABBAR ERP'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: prompt + " \nIMPORTANT: Tu es un système d'extraction. Réponds UNIQUEMENT par un objet JSON. Si c'est une fiche manuscrite avec des noms d'employés et des heures, classe-la impérativement en 'PERSONNEL'." },
+              { type: "image_url", image_url: { url: base64Data } }
+            ]
+          }],
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || "OpenRouter Error");
       }
+      const res = await response.json();
+      if (!res.choices || res.choices.length === 0) throw new Error("OpenRouter: Réponse vide");
+      const text = res.choices[0].message.content;
+      return this.parseAIResponse(text);
+    },
+
+    parseAIResponse(text) {
+      if (!text) throw new Error("Réponse vide.");
+      
+      // Nettoyage radical : on cherche le premier '{' et le dernier '}'
+      const firstBrace = text.indexOf('{');
+      const lastBrace = text.lastIndexOf('}');
+      
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        const jsonContent = text.substring(firstBrace, lastBrace + 1);
+        try {
+          return JSON.parse(jsonContent);
+        } catch (e) {
+          console.error("Extraction JSON échouée sur :", jsonContent);
+          throw new Error("Format JSON corrompu dans la réponse IA.");
+        }
+      }
+      
+      throw new Error("Aucun objet JSON trouvé dans la réponse IA.");
     },
 
     showOverlay(text = "Analyse en cours...") {
@@ -2106,38 +2304,30 @@ const App = {
         this.showOverlay("Classification du document...");
         
         // Prompt global pour classer ET extraire
-        const prompt = `
-          Tu es l'assistant IA expert de l'ERP ELABBAR (Gestion de produits de la mer).
-          Ton rôle est d'analyser ce document (qui peut être non structuré, scanné de travers, ou brouillon) et d'en extraire intelligemment les informations essentielles, comme un humain le ferait. Déduis les informations manquantes si c'est évident.
-          
-          Détermine sa catégorie parmi : 
-          1. RECEPTION (Bon de livraison poisson, arrivage bateau, ticket de pesée)
-          2. PRODUCTION (Bon de production interne, saisie journalière, reconditionnement, traitement)
-          3. FACTURE (Facture fournisseur, frais divers, ordre de virement, reçu de paiement, électricité ONEE, eau)
-          4. CONSOMMABLE (Bon de livraison de saches, cartons, étiquettes, sel)
-          5. PERSONNEL (Fiche employé, contrat, pièce d'identité, relevé d'heures)
-          6. ENERGIE (Facture d'électricité détaillée ou Relevé de températures/Thermographes)
+        const prompt = `Analyse ce document pour l'ERP d'une usine de poisson (SEA PECHE / ELABBAR). 
+Tu es l'assistant IA expert de l'ERP. Ton rôle est d'analyser ce document et d'en extraire intelligemment les informations.
 
-          Retourne UNIQUEMENT un objet JSON valide avec cette structure stricte :
-          {
-            "category": "RECEPTION | PRODUCTION | FACTURE | CONSOMMABLE | PERSONNEL | ENERGIE",
-            "confidence": 0.95,
-            "summary": "Brève description (ex: Ordre de Virement MEGA IT, Facture ONEE...)",
-            "data": { ... }
-          }
+Renvoie UNIQUEMENT un objet JSON avec cette structure :
+{
+  "category": "FACTURE | PERSONNEL | PRODUCTION | RECEPTION | CONSOMMABLE | ENERGIE",
+  "data": { ... }
+}
 
-          Détails des données à extraire intelligemment par catégorie (fais au mieux si des données manquent, laisse vide ou mets "Inconnu" au lieu d'échouer) :
-          - RECEPTION: { bateau, client, fournisseur, date, bl_numero, lignes: [{ espece, calibre, nbCaisses, quantite }] }
-          - PRODUCTION: { date, lot, palette, client, espece, calibre, poidsMP, caissesPI, poidsPF, caissesPF, produitFini, conditionnement, type: "frais"|"congele"|"reconditionnement" }
-          - FACTURE: { numero, date, fournisseur, montantHT, tva, montantTTC, devise, motif, lignes: [{ description, quantite, prixUnitaire, totalLigne }] }
-          - CONSOMMABLE: { date, fournisseur, bl_numero, lignes: [{ nom, quantite, prixUnit, unite }] }
-          - PERSONNEL: { nom, prenom, poste, dept, salaire, date_embauche }
-          - ENERGIE: { type: "facture"|"thermographe", mois, consoHP, consoHPl, consoHC, montantTTC, temperatures: [{ zone, temp_moyenne }] }
+Structures de "data" par catégorie :
+- FACTURE: { numero, date, fournisseur, montantHT, tva, montantTTC, devise, motif, lignes: [{ desc, qte, pu, total }] }
+- PERSONNEL: { date, activite (Traitement/Reconditionnement), lignes: [{ nom, heures }] }
+- PRODUCTION: { date, client, espece, calibre, poidsMP, caissesPI, poidsPF, caissesPF, produitFini, conditionnement, reliquatNom, reliquatPoids }
+- RECEPTION: { bateau, client, fournisseur, date, bl_numero, lignes: [{ espece, calibre, nbCaisses, quantite }] }
+- CONSOMMABLE: { fournisseur, date, lignes: [{ nom, quantite, prixUnit }] }
+- ENERGIE: { type: 'facture', mois (YYYY-MM), consoHP, consoHPl, consoHC, montantTTC } ou { type: 'thermographe', temperatures: [{ zone, temp_moyenne }] }
 
-          Note: Pour les espèces de poisson, utilise les noms standards (SARDINE, MAQUEREAU, ANCHOIS, ESPADON, PAGEOT, MERLU, etc.).
-        `;
+CONSIGNES STRICTES :
+1. DATES: Toujours ISO YYYY-MM-DD.
+2. NOMBRES: Séparateur point (.), pas d'unités (ex: 150.5 au lieu de 150,5 kg).
+3. INCONNU: Mettre null ou 0.
+4. ESPECES: Utiliser les noms techniques (SEPIA, CALAMAR, POULPE).`;
 
-        this.currentFile = file; // Store for potential re-analysis
+        this.currentFile = file;
         const result = await this.analyzeImage(file, prompt);
         this.hideOverlay();
 
@@ -2313,10 +2503,13 @@ const App = {
 
   // Chart.js destroy helper
   destroyCharts() {
+    // 1. Destroy Chart.js instances if available
     if (typeof Chart !== 'undefined' && Chart.instances) {
       Object.keys(Chart.instances).forEach(key => {
         try { Chart.instances[key].destroy(); } catch(e) {}
       });
     }
+    // 2. Clear App.charts tracking object
+    this.charts = {};
   },
 };

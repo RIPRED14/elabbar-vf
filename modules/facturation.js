@@ -9,22 +9,22 @@ const Facturation = {
     if (!data) return;
     this.render();
     
-    // Convertir les champs de l'IA vers la structure attendue
     const entry = {
       fournisseur: data.fournisseur || '',
       numero: data.numero || '',
-      date: data.date || App.formatDate(new Date()),
-      montantHT: data.montantHT || 0,
-      tva: data.tva || 0,
-      montant: data.montantTTC || data.montant || 0,
+      date: data.date ? App.formatDateISO(data.date) : new Date().toISOString().split('T')[0],
+      montantHT: parseFloat(data.montantHT) || 0,
+      tva: parseFloat(data.tva) || 0,
+      montant: parseFloat(data.montantTTC || data.montant) || 0,
       devise: data.devise || 'MAD',
       motif: data.motif || '',
+      allocation: data.allocation || 'general',
       etatPaiement: 'En attente',
-      lignes: data.lignes && data.lignes.length > 0 ? data.lignes : []
+      lignes: Array.isArray(data.lignes) ? data.lignes : []
     };
 
     this.showForm(entry);
-    App.toast("Données IA importées avec succès.", "success");
+    App.toast("Facture importée et normalisée via IA.", "success");
   },
 
   render() {
@@ -177,9 +177,18 @@ const Facturation = {
                 <option value="Payée" ${entry?.etatPaiement === 'Payée' ? 'selected' : ''}>✅ Payée</option>
               </select>
             </div>
-            <div class="form-group" style="grid-column: 1 / -1;">
+            <div class="form-group" style="grid-column: 1 / 3;">
               <label class="form-label">Motif / Description globale</label>
               <input type="text" class="form-input" id="fMotif" value="${entry?.motif||''}" placeholder="Ex: Achat fournitures bureau">
+            </div>
+            <div class="form-group" style="grid-column: 3 / -1;">
+              <label class="form-label">Allocation Activité</label>
+              <select class="form-select" id="fAllocation">
+                <option value="general" ${entry?.allocation === 'general' ? 'selected' : ''}>🌍 Général (Toute l'usine)</option>
+                <option value="traitement" ${entry?.allocation === 'traitement' ? 'selected' : ''}>🔧 Traitement</option>
+                <option value="reconditionnement" ${entry?.allocation === 'reconditionnement' ? 'selected' : ''}>📦 Reconditionnement</option>
+                <option value="emballage" ${entry?.allocation === 'emballage' ? 'selected' : ''}>🏷️ Emballage / Intrants</option>
+              </select>
             </div>
           </div>
 
@@ -359,6 +368,7 @@ const Facturation = {
       montant: montantTTC, // compatibilité historique
       devise,
       lignes: lignesValides,
+      allocation: document.getElementById('fAllocation')?.value || 'general',
       type: 'Achat'
     };
 
@@ -409,11 +419,13 @@ Renvoie un objet JSON avec la structure exacte suivante :
     "montantTTC": 0.0,
     "devise": "MAD",
     "motif": "Description globale",
+    "allocation": "general | traitement | reconditionnement | emballage",
     "lignes": [
       { "description": "Nom article", "quantite": 1, "prixUnitaire": 0.0, "totalLigne": 0.0 }
     ]
   }
-}`;
+}
+Note pour l'allocation: utilise 'traitement' si c'est du poisson, sel ou matériel de prod, 'reconditionnement' si c'est du matériel de stockage/recond, 'emballage' si c'est des cartons/sachets, sinon 'general'.`;
 
       const result = await App.AI.analyzeImage(file, prompt);
       

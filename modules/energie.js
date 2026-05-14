@@ -4,15 +4,13 @@
 const Energie = {
   applyAIData(data) {
     if (!data) return;
-    this.render();
 
     if (data.type === 'thermographe') {
-      // Pour les thermographes, on met à jour les températures moyennes des zones
       const temps = data.temperatures || [];
       temps.forEach(t => {
         const zone = App.AI.fuzzyMatch(t.zone, ['TUNNEL 1', 'TUNNEL 2', 'CHAMBRE 1', 'CHAMBRE 2', 'SAS', 'RECEPTION']);
         if (zone) {
-          // On injecte dans le stockage pour persister
+          if (!App.data.stockage) App.data.stockage = {};
           if (!App.data.stockage.temperatures) App.data.stockage.temperatures = {};
           App.data.stockage.temperatures[zone] = t.temp_moyenne;
         }
@@ -20,10 +18,20 @@ const Energie = {
       App.toast("Températures des zones mises à jour via IA.", "success");
       this.render();
     } else {
-      // Pour les factures, on ouvre le formulaire de saisie mensuelle
+      // Normalisation du mois (IA peut renvoyer JJ/MM/AAAA ou MM/AAAA)
+      let finalMonth = data.mois || "";
+      if (finalMonth.includes('/')) {
+        const parts = finalMonth.split('/');
+        if (parts.length >= 2) {
+          const m = parts[parts.length - 2].padStart(2, '0');
+          const y = parts[parts.length - 1];
+          finalMonth = `${y}-${m}`;
+        }
+      }
+
       App.showModal("⚡ Facture Énergie (IA)", `
         <div class="form-grid">
-          <div class="form-group"><label>Mois</label><input type="month" id="ai_eMois" value="${data.mois || ''}"></div>
+          <div class="form-group"><label>Mois</label><input type="month" id="ai_eMois" value="${finalMonth}"></div>
           <div class="form-group"><label>Conso HP (kWh)</label><input type="number" id="ai_eHP" value="${data.consoHP || 0}"></div>
           <div class="form-group"><label>Conso HPl (kWh)</label><input type="number" id="ai_eHPl" value="${data.consoHPl || 0}"></div>
           <div class="form-group"><label>Conso HC (kWh)</label><input type="number" id="ai_eHC" value="${data.consoHC || 0}"></div>
