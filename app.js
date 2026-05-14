@@ -21,6 +21,11 @@ const App = {
   currentPage: 'dashboard',
   data: {},
   charts: {},
+  
+  // --- Supabase Config ---
+  supabase: null,
+  sbUrl: 'https://waqfodmwoldhusazcycg.supabase.co',
+  sbKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhcWZvZG13b2xkaHVzYXpjeWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3OTA3ODgsImV4cCI6MjA5NDM2Njc4OH0.LJTloQ8ch2LqVKK6sNo4SZ4xz-MbvsnuxAhsTzwzhlc',
 
   // --- Default Data ---
   defaults: {
@@ -1801,16 +1806,82 @@ const App = {
     return { dailyFixed, avgTariff };
   },
 
-  init() {
-    this.loadData();
+  async init() {
+    console.log("🚀 Initialisation App...");
+    this.initSupabase();
+    await this.loadData();
     this.updateHeaderDate();
     this.navigate('dashboard');
     this.updateAlertsBadge();
     setInterval(() => this.updateHeaderDate(), 60000);
   },
 
+  initSupabase() {
+    if (typeof supabase !== 'undefined') {
+      this.supabase = supabase.createClient(this.sbUrl, this.sbKey);
+      console.log("✅ Supabase Client Initialisé");
+    } else {
+      console.warn("⚠️ Supabase JS non chargé");
+    }
+  },
+
   // --- Storage ---
-  loadData() {
+  async loadData() {
+    // Toujours initialiser avec les valeurs par défaut pour éviter les erreurs de nullité
+    this.data = JSON.parse(JSON.stringify(this.defaults));
+
+    // 1. Tenter de charger depuis Supabase en priorité si connecté
+    if (this.supabase) {
+      try {
+        console.log("📥 Chargement des données depuis Supabase...");
+        const tables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes'];
+        const results = await Promise.all([
+          this.supabase.from('settings').select('*').eq('id', 'global').maybeSingle(),
+          this.supabase.from('pointage').select('*'),
+          ...tables.map(t => this.supabase.from(t).select('*'))
+        ]);
+
+        const [settings, pointage, ...others] = results;
+
+        // Diagnostic logs
+        results.forEach((res, i) => {
+          if (res.error) console.warn(`⚠️ Supabase Load Warning (Table index ${i}):`, res.error.message);
+        });
+
+        if (settings.data) {
+          this.data.parametres = settings.data.data;
+        } else {
+          console.log("ℹ️ Pas de paramètres trouvés sur Supabase, utilisation des réglages locaux.");
+        }
+        
+        // Map other tables
+        tables.forEach((tableName, index) => {
+          const result = others[index];
+          if (result && result.data && result.data.length > 0) {
+            this.data[tableName] = result.data;
+            console.log(`✅ Table '${tableName}' chargée (${result.data.length} lignes)`);
+          }
+        });
+
+        // Rebuild pointage object structure { date: { id: hours } }
+        if (pointage.data && pointage.data.length > 0) {
+          this.data.pointage = {};
+          pointage.data.forEach(p => {
+            if (!this.data.pointage[p.date]) this.data.pointage[p.date] = {};
+            this.data.pointage[p.date][p.employee_id] = p.hours;
+          });
+          console.log(`✅ Pointage chargé (${pointage.data.length} entrées)`);
+        }
+
+        console.log("🚀 Initialisation Supabase terminée");
+        // Sync to localStorage as backup
+        localStorage.setItem('gestprod_data', JSON.stringify(this.data));
+        return;
+      } catch (err) {
+        console.error("❌ Erreur chargement Supabase:", err);
+      }
+    }
+
     const saved = localStorage.getItem('gestprod_data');
     if (saved) {
       try {
@@ -1898,8 +1969,50 @@ const App = {
   },
 
   saveData() {
+    // 1. Sauvegarde locale immédiate (Performance + Offline fallback)
     localStorage.setItem('gestprod_data', JSON.stringify(this.data));
     this.updateAlertsBadge();
+    
+    // 2. Synchronisation Supabase en arrière-plan
+    this.syncToSupabase();
+  },
+
+  async syncToSupabase() {
+    if (!this.supabase) return;
+
+    try {
+      // 1. Settings (Single Row)
+      this.supabase.from('settings').upsert({ id: 'global', data: this.data.parametres }).catch(e => console.error(e));
+
+      // 2. Pointage (Transformation complexe)
+      if (this.data.pointage) {
+        const pointages = [];
+        for (const date in this.data.pointage) {
+          for (const empId in this.data.pointage[date]) {
+            pointages.push({
+              date: date,
+              employee_id: parseInt(empId),
+              hours: parseFloat(this.data.pointage[date][empId]) || 0
+            });
+          }
+        }
+        if (pointages.length > 0) {
+          this.supabase.from('pointage').upsert(pointages).catch(e => console.error(e));
+        }
+      }
+
+      // 3. Simple Array Tables
+      const arrayTables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes'];
+      
+      arrayTables.forEach(table => {
+        if (Array.isArray(this.data[table]) && this.data[table].length > 0) {
+          this.supabase.from(table).upsert(this.data[table]).catch(e => console.error(`Sync error for ${table}:`, e));
+        }
+      });
+
+    } catch (err) {
+      console.error("❌ Erreur critique Sync Supabase:", err);
+    }
   },
 
   resetData() {
