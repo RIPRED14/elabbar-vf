@@ -1,0 +1,4 @@
+- [x] `index.html` contains cache-control meta tags.
+- [x] Script tags in `index.html` use `v=6`.
+- [x] `app.js` uses `gestprod_v8_ntsamak_clients_v4_force` for data synchronization.
+- [x] `Stockage.onClientChange()` displays a warning Toast when no boats are available for the selected client.

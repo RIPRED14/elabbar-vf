@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ELABBAR - Seafood ERP Excellence</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface-variant": "#bacac3",
+                        "surface-container": "#151f37",
+                        "surface-tint": "#38debb",
+                        "on-tertiary-fixed": "#091b39",
+                        "primary": "#ffffff",
+                        "error-container": "#93000a",
+                        "inverse-on-surface": "#263049",
+                        "on-surface": "#d9e2ff",
+                        "surface-dim": "#08132a",
+                        "error": "#ffb4ab",
+                        "on-primary-fixed": "#002019",
+                        "on-secondary-fixed": "#0d1c32",
+                        "surface": "#08132a",
+                        "surface-container-low": "#101b33",
+                        "secondary-fixed-dim": "#b9c7e4",
+                        "primary-fixed": "#5ffbd6",
+                        "surface-container-lowest": "#030d25",
+                        "on-secondary": "#233148",
+                        "primary-container": "#5ffbd6",
+                        "tertiary": "#ffffff",
+                        "surface-container-high": "#1f2942",
+                        "on-primary-fixed-variant": "#005142",
+                        "on-error": "#690005",
+                        "on-primary-container": "#00725e",
+                        "on-tertiary": "#20304f",
+                        "tertiary-fixed": "#d8e2ff",
+                        "secondary-container": "#3c4962",
+                        "inverse-surface": "#d9e2ff",
+                        "secondary-fixed": "#d6e3ff",
+                        "surface-bright": "#2f3952",
+                        "background": "#08132a",
+                        "secondary": "#b9c7e4",
+                        "tertiary-container": "#d8e2ff",
+                        "on-secondary-fixed-variant": "#39475f",
+                        "on-background": "#d9e2ff",
+                        "surface-variant": "#2a344d",
+                        "on-primary": "#00382d",
+                        "on-error-container": "#ffdad6",
+                        "outline": "#85948e",
+                        "inverse-primary": "#006b58",
+                        "outline-variant": "#3c4a45",
+                        "surface-container-highest": "#2a344d",
+                        "primary-fixed-dim": "#38debb",
+                        "on-secondary-container": "#abb9d6",
+                        "on-tertiary-container": "#556486",
+                        "tertiary-fixed-dim": "#b6c6ed",
+                        "on-tertiary-fixed-variant": "#374767"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-sm": "16px",
+                        "margin-md": "32px",
+                        "unit": "8px",
+                        "margin-lg": "64px",
+                        "gutter": "24px",
+                        "container-padding": "32px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "display": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-md": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["24px", {"lineHeight": "1.2", "fontWeight": "600"}],
+                        "display": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                        "label-md": ["14px", {"lineHeight": "1.4", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "label-sm": ["12px", {"lineHeight": "1.2", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #08132a;
+            color: #d9e2ff;
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(17, 34, 64, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(100, 255, 218, 0.1);
+        }
+        .cyan-glow {
+            box-shadow: 0 0 15px rgba(100, 255, 218, 0.15);
+        }
+    </style>
+</head>
+<body class="antialiased overflow-x-hidden">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl dark:bg-surface/80 border-b border-outline-variant/10 shadow-sm">
+<div class="flex items-center justify-between px-margin-md py-4 max-w-[1440px] mx-auto">
+<div class="flex items-center gap-3">
+<img alt="ELABBAR Logo" class="h-8 w-8 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVErUECZNvj7hESb6hPFe_Dn1BK8Op3Yf4LYPA6x5trnVyO0RgfAz920xQ2d4wAw2QbhC00lf0HF3bLWnDeG-kOl4kEZcFrM2qNVhDSgsr9S7NOwaVqJv7mbAZg2c3kJcqnzIX-aBaQLi0PqU-ukRljFwXBI4BlOz5pLVz0E1_600c1GqPzEl_VKYTY3RvwGhEImwoOoryijk93JoATs0_jhasXI5uN-ovglyfSCbZHI7ZCv6B7FlcF5f4u0n-jYPTRX4f_q1xZvc"/>
+<span class="font-display text-headline-md font-bold tracking-tight text-primary-fixed dark:text-primary-fixed">ELABBAR</span>
+</div>
+<div class="hidden md:flex gap-margin-md items-center">
+<a class="text-on-surface-variant hover:text-primary-fixed transition-colors duration-200 font-label-md text-label-md" href="#">Modules</a>
+<a class="text-on-surface-variant hover:text-primary-fixed transition-colors duration-200 font-label-md text-label-md" href="#">Support</a>
+<button class="bg-primary-container text-on-primary-container px-6 py-2 rounded-lg font-label-md text-label-md hover:scale-95 transition-transform">Connexion</button>
+</div>
+<button class="md:hidden text-primary-fixed">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+</div>
+</header>
+<main class="pt-20">
+<!-- Hero Section -->
+<section class="relative min-h-[90vh] flex flex-col justify-center px-margin-md py-margin-lg overflow-hidden">
+<div class="absolute inset-0 z-0">
+<div class="absolute inset-0 bg-gradient-to-b from-surface-dim via-surface-container-lowest to-surface-dim"></div>
+<!-- Abstract Deep Sea Texture -->
+<div class="absolute top-1/4 -right-20 w-96 h-96 bg-primary-fixed/5 rounded-full blur-[120px]"></div>
+<div class="absolute bottom-1/4 -left-20 w-96 h-96 bg-tertiary-fixed/5 rounded-full blur-[120px]"></div>
+</div>
+<div class="relative z-10 max-w-[1440px] mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-margin-lg items-center">
+<div class="space-y-margin-md">
+<span class="inline-block px-4 py-1.5 rounded-full border border-primary-fixed/30 bg-primary-fixed/5 text-primary-fixed font-label-sm text-label-sm tracking-widest uppercase">Premium Enterprise Solution</span>
+<h1 class="font-display text-display text-primary leading-tight">L'Excellence du <br/><span class="text-primary-fixed">Seafood ERP</span></h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+                        Propulsez votre logistique marine vers l'avenir. Une plateforme intégrée pour une gestion sans faille de la réception à l'exportation mondiale.
+                    </p>
+</div>
+<!-- Login Form Card -->
+<div class="glass-panel p-margin-md rounded-xl cyan-glow space-y-6 max-w-md w-full lg:ml-auto">
+<h2 class="font-headline-md text-headline-md text-primary">Accès Sécurisé</h2>
+<form class="space-y-4">
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Identifiant</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 text-on-surface focus:border-primary-fixed focus:ring-1 focus:ring-primary-fixed outline-none transition-all" placeholder="votre.nom@elabbar.com" type="text"/>
+</div>
+<div class="space-y-2">
+<label class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Mot de passe</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-4 py-3 text-on-surface focus:border-primary-fixed focus:ring-1 focus:ring-primary-fixed outline-none transition-all" placeholder="••••••••" type="password"/>
+</div>
+<button class="w-full bg-primary-fixed text-on-primary-fixed font-bold py-4 rounded-lg hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary-fixed/20" type="submit">
+                            Accéder au Dashboard
+                        </button>
+<div class="flex justify-between items-center pt-2">
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary-fixed transition-colors" href="#">Mot de passe oublié ?</a>
+<span class="font-label-sm text-label-sm text-on-surface-variant/40">v2.4.0</span>
+</div>
+</form>
+</div>
+</div>
+</section>
+<!-- Features Grid -->
+<section class="py-margin-lg bg-surface-container-lowest">
+<div class="max-w-[1440px] mx-auto px-margin-md">
+<div class="mb-margin-lg">
+<h2 class="font-headline-lg text-headline-lg text-primary mb-4 text-center">Infrastucture Opérationnelle</h2>
+<div class="w-16 h-1 bg-primary-fixed mx-auto"></div>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Feature 1 -->
+<div class="glass-panel p-6 rounded-xl hover:bg-surface-variant/50 transition-colors group">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-fixed/10 rounded-lg mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary-fixed text-3xl" data-icon="inventory_2">inventory_2</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-2">Réception Automatisée</h3>
+<p class="font-body-md text-label-sm text-on-surface-variant">Capture intelligente des données dès l'arrivée au quai.</p>
+</div>
+<!-- Feature 2 -->
+<div class="glass-panel p-6 rounded-xl hover:bg-surface-variant/50 transition-colors group">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-fixed/10 rounded-lg mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary-fixed text-3xl" data-icon="qr_code_2">qr_code_2</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-2">Traçabilité QR Code</h3>
+<p class="font-body-md text-label-sm text-on-surface-variant">Suivi de l'origine jusqu'au consommateur final.</p>
+</div>
+<!-- Feature 3 -->
+<div class="glass-panel p-6 rounded-xl hover:bg-surface-variant/50 transition-colors group">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-fixed/10 rounded-lg mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary-fixed text-3xl" data-icon="psychology">psychology</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-2">Gestion Intelligente</h3>
+<p class="font-body-md text-label-sm text-on-surface-variant">Prédictions de stock basées sur les flux saisonniers.</p>
+</div>
+<!-- Feature 4 -->
+<div class="glass-panel p-6 rounded-xl hover:bg-surface-variant/50 transition-colors group">
+<div class="w-12 h-12 flex items-center justify-center bg-primary-fixed/10 rounded-lg mb-6 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary-fixed text-3xl" data-icon="receipt_long">receipt_long</span>
+</div>
+<h3 class="font-label-md text-label-md text-primary mb-2">Facturation &amp; Export</h3>
+<p class="font-body-md text-label-sm text-on-surface-variant">Conformité douanière et export en un clic.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Advantages Section -->
+<section class="py-margin-lg bg-surface">
+<div class="max-w-[1440px] mx-auto px-margin-md">
+<div class="flex flex-col lg:flex-row gap-margin-lg items-center">
+<div class="flex-1 w-full relative">
+<div class="aspect-video rounded-xl overflow-hidden glass-panel relative">
+<img class="w-full h-full object-cover opacity-60" data-alt="A sophisticated digital command center dashboard for maritime logistics, featuring vibrant cyan data visualizations, 3D sea floor maps, and glowing UI elements on a dark navy glassmorphic interface. The lighting is low-key with intense neon cyan highlights, creating a high-tech, professional atmosphere suitable for seafood ERP software." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMea1qyqZGkI9I9G_djYV2tDDFILwmWqHt1mtk1WULhBRjWIchUqD5tMH4sANPF2E0tMt-XjpTJMgCPGErri_7X1ryTxL4U0aOyovmToVTxo2VFIoeeOzeGl6lRkBiv0NlnBaLraCs25fusKNWIp7lAKPnTraCBHfH6YjpSlBa65SkHpOhTEYSXKuKQvjOGakmFR8R77pRXjb_wIb63SmDxF7KnY24puK_oAaPHEwN0ZgNOLy79OWFFp3VY43FcGyuF5YEafRcla0"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-dim to-transparent"></div>
+<div class="absolute bottom-6 left-6 flex items-center gap-4">
+<div class="w-3 h-3 bg-primary-fixed rounded-full animate-pulse"></div>
+<span class="font-label-sm text-label-sm text-primary-fixed">Réseau Déployé : Global</span>
+</div>
+</div>
+</div>
+<div class="flex-1 space-y-gutter">
+<h2 class="font-headline-lg text-headline-lg text-primary">Avantages Stratégiques</h2>
+<div class="space-y-4">
+<!-- Card 1 -->
+<div class="flex gap-4 p-4 rounded-lg bg-surface-container-low border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="smart_toy">smart_toy</span>
+<div>
+<h4 class="font-label-md text-label-md text-primary">Intelligence Artificielle</h4>
+<p class="font-body-md text-label-sm text-on-surface-variant">Optimisation algorithmique des rendements de découpe.</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex gap-4 p-4 rounded-lg bg-surface-container-low border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="signal_wifi_off">signal_wifi_off</span>
+<div>
+<h4 class="font-label-md text-label-md text-primary">Mode Hors-ligne</h4>
+<p class="font-body-md text-label-sm text-on-surface-variant">Synchronisation automatique une fois le signal rétabli.</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="flex gap-4 p-4 rounded-lg bg-surface-container-low border border-outline-variant/10">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="cloud_done">cloud_done</span>
+<div>
+<h4 class="font-label-md text-label-md text-primary">Déploiement SaaS</h4>
+<p class="font-body-md text-label-sm text-on-surface-variant">Cloud sécurisé ultra-haute disponibilité.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Trust Section -->
+<section class="py-margin-md border-y border-outline-variant/10">
+<div class="max-w-[1440px] mx-auto px-margin-md text-center">
+<p class="font-label-sm text-label-sm text-on-surface-variant/60 uppercase tracking-[0.2em] mb-gutter">Utilisé par les leaders de l'industrie</p>
+<div class="flex flex-wrap justify-center items-center gap-margin-lg opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
+<div class="h-12 w-32 bg-primary/20 rounded flex items-center justify-center font-bold">OCÉANE</div>
+<div class="h-12 w-32 bg-primary/20 rounded flex items-center justify-center font-bold">MARINEX</div>
+<div class="h-12 w-32 bg-primary/20 rounded flex items-center justify-center font-bold">ATLANTIQUE</div>
+<div class="h-12 w-32 bg-primary/20 rounded flex items-center justify-center font-bold">SEA-FOOD CO</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="w-full bottom-0 bg-surface-dim dark:bg-surface-dim border-t border-outline-variant/10">
+<div class="flex flex-col md:flex-row justify-between items-center px-margin-md py-margin-md gap-gutter w-full max-w-[1440px] mx-auto">
+<div class="flex items-center gap-3">
+<span class="font-display text-headline-md text-primary-fixed">ELABBAR</span>
+</div>
+<div class="flex flex-wrap justify-center gap-gutter text-on-surface-variant font-label-sm text-label-sm">
+<a class="hover:text-primary-fixed transition-colors" href="#">Modules</a>
+<a class="hover:text-primary-fixed transition-colors" href="#">Sécurité</a>
+<a class="hover:text-primary-fixed transition-colors" href="#">Support</a>
+<a class="hover:text-primary-fixed transition-colors" href="#">Mentions Légales</a>
+</div>
+<p class="font-body-md text-label-sm text-on-surface-variant/60">
+                © 2024 ELABBAR Seafood ERP. Tous droits réservés.
+            </p>
+</div>
+</footer>
+</body></html>

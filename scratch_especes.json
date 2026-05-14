@@ -1,0 +1,879 @@
+[
+  {
+    "nom": "POULPE",
+    "calibres": [
+      "TAKO 1",
+      "TAKO 2",
+      "TAKO 3",
+      "TAKO 4",
+      "TAKO 5",
+      "TAKO 6",
+      "TAKO 7",
+      "TAKO 8",
+      "TAKO 9"
+    ]
+  },
+  {
+    "nom": "SEPIA",
+    "calibres": [
+      "MONGO 1",
+      "MONGO 2",
+      "MONGO 3",
+      "MONGO 4",
+      "MONGO 5",
+      "MONGO 6",
+      "MONGO 7",
+      "MONGO 8",
+      "MONGO MX"
+    ]
+  },
+  {
+    "nom": "CALAMAR",
+    "calibres": [
+      "GG",
+      "G",
+      "M",
+      "P",
+      "2P",
+      "3P",
+      "4P",
+      "MX"
+    ]
+  },
+  {
+    "nom": "CHOCO",
+    "calibres": [
+      "G",
+      "M",
+      "P",
+      "2P",
+      "3P",
+      "4P",
+      "MX",
+      "GM",
+      "MM",
+      "PM",
+      "2PM",
+      "ROTO"
+    ]
+  },
+  {
+    "nom": "LENGUADO",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "TRES GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "DENTON",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "TRES GROS",
+      "MIXTE",
+      "ENTIER"
+    ]
+  },
+  {
+    "nom": "PARGO",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "TRES GROS",
+      "MIXTE",
+      "ENTIER"
+    ]
+  },
+  {
+    "nom": "SARGO",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE",
+      "ENTIER"
+    ]
+  },
+  {
+    "nom": "DORADA",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "CORVINA",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "SAMPIETRO",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "SALMONETE",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "CONGRIO",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "RAYA",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE",
+      "WING"
+    ]
+  },
+  {
+    "nom": "RATA",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "ACEDIA",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "HERRERA",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "VARIOS",
+    "calibres": [
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "BURRO",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE",
+      "ENTIER"
+    ]
+  },
+  {
+    "nom": "SEPIOLA",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "VERRUGATO",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "EU-MIX",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "AF-MIX",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "RONCADOR",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "GALINA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "JUREL",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "CHOPA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "BESUGO",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "MERLUZA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "GAZON",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "CABEZOTE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "CABRETA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "CATCHOCHO",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "GALLO",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PAMPANO",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "SABLE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "ROQUERA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "SALMONE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PINTA ROJA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "RAPE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "RASCASIO",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "REKODAY",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "HAMADAY",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "LIRIO",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "BRECA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PESCADILLA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PASSAMAR",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "BAILLA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "CHERNE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "MOSTEL",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "GABRITA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "RENKO",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "SAMA PLUMA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PALOMA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "FOLA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PULUDA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "FRITE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "POTON",
+    "calibres": [
+      "GG",
+      "G",
+      "M",
+      "P",
+      "2P",
+      "3P",
+      "4P",
+      "MX",
+      "TUBE",
+      "TENTACULE",
+      "COURONNE"
+    ]
+  },
+  {
+    "nom": "CREVETTE",
+    "calibres": [
+      "1/2",
+      "2/3",
+      "3/4",
+      "4/5",
+      "5/6",
+      "6/7",
+      "7/8",
+      "8/9",
+      "9/10",
+      "10/12",
+      "12/14",
+      "14/16",
+      "16/20",
+      "20/30",
+      "30/40",
+      "40/60",
+      "60/80",
+      "80/UP"
+    ]
+  },
+  {
+    "nom": "SARDINE",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "MAQUEREAU",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE"
+    ]
+  },
+  {
+    "nom": "CRABE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "CROQUETTE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "MOULE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "LANGOUSTE",
+    "calibres": [
+      "200/300",
+      "300/500",
+      "500/1000",
+      "1000/2000",
+      "2000/3000"
+    ]
+  },
+  {
+    "nom": "BURRO S/C",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "GAMBAS",
+    "calibres": [
+      "1/2",
+      "2/3",
+      "3/4",
+      "4/5",
+      "5/6",
+      "6/7",
+      "7/8",
+      "8/9",
+      "9/10",
+      "10/12",
+      "12/14",
+      "14/16",
+      "16/20",
+      "20/30",
+      "30/40",
+      "40/60",
+      "60/80",
+      "80/UP"
+    ]
+  },
+  {
+    "nom": "ARANA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "THON",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE",
+      "ENTIER"
+    ]
+  },
+  {
+    "nom": "SURIMI",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "SPRING ROLL PASTRY",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "BALISTE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "SAUMON",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "TAKO MIX",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "crevette G/5",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "LONGUE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "SOLE",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE",
+      "ENTIER"
+    ]
+  },
+  {
+    "nom": "MERLAN",
+    "calibres": [
+      "PETIT",
+      "MOYEN",
+      "GROS",
+      "MIXTE",
+      "ENTIER",
+      "FILET"
+    ]
+  },
+  {
+    "nom": "SARGO KG",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "RONCADOR KG",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "DENTON KG",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "ACEDIA KG",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PELUDA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "LAMELLE DE CALAMAR",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "EUR-MIX",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "BOGUE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "ST PIERRE",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "PELAGIQUES",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "ANCHOIS",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  },
+  {
+    "nom": "SOYA",
+    "calibres": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ]
+  }
+]

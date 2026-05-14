@@ -1,0 +1,13 @@
+{
+  "name": "elabbar-erp",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npx serve ./",
+    "start": "npx serve ./"
+  },
+  "dependencies": {
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^4.0.379",
+    "xlsx": "^0.18.5"
+  }
+}

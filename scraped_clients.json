@@ -1,0 +1,132 @@
+[
+  {
+    "nom": "FISH & FOOD TRAITE...",
+    "type": "Client, Fournisseur poisson, Usine de traitement",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "FISH AND FOOD PROC...",
+    "type": "Client, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "LAMBDA FISH SUD",
+    "type": "Client, Fournisseur poisson",
+    "ville": "Dakhla",
+    "bateaux": []
+  },
+  {
+    "nom": "4A LOGISTIC",
+    "type": "Frigo",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "A.O.C",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Casablanca",
+    "bateaux": []
+  },
+  {
+    "nom": "ADAM INDUSTRIES",
+    "type": "Fournisseur divers achats",
+    "ville": "Casablanca",
+    "nIF": "1641580",
+    "bateaux": []
+  },
+  {
+    "nom": "AGADIR ICE",
+    "type": "Frigo",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "AGORAPOLIS",
+    "type": "Fournisseur divers achats",
+    "ville": "Agadir",
+    "adresse": "D 164 Riad Sala...",
+    "telephone": "+212 661 372 232",
+    "formeJuridique": "Société à Responsabilité Limitée",
+    "nRC": "35183",
+    "bateaux": []
+  },
+  {
+    "nom": "AIT MELLOUL CHIMIE",
+    "type": "Fournisseur divers achats",
+    "ville": "Agadir",
+    "email": "aitmelloulchimie1@gmail.com",
+    "nIF": "06949193",
+    "nRC": "957/97",
+    "bateaux": []
+  },
+  {
+    "nom": "ALIA PECHE",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": [
+      {"nom": "IBNOU NOUASS", "type": "Congelateur", "agrement": "CO 3214"},
+      {"nom": "MASSIRA 6", "type": "Congelateur", "agrement": "CO 0501"},
+      {"nom": "MASSIRA 7", "type": "Congelateur", "agrement": "CO 0502"},
+      {"nom": "MASSIRA 8", "type": "Congelateur", "agrement": "CO 0503"},
+      {"nom": "AGDAL 4", "type": "Congelateur", "agrement": ""}
+    ]
+  },
+  {
+    "nom": "ARCADE EQUIPEMENT",
+    "type": "Fournisseur divers achats",
+    "ville": "Casablanca",
+    "bateaux": []
+  },
+  {
+    "nom": "ARCHI FOOD",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "ASMAK KHALIL ADAM",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "ASMAK RAHAL",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "ATLANTIC FISH MORO...",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "ATLANTIC FISH SUD",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": []
+  },
+  {
+    "nom": "ATLANTIC GAMBA SUD...",
+    "type": "Armateur, Client, Fournisseur poisson",
+    "ville": "Boujdour",
+    "bateaux": []
+  },
+  {
+    "nom": "AVENIR NEGOCE",
+    "type": "Fournisseur divers achats",
+    "ville": "Agadir",
+    "nIF": "15258234",
+    "nRC": "12211",
+    "bateaux": []
+  },
+  {
+    "nom": "BIOB SHRIMP",
+    "type": "Armateur, Fournisseur poisson",
+    "ville": "Agadir",
+    "bateaux": []
+  }
+]
