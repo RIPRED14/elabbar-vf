@@ -67,8 +67,8 @@ App.AiEngine = {
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             </div>
             <h4 style="font-size:1.1rem;margin-bottom:8px;color:#1e293b;">Glissez ou cliquez pour sélectionner</h4>
-            <p style="color:#64748b;font-size:0.85rem;">Formats supportés : JPG, PNG, PDF</p>
-            <input type="file" id="aiFileInput" style="display:none" accept="image/*,application/pdf" onchange="App.AiEngine.handleFileSelect(event)">
+            <p style="color:#64748b;font-size:0.85rem;">Formats supportés : JPG, PNG, PDF, XLSX</p>
+            <input type="file" id="aiFileInput" style="display:none" accept="image/*,application/pdf,.xlsx" onchange="App.AiEngine.handleFileSelect(event)">
           </div>
 
           <div id="aiProcessing" class="ai-processing">
@@ -137,8 +137,13 @@ App.AiEngine = {
       } else if (file.type.startsWith('image/')) {
         base64Data = await this.fileToBase64(file);
         mimeType = file.type;
+      } else if (file.name.endsWith('.xlsx')) {
+        // Special case: Excel to Text for AI
+        const text = await this.excelToText(file);
+        await this.callGeminiTextApi(text);
+        return;
       } else {
-        throw new Error('Format de fichier non supporté. Veuillez utiliser un PDF ou une Image.');
+        throw new Error('Format de fichier non supporté. Veuillez utiliser un PDF, une Image ou un Excel.');
       }
 
       // Format for Gemini (remove data:image/jpeg;base64, prefix)
@@ -245,5 +250,72 @@ App.AiEngine = {
     } finally {
       this.closeScanner();
     }
+  },
+
+  async excelToText(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          let fullText = "";
+          workbook.SheetNames.forEach(sheetName => {
+            const ws = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            fullText += `--- Sheet: ${sheetName} ---\n`;
+            json.forEach(row => {
+              fullText += row.map(cell => cell === null ? "" : cell).join("\t") + "\n";
+            });
+          });
+          resolve(fullText);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  },
+
+  async callGeminiTextApi(text) {
+    const key = App.data.parametres?.geminiKey;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`;
+    const prompt = (this.prompts[this.currentType] || "Extrait les données en JSON") + "\n\nVoici le contenu du fichier Excel :\n" + text;
+
+    const payload = {
+      "contents": [{ "parts": [{ "text": prompt }] }]
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error?.message || "Erreur de l'API Gemini");
+      }
+
+      const data = await response.json();
+      if (data.candidates && data.candidates[0].content.parts[0].text) {
+        let rawText = data.candidates[0].content.parts[0].text;
+        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const extractedJson = JSON.parse(rawText);
+        App.toast("Intelligence IA : Analyse réussie !", 'success');
+        if (this.currentCallback) this.currentCallback(extractedJson);
+      }
+    } catch (e) {
+      console.error(e);
+      throw new Error("Erreur de l'IA Textuelle: " + e.message);
+    } finally {
+      this.closeScanner();
+    }
+  },
+
+  showOverlay(text) {
+    App.toast(text, 'info');
   }
 };

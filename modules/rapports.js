@@ -37,12 +37,24 @@ const Rapports = {
             </div>
             
             <div class="date-picker-wrapper">
-              ${this.view === 'monthly' ? `
+              ${this.view === 'quarterly' ? `
+                <div style="display:flex; gap:8px;">
+                  <select class="input-premium" id="rapportAnnee" onchange="Rapports.render()">
+                    ${[2024,2025,2026].map(y => `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`).join('')}
+                  </select>
+                  <select class="input-premium" id="rapportTrim" onchange="Rapports.render()">
+                    <option value="1">T1</option>
+                    <option value="2">T2</option>
+                    <option value="3">T3</option>
+                    <option value="4">T4</option>
+                  </select>
+                </div>
+              ` : this.view === 'monthly' ? `
                 <select class="input-premium" id="rapportMois" onchange="Rapports.changeMonth(this.value)">
                   ${months.map((m,i) => `<option value="${m.value}" ${i===0?'selected':''}>${m.label}</option>`).join('')}
                 </select>
               ` : `
-                <input type="date" value="${this.selectedDate}" onchange="Rapports.changeDate(this.value)" class="input-premium">
+                <input type="date" id="rapportJour" value="${this.selectedDate}" onchange="Rapports.changeDate(this.value)" class="input-premium">
               `}
             </div>
 
@@ -80,15 +92,21 @@ const Rapports = {
     let prod = [];
     let label = "";
     
-    if (this.view === 'monthly') {
+    if (this.view === 'quarterly') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      const trim = parseInt(document.getElementById('rapportTrim').value);
+      prod = App.getQuarterProduction(year, trim);
+      label = App.formatQuarter(year, trim);
+    } else if (this.view === 'monthly') {
       const monthVal = document.getElementById('rapportMois').value.split('-');
       const year = parseInt(monthVal[0]);
       const month = parseInt(monthVal[1]) - 1;
       prod = App.getMonthProduction(year, month);
       label = new Date(year, month, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
     } else {
-      prod = App.data.production.filter(p => p.date === this.selectedDate);
-      label = new Date(this.selectedDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      const dateVal = document.getElementById('rapportJour').value;
+      prod = App.data.production.filter(p => p.date === dateVal);
+      label = new Date(dateVal).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
     if (prod.length === 0) {

@@ -299,6 +299,13 @@ const Parametres = {
               </div>
               <input type="file" accept=".json" style="display:none" onchange="App.importData(this.files[0])">
             </label>
+            <button class="btn" style="background:var(--status-info); color:white; padding:12px 24px; display:flex; align-items:center; gap:8px;" onclick="App.syncToSupabase()">
+              <span style="font-size:1.4rem;">☁️</span> 
+              <div style="text-align:left;">
+                <div style="font-weight:600;">Synchronisation Cloud</div>
+                <div style="font-size:0.75rem; opacity:0.9;">Forcer l'envoi maintenant</div>
+              </div>
+            </button>
             <div style="flex:1;"></div>
             <button class="btn btn-danger" onclick="App.resetData()" style="padding:12px 24px; display:flex; align-items:center; gap:8px;">
               <span style="font-size:1.4rem;">🗑️</span> 

@@ -3,8 +3,12 @@
    ============================================ */
 const Personnel = {
   currentTab: 'resume',
-  currentMonth: new Date().toISOString().substring(0, 7), // YYYY-MM
-  currentDailyDate: new Date().toISOString().substring(0, 10), // YYYY-MM-DD
+  viewType: 'month',
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: new Date().getMonth(),
+  selectedDay: new Date().toISOString().split('T')[0],
+  selectedPeriod: new Date().toISOString().substring(0, 7), // YYYY-MM
+  selectedDayISO: new Date().toISOString().substring(0, 10), // YYYY-MM-DD
   currentDailyActivite: 'Traitement',
   currentFicheId: null,
   pendingScanData: null,
@@ -14,7 +18,15 @@ const Personnel = {
     
     // On bascule sur l'onglet journalier
     this.currentTab = 'daily';
-    if (data.date) this.currentDailyDate = App.formatDateISO(data.date);
+    const fallbackDate = this.selectedDay || new Date().toISOString().split('T')[0];
+    const finalDate = data.date ? App.formatDateISO(data.date) : fallbackDate;
+    
+    this.selectedDay = finalDate;
+    const parts = this.selectedDay.split('-');
+    this.selectedYear = parseInt(parts[0]);
+    this.selectedMonth = parseInt(parts[1]) - 1;
+    this.viewType = 'day';
+    this.updatePeriodISO();
     
     const activite = data.activite || 'Traitement';
     const dateAffichage = data.date || new Date().toLocaleDateString('fr-FR');
@@ -51,7 +63,7 @@ const Personnel = {
         }
       });
 
-      this.recalcPointageMensuel(this.currentDailyDate.substring(0, 7));
+      this.recalcPointageMensuel(this.selectedPeriod);
       this.render();
       
       if (matchCount > 0) {
@@ -116,32 +128,87 @@ const Personnel = {
     ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).reduce((s, p) => s + p.salaire, 0);
     ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).reduce((s, p) => s + p.salaire, 0);
     
+    // Cloud Sync: Flat pointage table
+    this.syncFlatPointage(monthStr);
+    
     App.saveData();
   },
 
+  async syncFlatPointage(monthStr) {
+    if (!App.supabase) return;
+    const ptg = this.getPointageData(monthStr);
+    const flatEntries = [];
+    
+    Object.keys(ptg.jours).forEach(date => {
+      const presences = this.getDayPresences(ptg.jours[date]);
+      // Group by employee to sum hours if multiple fiches
+      const empHours = {};
+      presences.forEach(p => {
+        empHours[p.personnelId] = (empHours[p.personnelId] || 0) + (p.heures || 0);
+      });
+      
+      Object.keys(empHours).forEach(empId => {
+        flatEntries.push({
+          date: date,
+          employee_id: parseInt(empId),
+          hours: empHours[empId]
+        });
+      });
+    });
+
+    if (flatEntries.length > 0) {
+      try {
+        const { error } = await App.supabase.from('pointage').upsert(flatEntries, { onConflict: 'date, employee_id' });
+        if (error) console.error("Sync Flat Pointage Error:", error);
+      } catch (e) {
+        console.error("Sync Flat Pointage Exception:", e);
+      }
+    }
+  },
+
   render() {
-    this.recalcPointageMensuel(this.currentMonth);
+    this.updatePeriodISO();
+    this.recalcPointageMensuel(this.selectedPeriod);
     const content = document.getElementById('pageContent');
     content.innerHTML = `
       <div class="fade-in">
-        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:24px; gap:20px; flex-wrap:wrap;">
           <div>
             <h2 class="page-title">Personnel & Pointage</h2>
             <p class="page-subtitle">Gestion des effectifs, pointage journalier et calcul des coûts de main d'œuvre</p>
           </div>
-          <div style="display:flex; gap:12px; align-items:center;">
-            <input type="month" class="form-input" style="width:160px;" value="${this.currentMonth}" onchange="Personnel.changeMonth(this.value)">
-            <label class="btn btn-success" style="cursor:pointer; background:linear-gradient(135deg, #10b981, #059669); border:none;" title="Importer le fichier Excel H POINTAGE">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
-              <span>Import Excel</span>
+          
+          <div style="display:flex; gap:12px; align-items:flex-end;">
+            <div style="display:flex; background:var(--bg-card); padding:4px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:2px;">
+              <button onclick="Personnel.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Jour</button>
+              <button onclick="Personnel.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Mois</button>
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${this.viewType === 'day' ? 'Date' : 'Période'}</label>
+              ${this.viewType === 'day' 
+                ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Personnel.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+                : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Personnel.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+              }
+            </div>
+
+            <div style="width:1px; height:24px; background:var(--border-color); margin:0 8px;"></div>
+
+            <label class="btn btn-success btn-sm" style="cursor:pointer; padding: 8px 12px;" title="Importer le fichier Excel H POINTAGE">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+              <span>Import</span>
               <input type="file" accept=".xlsx,.xls" style="display:none" onchange="Personnel.importExcel(event)">
             </label>
-            <button class="btn btn-primary" onclick="Personnel.showAddModal()">+ Nouvel Employé</button>
+            <button class="btn btn-primary btn-sm" onclick="Personnel.showAddModal()">+ Employé</button>
           </div>
         </div>
 
         <div class="tabs" style="margin-bottom:24px;">
-          ${this.tabs.map(t => `
+          ${this.tabs.filter(t => {
+            if (this.viewType === 'day' && (t.id === 'resume' || t.id === 'pointage')) return false;
+            if (this.viewType === 'month' && t.id === 'daily') return false;
+            return true;
+          }).map(t => `
             <div class="tab ${this.currentTab === t.id ? 'active' : ''}" onclick="Personnel.switchTab('${t.id}')">
               ${t.icon} ${t.label}
             </div>
@@ -155,6 +222,74 @@ const Personnel = {
     `;
   },
 
+  onViewTypeChange(type) {
+    this.viewType = type;
+    if (type === 'day') {
+      this.currentTab = 'daily';
+    } else {
+      this.currentTab = 'resume';
+    }
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onDayChange(e) {
+    this.selectedDay = e.target.value;
+    const parts = this.selectedDay.split('-');
+    this.selectedYear = parseInt(parts[0]);
+    this.selectedMonth = parseInt(parts[1]) - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onPeriodChange(e) {
+    const val = e.target.value;
+    if (!val) return;
+    const [y, m] = val.split('-').map(Number);
+    this.selectedYear = y;
+    this.selectedMonth = m - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  toggleView(mode) {
+    this.onViewTypeChange(mode);
+  },
+
+  updatePeriod(type, val) {
+    if (type === 'year') this.selectedYear = parseInt(val);
+    if (type === 'month') this.selectedMonth = parseInt(val) - 1;
+    if (type === 'day') {
+       // Support for old day selector if needed, but we'll replace the UI
+       const d = String(val).padStart(2, '0');
+       this.selectedDay = `${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}-${d}`;
+    }
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  navigatePeriod(dir) {
+    if (this.viewType === 'day') {
+      const d = new Date(this.selectedDay);
+      d.setDate(d.getDate() + dir);
+      this.selectedDay = d.toISOString().split('T')[0];
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    } else {
+      let m = this.selectedMonth + dir;
+      const d = new Date(this.selectedYear, m, 1);
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    }
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  updatePeriodISO() {
+    this.selectedPeriod = `${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}`;
+    this.selectedDayISO = this.selectedDay;
+  },
+
   switchTab(tabId) {
     this.currentTab = tabId;
     this.render();
@@ -162,7 +297,10 @@ const Personnel = {
 
   changeMonth(monthStr) {
     if (!monthStr) return;
-    this.currentMonth = monthStr;
+    this.selectedPeriod = monthStr;
+    const [y, m] = monthStr.split('-');
+    this.selectedYear = parseInt(y);
+    this.selectedMonth = parseInt(m) - 1;
     this.render();
   },
 
@@ -179,48 +317,86 @@ const Personnel = {
   },
 
   renderResume() {
-    const ptg = this.getPointageData(this.currentMonth);
-    const nbAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && p.actif).length;
-    const nbAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).length;
-    const nbFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).length;
+    const isDay = this.viewType === 'day';
+    const ptg = this.getPointageData(this.selectedPeriod);
     
-    // Compter les occasionnels uniques qui ont travaillé ce mois-ci
-    const occIds = new Set();
-    Object.values(ptg.jours).forEach(jour => {
-      const presences = this.getDayPresences(jour);
-      presences.forEach(p => {
-        const emp = App.data.personnel.find(e => e.id === p.personnelId);
-        if (emp && emp.type === 'occasionnel') occIds.add(p.personnelId);
-      });
-    });
-    const nbOcc = occIds.size;
+    let nbAdmin, nbAutre, nbFixe, nbOcc, totalFixe, totalMOProd, totalHeures;
 
-    const totalFixe = ptg.totalSalairesFixeAdmin + ptg.totalSalairesFixeAutre;
-    const totalMOProd = ptg.totalSalairesOuvriersFixe + ptg.totalMontantOcc;
+    if (isDay) {
+      // Calcul journalier
+      const dayData = ptg.jours[this.selectedDayISO] || { fiches: [] };
+      const presences = this.getDayPresences(dayData);
+      
+      nbAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && p.actif).length;
+      nbAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).length;
+      nbFixe = new Set(presences.filter(p => {
+        const e = App.data.personnel.find(emp => emp.id === p.personnelId);
+        return e && e.type === 'ouvrier_fixe';
+      }).map(p => p.personnelId)).size;
+      
+      nbOcc = new Set(presences.filter(p => {
+        const e = App.data.personnel.find(emp => emp.id === p.personnelId);
+        return e && e.type === 'occasionnel';
+      }).map(p => p.personnelId)).size;
+
+      const hOcc = presences.reduce((s, p) => {
+        const e = App.data.personnel.find(emp => emp.id === p.personnelId);
+        return (e && e.type === 'occasionnel') ? s + p.heures : s;
+      }, 0);
+      
+      const hFixe = presences.reduce((s, p) => {
+        const e = App.data.personnel.find(emp => emp.id === p.personnelId);
+        return (e && e.type === 'ouvrier_fixe') ? s + p.heures : s;
+      }, 0);
+
+      totalFixe = (ptg.totalSalairesFixeAdmin + ptg.totalSalairesFixeAutre) / 30; // Estimation journalière
+      totalMOProd = (hOcc * ptg.tauxHoraireOcc) + (hFixe * (ptg.totalSalairesOuvriersFixe / 200)); // Estimation simplifiée
+      totalHeures = hOcc + hFixe;
+    } else {
+      // Calcul mensuel (existant)
+      nbAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && p.actif).length;
+      nbAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).length;
+      nbFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).length;
+      
+      const occIds = new Set();
+      Object.values(ptg.jours).forEach(jour => {
+        const presences = this.getDayPresences(jour);
+        presences.forEach(p => {
+          const emp = App.data.personnel.find(e => e.id === p.personnelId);
+          if (emp && emp.type === 'occasionnel') occIds.add(p.personnelId);
+        });
+      });
+      nbOcc = occIds.size;
+
+      totalFixe = ptg.totalSalairesFixeAdmin + ptg.totalSalairesFixeAutre;
+      totalMOProd = ptg.totalSalairesOuvriersFixe + ptg.totalMontantOcc;
+      totalHeures = ptg.totalHeuresOcc + ptg.totalHeuresOuvriersFixe;
+    }
     
+    const labelSuffix = isDay ? "Jour" : "Mois";
     const tauxHoraireReelFixe = ptg.totalHeuresOuvriersFixe > 0 ? (ptg.totalSalairesOuvriersFixe / ptg.totalHeuresOuvriersFixe) : 0;
 
     return `
       <div class="kpi-grid" style="margin-bottom:24px;">
         <div class="kpi-card purple">
           <div class="kpi-icon purple">👥</div>
-          <div class="kpi-label">Effectif Total Mois</div>
+          <div class="kpi-label">Effectif Total ${labelSuffix}</div>
           <div class="kpi-value">${nbAdmin + nbAutre + nbFixe + nbOcc}</div>
         </div>
         <div class="kpi-card blue">
           <div class="kpi-icon blue">💰</div>
-          <div class="kpi-label">Masse Salariale Totale</div>
+          <div class="kpi-label">Masse Salariale ${labelSuffix}</div>
           <div class="kpi-value">${App.formatNumber(totalFixe + totalMOProd, 0)}<span class="kpi-unit">DH</span></div>
         </div>
         <div class="kpi-card green">
-          <div class="kpi-icon green">🏭</div>
+          <div class="kpi-icon green"> green"> green"> green">🏭</div>
           <div class="kpi-label">Coût M.O. Production</div>
           <div class="kpi-value">${App.formatNumber(totalMOProd, 0)}<span class="kpi-unit">DH</span></div>
         </div>
         <div class="kpi-card yellow">
           <div class="kpi-icon yellow">⏱️</div>
           <div class="kpi-label">Heures Prod Totales</div>
-          <div class="kpi-value">${App.formatNumber(ptg.totalHeuresOcc + ptg.totalHeuresOuvriersFixe, 1)}<span class="kpi-unit">h</span></div>
+          <div class="kpi-value">${App.formatNumber(totalHeures, 1)}<span class="kpi-unit">h</span></div>
         </div>
       </div>
 
@@ -273,8 +449,8 @@ const Personnel = {
   },
 
   renderDaily() {
-    const dateStr = this.currentDailyDate;
-    const monthStr = dateStr.substring(0, 7);
+    const dateStr = this.selectedDayISO;
+    const monthStr = this.selectedPeriod;
     const ptg = this.getPointageData(monthStr);
     const dayData = ptg.jours[dateStr] || { date: dateStr, fiches: [] };
     
@@ -313,11 +489,11 @@ const Personnel = {
       <div class="card fade-in" style="margin-bottom:24px;">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-app);">
           <div style="display:flex; gap:12px; align-items:center;">
-             <h3 style="margin:0;">📅 Journée du ${App.formatDateFR(this.currentDailyDate)}</h3>
+             <h3 style="margin:0;">📅 Journée du ${App.formatDateFR(this.selectedDayISO)}</h3>
              <div style="display:flex; gap:4px;">
-               <button class="btn btn-sm btn-outline" onclick="Personnel.navigateDay(-1)">◀</button>
-               <input type="date" class="form-input" style="width:140px; height:32px; font-size:0.85rem;" value="${this.currentDailyDate}" onchange="Personnel.changeDailyDate(this.value)">
-               <button class="btn btn-sm btn-outline" onclick="Personnel.navigateDay(1)">▶</button>
+               <button class="btn btn-sm btn-outline" onclick="Personnel.navigatePeriod(-1)">◀</button>
+               <input type="date" class="form-input" style="width:140px; height:32px; font-size:0.85rem;" value="${this.selectedDayISO}" onchange="Personnel.onDayChange(event)">
+               <button class="btn btn-sm btn-outline" onclick="Personnel.navigatePeriod(1)">▶</button>
              </div>
           </div>
           <div style="display:flex; gap:12px;">
@@ -367,8 +543,8 @@ const Personnel = {
   },
 
   renderFicheEditor() {
-    const dateStr = this.currentDailyDate;
-    const ptg = this.getPointageData(dateStr.substring(0, 7));
+    const dateStr = this.selectedDayISO;
+    const ptg = this.getPointageData(this.selectedPeriod);
     const fiche = ptg.jours[dateStr].fiches.find(f => f.id === this.currentFicheId);
     if (!fiche) return '';
 
@@ -429,18 +605,25 @@ const Personnel = {
   },
 
   addNewFiche(activite = 'Traitement', titre = 'Nouvelle Feuille') {
-    const dateStr = this.currentDailyDate;
-    const monthStr = dateStr.substring(0, 7);
+    const dateStr = this.selectedDayISO;
+    const monthStr = this.selectedPeriod;
     const ptg = this.getPointageData(monthStr);
     if (!ptg.jours[dateStr]) ptg.jours[dateStr] = { date: dateStr, fiches: [] };
     const day = ptg.jours[dateStr];
     if (!day.fiches) day.fiches = [];
 
-    const newId = day.fiches.length > 0 ? Math.max(...day.fiches.map(f => f.id)) + 1 : 1;
-    const newFiche = { id: newId, activite, titre, presences: [] };
+    const newId = App.nextId(App.data.fiches_pointage || []);
+    const newFiche = { id: newId, date: dateStr, activite, titre, presences: [] };
+    
+    // Add to nested for UI
     day.fiches.push(newFiche);
+    // Add to flat for Sync
+    if (!App.data.fiches_pointage) App.data.fiches_pointage = [];
+    App.data.fiches_pointage.push(newFiche);
+    
     this.currentFicheId = newId;
     this.render();
+    App.saveData('fiches_pointage', newFiche);
     App.toast("Nouvelle feuille créée", "success");
   },
 
@@ -449,13 +632,22 @@ const Personnel = {
     this.render();
   },
 
-  deleteFiche(id) {
+  async deleteFiche(id) {
     if (!confirm("Supprimer cette feuille de présence ?")) return;
-    const dateStr = this.currentDailyDate;
-    const ptg = this.getPointageData(dateStr.substring(0, 7));
+    const dateStr = this.selectedDayISO;
+    const ptg = this.getPointageData(this.selectedPeriod);
     const day = ptg.jours[dateStr];
+    
     day.fiches = day.fiches.filter(f => f.id !== id);
+    if (App.data.fiches_pointage) {
+      App.data.fiches_pointage = App.data.fiches_pointage.filter(f => f.id !== id);
+    }
+    
     if (this.currentFicheId === id) this.currentFicheId = null;
+    
+    // Cloud sync deletion
+    await App.deleteFromCloud('fiches_pointage', id);
+    
     this.recalcPointageMensuel(dateStr.substring(0, 7));
     this.render();
     App.toast("Feuille supprimée", "info");
@@ -465,7 +657,7 @@ const Personnel = {
     const fiche = this.getFiche(id);
     if (fiche) {
       fiche.activite = val;
-      this.recalcPointageMensuel(this.currentDailyDate.substring(0, 7));
+      this.recalcPointageMensuel(this.selectedPeriod);
       this.render();
     }
   },
@@ -474,14 +666,14 @@ const Personnel = {
     const fiche = this.getFiche(id);
     if (fiche) {
       fiche.titre = val;
-      App.saveData();
+      App.saveData('fiches_pointage', fiche);
       this.render();
     }
   },
 
   getFiche(id) {
-    const dateStr = this.currentDailyDate;
-    const ptg = this.getPointageData(dateStr.substring(0, 7));
+    const dateStr = this.selectedDayISO;
+    const ptg = this.getPointageData(this.selectedPeriod);
     return ptg.jours[dateStr]?.fiches?.find(f => f.id === id);
   },
 
@@ -499,7 +691,8 @@ const Personnel = {
     else pres[field] = val;
 
     pres.heures = (pres.matinHeures || 0) + (pres.soirHeures || 0);
-    this.recalcPointageMensuel(this.currentDailyDate.substring(0, 7));
+    this.recalcPointageMensuel(this.selectedPeriod);
+    App.saveData('fiches_pointage', fiche);
     this.render();
   },
 
@@ -514,8 +707,8 @@ const Personnel = {
   },
 
   processDailyScan(results) {
-    const dateStr = this.currentDailyDate;
-    const monthStr = dateStr.substring(0, 7);
+    const dateStr = this.selectedDayISO;
+    const monthStr = this.selectedPeriod;
     const ptg = this.getPointageData(monthStr);
     if (!ptg.jours[dateStr]) ptg.jours[dateStr] = { date: dateStr, fiches: [] };
     const day = ptg.jours[dateStr];
@@ -593,10 +786,10 @@ const Personnel = {
 
   // --- Grille de Pointage ---
   renderPointage() {
-    const ptg = this.getPointageData(this.currentMonth);
+    const ptg = this.getPointageData(this.selectedPeriod);
     
     // Générer les jours du mois
-    const [year, month] = this.currentMonth.split('-');
+    const [year, month] = this.selectedPeriod.split('-');
     const daysInMonth = new Date(year, month, 0).getDate();
     const days = [];
     for (let i = 1; i <= daysInMonth; i++) {
@@ -614,7 +807,7 @@ const Personnel = {
     return `
       <div class="card" style="margin-bottom:20px;">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="card-title">Grille de Pointage - ${this.currentMonth}</span>
+          <span class="card-title">Grille de Pointage - ${this.selectedPeriod}</span>
           <div style="display:flex; gap:12px; align-items:center;">
             <div style="font-size:0.9rem; font-weight:600;">
               Taux Occasionnel: 
@@ -679,14 +872,14 @@ const Personnel = {
   },
 
   updateTaux(val) {
-    const ptg = this.getPointageData(this.currentMonth);
+    const ptg = this.getPointageData(this.selectedPeriod);
     ptg.tauxHoraireOcc = parseFloat(val) || 16.8;
-    this.recalcPointageMensuel(this.currentMonth);
+    this.recalcPointageMensuel(this.selectedPeriod);
     this.render();
   },
 
   updatePointage(dateStr, empId, val) {
-    const ptg = this.getPointageData(this.currentMonth);
+    const ptg = this.getPointageData(this.selectedPeriod);
     if (!ptg.jours[dateStr]) ptg.jours[dateStr] = { date: dateStr, fiches: [] };
     const day = ptg.jours[dateStr];
 
@@ -987,7 +1180,12 @@ const Personnel = {
         
         // Changer pour le mois mis à jour s'il y en a
         if(datesUpdated.size > 0) {
-          this.currentMonth = Array.from(datesUpdated)[0];
+          const firstMonth = Array.from(datesUpdated)[0];
+          this.currentMonth = firstMonth;
+          const parts = firstMonth.split('-');
+          this.selectedYear = parseInt(parts[0]);
+          this.selectedMonth = parseInt(parts[1]) - 1;
+          this.viewType = 'month';
         }
         this.switchTab('pointage');
         

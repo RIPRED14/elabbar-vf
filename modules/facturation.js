@@ -4,15 +4,28 @@
 const Facturation = {
   editingId: null,
   currentLignes: [],
+  viewType: 'month',
+  selectedDay: new Date().toISOString().split('T')[0],
+  selectedMonth: new Date().getMonth(),
+  selectedYear: new Date().getFullYear(),
 
   applyAIData(data) {
     if (!data) return;
+    
+    const fallbackDate = this.selectedDay || new Date().toISOString().split('T')[0];
+    const finalDate = data.date ? App.formatDateISO(data.date) : fallbackDate;
+
+    const d = new Date(finalDate);
+    this.selectedYear = d.getFullYear();
+    this.selectedMonth = d.getMonth();
+    this.selectedDay = finalDate;
+
     this.render();
     
     const entry = {
       fournisseur: data.fournisseur || '',
       numero: data.numero || '',
-      date: data.date ? App.formatDateISO(data.date) : new Date().toISOString().split('T')[0],
+      date: finalDate,
       montantHT: parseFloat(data.montantHT) || 0,
       tva: parseFloat(data.tva) || 0,
       montant: parseFloat(data.montantTTC || data.montant) || 0,
@@ -31,15 +44,18 @@ const Facturation = {
     const content = document.getElementById('pageContent');
     if (!content) return;
 
-    const factures = App.data.factures || [];
-    const now = new Date();
-    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const facturesDuMois = factures.filter(f => f.date.startsWith(currentMonth));
-    const totalMois = facturesDuMois.reduce((s, f) => s + (f.montant || 0), 0);
+    let factures = this.viewType === 'day' 
+      ? App.getDayData('factures', this.selectedDay)
+      : App.getMonthData('factures', this.selectedYear, this.selectedMonth);
 
-    const saisiesMois = (App.data.production || []).filter(p => p.date.startsWith(currentMonth));
-    const totalKgMois = saisiesMois.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
-    const coutFactureParKg = totalKgMois > 0 ? (totalMois / totalKgMois) : 0;
+    const totalPeriod = factures.reduce((s, f) => s + (f.montant || 0), 0);
+
+    let prod = this.viewType === 'day'
+      ? App.getDayProduction(this.selectedDay)
+      : App.getMonthProduction(this.selectedYear, this.selectedMonth);
+
+    const totalKgPeriod = prod.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
+    const coutFactureParKg = totalKgPeriod > 0 ? (totalPeriod / totalKgPeriod) : 0;
 
     content.innerHTML = `
       <div class="fade-in">
@@ -53,7 +69,20 @@ const Facturation = {
             <h2 class="page-title">Facturation & Charges</h2>
             <p class="page-subtitle">Gestion des dépenses opérationnelles et analyse de rentabilité.</p>
           </div>
-          <div style="display:flex; gap:12px;">
+          <div style="display:flex; gap:12px; align-items:flex-end;">
+            <div style="display:flex; background:var(--bg-card); padding:4px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:2px;">
+              <button onclick="Facturation.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Jour</button>
+              <button onclick="Facturation.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Mois</button>
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${this.viewType === 'day' ? 'Date' : 'Période'}</label>
+              ${this.viewType === 'day' 
+                ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Facturation.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+                : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Facturation.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+              }
+            </div>
+
             <button class="btn btn-primary" onclick="Facturation.showForm()">
               <span>+ Nouvelle Facture</span>
             </button>
@@ -63,15 +92,15 @@ const Facturation = {
         <div class="kpi-grid">
           <div class="kpi-card blue">
             <div class="kpi-icon blue">💰</div>
-            <div class="kpi-label">Total Factures (Ce Mois)</div>
-            <div class="kpi-value">${App.formatNumber(totalMois, 0)}<span class="kpi-unit">DH</span></div>
+            <div class="kpi-label">Total Factures (${this.viewType === 'day' ? 'Jour' : 'Ce Mois'})</div>
+            <div class="kpi-value">${App.formatNumber(totalPeriod, 0)}<span class="kpi-unit">DH</span></div>
             <div class="kpi-change">Dépenses opérationnelles</div>
           </div>
           <div class="kpi-card purple">
             <div class="kpi-icon purple">📦</div>
             <div class="kpi-label">Volume Production</div>
-            <div class="kpi-value">${App.formatNumber(totalKgMois, 0)}<span class="kpi-unit">kg</span></div>
-            <div class="kpi-change">Masse critique mensuelle</div>
+            <div class="kpi-value">${App.formatNumber(totalKgPeriod, 0)}<span class="kpi-unit">kg</span></div>
+            <div class="kpi-change">Masse critique ${this.viewType === 'day' ? 'journalière' : 'mensuelle'}</div>
           </div>
           <div class="kpi-card ${coutFactureParKg > 5 ? 'red' : 'green'}">
             <div class="kpi-icon ${coutFactureParKg > 5 ? 'red' : 'green'}">⚖️</div>
@@ -87,11 +116,11 @@ const Facturation = {
           <div class="card">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
               <span class="card-title">📋 Historique des Factures</span>
-              <div class="badge badge-info">${factures.length} documents enregistrés</div>
+              <div class="badge badge-info">${factures.length} documents (${this.viewType === 'day' ? 'ce jour' : 'ce mois'})</div>
             </div>
             <div class="card-body">
               <div class="table-container">
-                ${factures.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">📄</div><div class="empty-state-text">Aucune facture enregistrée</div></div>' : `
+                ${factures.length === 0 ? '<div class="empty-state"><div class="empty-state-icon">📄</div><div class="empty-state-text">Aucune facture enregistrée pour cette période</div></div>' : `
                   <table>
                     <thead>
                       <tr>
@@ -140,6 +169,23 @@ const Facturation = {
     `;
   },
 
+  onViewTypeChange(type) {
+    this.viewType = type;
+    this.render();
+  },
+
+  onDayChange(e) {
+    this.selectedDay = e.target.value;
+    this.render();
+  },
+
+  onPeriodChange(e) {
+    const [y, m] = e.target.value.split('-').map(Number);
+    this.selectedYear = y;
+    this.selectedMonth = m - 1;
+    this.render();
+  },
+
   showForm(entry = null) {
     this.editingId = entry && entry.id ? entry.id : null;
     this.currentLignes = entry && entry.lignes ? JSON.parse(JSON.stringify(entry.lignes)) : [];
@@ -168,7 +214,7 @@ const Facturation = {
 
           <h4 style="margin-bottom:15px; color:var(--accent-blue); border-bottom:1px solid #eee; padding-bottom:5px;">Informations Générales</h4>
           <div class="form-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
-            <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="fDate" value="${entry ? entry.date : App.formatDate(new Date())}"></div>
+            <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="fDate" value="${entry ? entry.date : (this.selectedDay || App.formatDate(new Date()))}"></div>
             <div class="form-group"><label class="form-label">Fournisseur</label><input type="text" class="form-input" id="fFournisseur" value="${entry?.fournisseur||''}" placeholder="Ex: AMENDIS"></div>
             <div class="form-group"><label class="form-label">N° Facture</label><input type="text" class="form-input" id="fNumero" value="${entry?.numero||''}" placeholder="FA-2026-01"></div>
             <div class="form-group"><label class="form-label">État du Paiement</label>

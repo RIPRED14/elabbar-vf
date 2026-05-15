@@ -7,7 +7,8 @@ const Stockage = {
     this.currentTab = 'entrees';
     
     // Normalisation de la date
-    if (data.date) data.date = App.formatDateISO(data.date);
+    const fallbackDate = this.selectedDay || new Date().toISOString().split('T')[0];
+    const finalDate = data.date ? App.formatDateISO(data.date) : fallbackDate;
 
     // Préparation des lignes avec Fuzzy Matching
     if (data.lignes && data.lignes.length > 0) {
@@ -35,7 +36,7 @@ const Stockage = {
         if (el && val) el.value = val; 
       };
 
-      setVal('sDateEntree', data.date);
+      setVal('sDateEntree', finalDate);
       setVal('sBateau', data.bateau);
       setVal('sClient', data.client);
       setVal('sFournisseur', data.fournisseur || data.client);
@@ -57,9 +58,86 @@ const Stockage = {
 
   editingId: null,
   currentTab: 'entrees',
+  viewType: 'month',
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: new Date().getMonth(),
+  selectedQuarter: Math.floor(new Date().getMonth() / 3) + 1,
+  selectedDay: new Date().toISOString().split('T')[0],
+  selectedPeriod: new Date().toISOString().substring(0, 7),
+  selectedDayISO: new Date().toISOString().substring(0, 10),
+
+  onViewTypeChange(type) {
+    this.viewType = type;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onDayChange(e) {
+    this.selectedDay = e.target.value;
+    const parts = this.selectedDay.split('-');
+    this.selectedYear = parseInt(parts[0]);
+    this.selectedMonth = parseInt(parts[1]) - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onPeriodChange(e) {
+    const val = e.target.value;
+    if (!val) return;
+    const [y, m] = val.split('-').map(Number);
+    this.selectedYear = y;
+    this.selectedMonth = m - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onQuarterChange(year, q) {
+    this.selectedYear = parseInt(year);
+    this.selectedQuarter = parseInt(q);
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  toggleView(mode) {
+    this.onViewTypeChange(mode);
+  },
+
+  updatePeriod(type, val) {
+    if (type === 'year') this.selectedYear = parseInt(val);
+    if (type === 'month') this.selectedMonth = parseInt(val) - 1;
+    if (type === 'day') {
+       const d = String(val).padStart(2, '0');
+       this.selectedDay = `${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}-${d}`;
+    }
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  navigatePeriod(dir) {
+    if (this.viewType === 'day') {
+      const d = new Date(this.selectedDay);
+      d.setDate(d.getDate() + dir);
+      this.selectedDay = d.toISOString().split('T')[0];
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    } else {
+      let m = this.selectedMonth + dir;
+      const d = new Date(this.selectedYear, m, 1);
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    }
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  updatePeriodISO() {
+    this.selectedPeriod = `${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}`;
+    this.selectedDayISO = this.selectedDay;
+  },
 
   render() {
     this.currentTab = this.currentTab || 'entrees';
+    this.updatePeriodISO();
     const content = document.getElementById('pageContent');
     if (!content) return;
 
@@ -90,19 +168,47 @@ const Stockage = {
             <h2 class="page-title">Réception & Stockage</h2>
             <p class="page-subtitle">Gestion intelligente des flux de marchandise et traçabilité temps réel.</p>
           </div>
-          <div style="display:flex; gap:12px;">
-            <button class="btn btn-outline" onclick="Stockage.printList()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
+          <div style="display:flex; gap:12px; align-items:center; background:var(--bg-card); padding:8px 16px; border-radius:12px; border:1px solid var(--border-color); box-shadow:var(--shadow-sm);">
+            <div style="display:flex; gap:12px; align-items:flex-end;">
+            <div style="display:flex; background:var(--bg-card); padding:4px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:2px;">
+              <button onclick="Stockage.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Jour</button>
+              <button onclick="Stockage.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Mois</button>
+              <button onclick="Stockage.onViewTypeChange('quarter')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'quarter' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'quarter' ? 'white' : 'var(--text-muted)'};">Trimestre</button>
+            </div>
+
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${this.viewType === 'day' ? 'Date' : 'Période'}</label>
+              ${this.viewType === 'day' 
+                ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Stockage.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+                : this.viewType === 'month'
+                ? `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Stockage.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+                : `<div style="display:flex; gap:4px;">
+                     <select class="form-select" onchange="Stockage.onQuarterChange(this.value, Stockage.selectedQuarter)" style="padding:8px; font-size:0.85rem; width:85px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">
+                       ${[2024, 2025, 2026].map(y => `<option value="${y}" ${this.selectedYear===y?'selected':''}>${y}</option>`).join('')}
+                     </select>
+                     <select class="form-select" onchange="Stockage.onQuarterChange(Stockage.selectedYear, this.value)" style="padding:8px; font-size:0.85rem; width:65px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">
+                       <option value="1" ${this.selectedQuarter===1?'selected':''}>T1</option>
+                       <option value="2" ${this.selectedQuarter===2?'selected':''}>T2</option>
+                       <option value="3" ${this.selectedQuarter===3?'selected':''}>T3</option>
+                       <option value="4" ${this.selectedQuarter===4?'selected':''}>T4</option>
+                     </select>
+                   </div>`
+              }
+            </div>
+            </div>
+
+            <div style="width:1px; height:24px; background:var(--border-color); margin:0 8px;"></div>
+
+            <button class="btn btn-outline btn-sm" onclick="Stockage.printList()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
               <span>Imprimer</span>
             </button>
             ${this.currentTab === 'entrees' ? `
-              <button class="btn btn-outline" onclick="Stockage.startScanner()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h2v2H7z"/><path d="M7 15h2v2H7z"/><path d="M15 7h2v2h-2z"/><path d="M15 15h2v2h-2z"/></svg>
-                <span>Scanner QR</span>
+              <button class="btn btn-outline btn-sm" onclick="Stockage.startScanner()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 7h2v2H7z"/><path d="M7 15h2v2H7z"/><path d="M15 7h2v2h-2z"/><path d="M15 15h2v2h-2z"/></svg>
+                <span>Scanner</span>
               </button>
-              <button class="btn btn-primary" onclick="Stockage.showForm()">
-                <span>+ Nouvelle Entrée</span>
-              </button>
+              <button class="btn btn-primary btn-sm" onclick="Stockage.showForm()">+ Réception</button>
             ` : ''}
             ${this.currentTab === 'sorties' ? `
               <button class="btn btn-primary" onclick="Stockage.showSortieForm()">
@@ -188,10 +294,22 @@ const Stockage = {
   },
 
   getMonthEntries() {
-    const now = new Date();
     return (App.data.stockage || []).filter(e => {
       const d = new Date(e.dateEntree);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      if (this.viewType === 'day') {
+        return App.formatDateISO(d) === this.selectedDay;
+      } else if (this.viewType === 'month') {
+        return d.getFullYear() === this.selectedYear && d.getMonth() === this.selectedMonth;
+      } else {
+        const m = d.getMonth();
+        const q = this.selectedQuarter;
+        if (d.getFullYear() !== this.selectedYear) return false;
+        if (q === 1) return m >= 0 && m <= 2;
+        if (q === 2) return m >= 3 && m <= 5;
+        if (q === 3) return m >= 6 && m <= 8;
+        if (q === 4) return m >= 9 && m <= 11;
+        return false;
+      }
     });
   },
 
@@ -342,7 +460,7 @@ const Stockage = {
             <div class="form-section-title">🔹 Informations de réception</div>
             <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
               <div class="form-group"><label class="form-label">Référence *</label><input type="text" class="form-input" id="sRef" value="${nextRef}"></div>
-              <div class="form-group"><label class="form-label">Date entrée *</label><input type="date" class="form-input" id="sDateEntree" value="${entry ? App.formatDate(entry.dateEntree) : App.formatDate(new Date())}" onchange="Stockage.calcDateSortie()"></div>
+              <div class="form-group"><label class="form-label">Date entrée *</label><input type="date" class="form-input" id="sDateEntree" value="${entry ? App.formatDate(entry.dateEntree) : (this.selectedDay || App.formatDate(new Date()))}" onchange="Stockage.calcDateSortie()"></div>
               <div class="form-group"><label class="form-label">🚢 Bateau *</label>
                 <select class="form-select" id="sBateau" onchange="Stockage.onBateauChange()">
                   <option value="">-- Choisir Bateau --</option>

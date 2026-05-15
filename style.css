@@ -317,6 +317,32 @@ h1, h2, h3, h4, h5, h6 { font-family: 'Poppins', sans-serif; color: var(--primar
   border: 2px solid var(--bg-card);
 }
 
+/* --- Sync Status Indicator --- */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+
+.sync-status.syncing { color: var(--accent-blue); border-color: var(--accent-blue); }
+.sync-status.success { color: var(--status-success); border-color: var(--status-success); }
+.sync-status.error { color: var(--status-danger); border-color: var(--status-danger); }
+
+.sync-status.syncing #syncIcon { animation: rotate 2s linear infinite; }
+
+@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.sync-text { font-family: 'Inter', sans-serif; }
+
+
 /* --- Page Content --- */
 .page-content { padding: 32px; max-width: 1600px; margin: 0 auto; }
 .page-header { margin-bottom: 32px; }

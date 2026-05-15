@@ -8,6 +8,7 @@ const Saisie = {
   selectedDay: new Date().toISOString().split('T')[0],
   selectedMonth: new Date().getMonth(),
   selectedYear: new Date().getFullYear(),
+  selectedQuarter: Math.floor(new Date().getMonth() / 3) + 1,
   phasesList: ['Triage-Lavage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Mélançage','Trempage','Congélation','DECONGELATION'],
 
   emballagesList: [
@@ -128,13 +129,26 @@ const Saisie = {
             <div style="display:flex; background:var(--bg-card); padding:4px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:2px;">
               <button onclick="Saisie.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Jour</button>
               <button onclick="Saisie.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Mois</button>
+              <button onclick="Saisie.onViewTypeChange('quarter')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'quarter' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'quarter' ? 'white' : 'var(--text-muted)'};">Trimestre</button>
             </div>
 
             <div class="form-group" style="margin:0;">
               <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${this.viewType === 'day' ? 'Date' : 'Période'}</label>
               ${this.viewType === 'day' 
                 ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Saisie.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
-                : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Saisie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+                : this.viewType === 'month'
+                ? `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Saisie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+                : `<div style="display:flex; gap:4px;">
+                     <select class="form-select" onchange="Saisie.onQuarterChange(this.value, Saisie.selectedQuarter)" style="padding:8px; font-size:0.85rem; width:85px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">
+                       ${[2024, 2025, 2026].map(y => `<option value="${y}" ${this.selectedYear===y?'selected':''}>${y}</option>`).join('')}
+                     </select>
+                     <select class="form-select" onchange="Saisie.onQuarterChange(Saisie.selectedYear, this.value)" style="padding:8px; font-size:0.85rem; width:65px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">
+                       <option value="1" ${this.selectedQuarter===1?'selected':''}>T1</option>
+                       <option value="2" ${this.selectedQuarter===2?'selected':''}>T2</option>
+                       <option value="3" ${this.selectedQuarter===3?'selected':''}>T3</option>
+                       <option value="4" ${this.selectedQuarter===4?'selected':''}>T4</option>
+                     </select>
+                   </div>`
               }
             </div>
             <button class="btn btn-outline" onclick="Saisie.printTable()">
@@ -148,7 +162,7 @@ const Saisie = {
             <label class="btn btn-purple" style="cursor:pointer;" title="Analyse intelligente de bons ou fiches de production">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v8"/><path d="m16 6-4 4-4-4"/><rect x="2" y="12" width="20" height="8" rx="2"/><circle cx="12" cy="16" r="2"/></svg>
               <span>Scan Bon IA</span>
-              <input type="file" accept="image/*,application/pdf" style="display:none" onchange="Saisie.processAIAnalysis(event)">
+              <input type="file" accept="image/*,application/pdf,.xlsx" style="display:none" onchange="Saisie.processAIAnalysis(event)">
             </label>
             <label class="btn btn-success" style="cursor:pointer; background:linear-gradient(135deg, #10b981, #059669); border:none;" title="Importer un rapport de production Excel (.xlsx)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
@@ -174,7 +188,7 @@ const Saisie = {
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
               <span class="card-title">📋 Historique des opérations</span>
               <div style="display:flex; gap:12px; align-items:center;">
-                <div class="badge badge-info">${prod.length} entrées ${this.viewType === 'day' ? 'aujourd\'hui' : 'ce mois'}</div>
+                <div class="badge badge-info">${prod.length} entrées ${this.viewType === 'day' ? "aujourd'hui" : this.viewType === 'month' ? "ce mois" : "ce trimestre"}</div>
                 <select class="form-select" id="filterEspece" onchange="Saisie.renderTable()" style="width:180px; padding:8px 12px; font-size:0.85rem;">
                   <option value="">Toutes les espèces</option>
                   ${App.data.especes.map(e => `<option value="${e.nom}">${e.nom}</option>`).join('')}
@@ -205,7 +219,9 @@ const Saisie = {
   renderTable() {
     let prod = this.viewType === 'day' 
       ? App.getDayProduction(this.selectedDay)
-      : App.getMonthProduction(this.selectedYear, this.selectedMonth);
+      : this.viewType === 'month'
+      ? App.getMonthProduction(this.selectedYear, this.selectedMonth)
+      : App.getQuarterProduction(this.selectedYear, this.selectedQuarter);
 
     prod = prod.filter(p => (p.activite||'reconditionnement') === this.currentActivite);
     const filter = document.getElementById('filterEspece')?.value;
@@ -255,18 +271,18 @@ const Saisie = {
                 <td>${statusBadge}</td>
                 <td class="td-center">
                   <div style="display:flex; gap:4px; justify-content:center;">
-                    <button class="btn-icon" onclick="Saisie.editEntry(${p.id})" title="${isSent ? 'Voir (Lecture seule)' : 'Modifier'}" style="${isSent ? 'color:var(--text-muted);' : ''}">
+                    <button class="btn-icon" onclick="Saisie.editEntry('${p.id}')" title="${isSent ? 'Voir (Lecture seule)' : 'Modifier'}" style="${isSent ? 'color:var(--text-muted);' : ''}">
                       ${isSent ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'}
                     </button>
-                    <button class="btn-icon" onclick="Saisie.printBon(${p.id})" title="Bon de production">
+                    <button class="btn-icon" onclick="Saisie.printBon('${p.id}')" title="Bon de production">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
                     </button>
                     ${hasPF && !isSent ? `
-                      <button class="btn-icon" onclick="Saisie.showSendToStorageModal(${p.id})" title="Transférer au Stockage" style="color:var(--status-success); background:rgba(34,197,94,0.1);">
+                      <button class="btn-icon" onclick="Saisie.showSendToStorageModal('${p.id}')" title="Transférer au Stockage" style="color:var(--status-success); background:rgba(34,197,94,0.1);">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3m18 0v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8m18 0-9-5-9 5m9 11V8"/></svg>
                       </button>
                     ` : ''}
-                    <button class="btn-icon danger" onclick="Saisie.deleteEntry(${p.id})" title="Supprimer" ${isSent ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''}>
+                    <button class="btn-icon danger" onclick="Saisie.deleteEntry('${p.id}')" title="Supprimer" ${isSent ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </div>
@@ -284,7 +300,7 @@ const Saisie = {
     const p = App.data.parametres;
     const totalFixeH = App.data.personnel.filter(e => e.dept === 'Production').length;
     const salaireFixeTotal = App.data.personnel.filter(e => e.dept === 'Production').reduce((s, e) => s + e.salaire, 0);
-    const salaireHF = p.heuresMensuelles > 0 ? salaireFixeTotal / totalFixeH / (p.heuresMensuelles / App.data.personnel.filter(e => e.dept === 'Production').length) : 22.1;
+    const salaireHF = p.heuresMensuelles > 0 && totalFixeH > 0 ? salaireFixeTotal / totalFixeH / (p.heuresMensuelles / totalFixeH) : 22.1;
 
     const phasesPF = entry?.phasesPF || [
       { nom: 'Glasurage', seuil: 107, qteInit: 0, qteFinale: 0 }
@@ -324,7 +340,7 @@ const Saisie = {
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label">Date</label>
-                  <input type="date" class="form-input" id="fDate" value="${entry ? App.formatDate(entry.date) : ((new Date().getMonth() === this.selectedMonth && new Date().getFullYear() === this.selectedYear) ? App.formatDate(new Date()) : App.formatDate(new Date(this.selectedYear, this.selectedMonth, 1)))}" onchange="Saisie.onDateChange()">
+                  <input type="date" class="form-input" id="fDate" value="${entry ? App.formatDate(entry.date) : this.selectedDay}" onchange="Saisie.onDateChange()">
                 </div>
                 <div class="form-group">
                   <label class="form-label">Client</label>
@@ -854,7 +870,7 @@ const Saisie = {
       poidsMP,
       rendement
     };
-    const previous = this.editingId ? App.data.production.find(p => p.id === this.editingId) : null;
+    const previous = this.editingId ? App.data.production.find(p => p.id == this.editingId) : null;
     const previousConsumption = previous ? this.getReconditionnementConsumption(previous) : {};
     const nextConsumption = this.getReconditionnementConsumption(entry);
     const missingOrLow = Object.entries(nextConsumption).find(([nom, qty]) => {
@@ -873,7 +889,7 @@ const Saisie = {
     }
 
     if (this.editingId) {
-      const idx = App.data.production.findIndex(p => p.id === this.editingId);
+      const idx = App.data.production.findIndex(p => p.id == this.editingId);
       if (idx !== -1) App.data.production[idx] = entry;
       this.restoreConsumption(previousConsumption, `Correction saisie #${entry.id}`);
       this.consumeStock(nextConsumption, `Production #${entry.id}`);
@@ -882,7 +898,7 @@ const Saisie = {
       this.consumeStock(nextConsumption, `Production #${entry.id}`);
     }
 
-    App.saveData();
+    App.saveData('production', entry);
     this.hideForm();
     this.render();
     App.toast(this.editingId ? 'Saisie mise à jour' : 'Saisie enregistrée', 'success');
@@ -940,18 +956,35 @@ const Saisie = {
   },
 
   editEntry(id) {
-    const entry = App.data.production.find(p => p.id === id);
-    if (entry) {
-      if (entry.activite === 'traitement' || entry.activite === 'divers') this.showTraitementForm(entry);
-      else this.showForm(entry);
+    try {
+      const entry = App.data.production.find(p => p.id == id);
+      if (entry) {
+        if (entry.activite === 'traitement' || entry.activite === 'divers') this.showTraitementForm(entry);
+        else this.showForm(entry);
+        
+        // Scroll to top of form
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        console.warn("Entry not found for ID:", id);
+        App.toast("Impossible de trouver cette saisie (ID: " + id + ")", "error");
+      }
+    } catch (err) {
+      console.error("Error in editEntry:", err);
+      App.toast("Erreur lors de l'ouverture de la saisie", "error");
     }
   },
 
-  deleteEntry(id) {
+  async deleteEntry(id) {
     if (!confirm('Supprimer cette saisie ?')) return;
-    const entry = App.data.production.find(p => p.id === id);
-    this.restoreConsumption(this.getReconditionnementConsumption(entry), `Annulation saisie #${id}`);
-    App.data.production = App.data.production.filter(p => p.id !== id);
+    const entry = App.data.production.find(p => p.id == id);
+    if (entry) {
+      this.restoreConsumption(this.getReconditionnementConsumption(entry), `Annulation saisie #${id}`);
+    }
+    App.data.production = App.data.production.filter(p => p.id != id);
+    
+    // Cloud sync deletion
+    await App.deleteFromCloud('production', id);
+    
     App.saveData();
     this.render();
     App.toast('Saisie supprimée', 'info');
@@ -968,6 +1001,12 @@ const Saisie = {
     const [y, m] = val.split('-').map(Number);
     this.selectedYear = y;
     this.selectedMonth = m - 1;
+    this.render();
+  },
+
+  onQuarterChange(year, q) {
+    this.selectedYear = parseInt(year);
+    this.selectedQuarter = parseInt(q);
     this.render();
   },
 
@@ -1024,7 +1063,7 @@ const Saisie = {
               <div class="form-section-title">🔹 Liaison réception & infos</div>
               <div class="form-grid">
                 <div class="form-group"><label class="form-label">Réception (stockage) *</label><select class="form-select" id="tReception" onchange="Saisie.onReceptionChange()">${receptions}</select></div>
-                <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-input" id="tDate" value="${entry?App.formatDate(entry.date):App.formatDate(new Date())}"></div>
+                <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-input" id="tDate" value="${entry?App.formatDate(entry.date):this.selectedDay}"></div>
                 <div class="form-group"><label class="form-label">Client</label><input type="text" class="form-input" id="tClient" value="${entry?.client||''}" oninput="Saisie.refreshQR()"></div>
               </div>
             </div>
@@ -2251,11 +2290,24 @@ const Saisie = {
     const file = event.target.files[0];
     if (!file) return;
 
+    if (file.name.endsWith('.xlsx')) {
+      App.AiEngine.currentType = 'traitement';
+      App.AiEngine.currentCallback = (data) => {
+        this.importBatchAIData(data);
+      };
+      App.AiEngine.processFile(file);
+      return;
+    }
+
     App.AI.showOverlay("Analyse du document de production...");
     
     try {
       const prompt = `Analyse cette fiche de production ou bon de travail.
-Renvoie un objet JSON avec cette structure :
+EXTRACTION MULTI-LIGNES OBLIGATOIRE :
+Si le document contient un tableau ou plusieurs lignes de production, tu DOIS extraire CHAQUE ligne comme un objet distinct dans un tableau nommé "entries". 
+Ne te contente pas de la première ligne, extrais TOUTES les lignes visibles.
+
+Structure de l'objet pour chaque ligne :
 {
   "date": "YYYY-MM-DD",
   "client": "Nom du client",
@@ -2268,24 +2320,31 @@ Renvoie un objet JSON avec cette structure :
   "produitFini": "Désignation (ex: SEPIA NETTOYE)",
   "conditionnement": "CODE (ex: C12S1000)",
   "reliquatNom": "Article reliquat",
-  "reliquatPoids": 0.0
+  "reliquatPoids": 0.0,
+  "isQuarterly": false
 }
 Notes:
+- Si c'est un rapport trimestriel ou périodique, mets "isQuarterly": true.
 - Si une info est manquante, laisse vide.
-- Espèces standards: SEPIA, POULPE, SARDINE, CREVETTE, etc.
+- Espèces standards: SEPIA, POULPE, SARDINE, CREVETTE, BURRO, BESUGO, etc.
 - Nombres avec point décimal.`;
 
-      const data = await App.AI.analyzeImage(file, prompt);
+      const rawData = await App.AI.analyzeImage(file, prompt);
       
-      // Fuzzy matching
+      // Normalisation: toujours avoir un tableau d'entrées pour la suite
+      let entries = rawData.entries ? rawData.entries : [rawData];
+      
+      // Fuzzy matching sur chaque entrée
       const speciesList = (App.data.especes || []).map(e => e.nom.toUpperCase());
       const clientsList = [...new Set((App.data.stockage||[]).map(e=>e.client).filter(Boolean))];
       
-      if (data.client) data.client = App.AI.fuzzyMatch(data.client, clientsList);
-      if (data.espece) data.espece = App.AI.fuzzyMatch(data.espece, speciesList);
+      entries.forEach(data => {
+        if (data.client) data.client = App.AI.fuzzyMatch(data.client, clientsList);
+        if (data.espece) data.espece = App.AI.fuzzyMatch(data.espece, speciesList);
+      });
 
       App.AI.hideOverlay();
-      this.showAIReviewModal(data);
+      this.showAIReviewModal(entries, rawData.isQuarterly || entries.some(e => e.isQuarterly));
       
     } catch (error) {
       App.AI.hideOverlay();
@@ -2296,13 +2355,20 @@ Notes:
     }
   },
 
-  showAIReviewModal(data) {
-    App.showModal("🤖 Validation de l'Extraction IA", `
+  showAIReviewModal(entries, isQuarterly = false) {
+    const isSingle = entries.length === 1;
+    const title = isQuarterly ? "🤖 Rapport Trimestriel Détecté" : (isSingle ? "🤖 Validation de l'Extraction IA" : `🤖 Extraction Multi-Lignes (${entries.length} entrées)`);
+    
+    let bodyHtml = `
       <div style="max-height:60vh; overflow-y:auto; padding-right:10px;">
         <p style="margin-bottom:15px; font-size:0.9rem; color:var(--text-secondary);">
-          Vérifiez les informations extraites avant l'importation.
+          ${isQuarterly ? "Ce document semble être un rapport trimestriel. Les données seront importées comme des résumés de période." : "Vérifiez les informations extraites avant l'importation."}
         </p>
-        
+    `;
+
+    if (isSingle) {
+      const data = entries[0];
+      bodyHtml += `
         <div class="ai-review-card">
           <div class="ai-review-field"><span class="ai-review-label">Date:</span><span class="ai-review-value">${data.date || '-'}</span></div>
           <div class="ai-review-field"><span class="ai-review-label">Client:</span><span class="ai-review-value">${data.client || '-'}</span></div>
@@ -2317,10 +2383,41 @@ Notes:
           <div class="ai-review-field"><span class="ai-review-label">Produit:</span><span class="ai-review-value">${data.produitFini || '-'}</span></div>
           <div class="ai-review-field"><span class="ai-review-label">Condit.:</span><span class="ai-review-value">${data.conditionnement || '-'}</span></div>
         </div>
-      </div>
-    `, `
+      `;
+    } else {
+      bodyHtml += `
+        <div class="table-container">
+          <table style="font-size:0.8rem;">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Espèce</th>
+                <th class="td-right">Poids MP</th>
+                <th class="td-right">Poids PF</th>
+                <th>Produit</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${entries.map(e => `
+                <tr>
+                  <td>${e.date || '-'}</td>
+                  <td><strong>${e.espece || '-'}</strong></td>
+                  <td class="td-right">${App.formatNumber(e.poidsMP, 1)}</td>
+                  <td class="td-right td-bold">${App.formatNumber(e.poidsPF, 1)}</td>
+                  <td>${e.produitFini || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+    
+    bodyHtml += `</div>`;
+
+    App.showModal(title, bodyHtml, `
       <div style="display:flex; gap:12px;">
-        <button class="btn btn-primary" id="btnConfirmAI">Importer les données</button>
+        <button class="btn btn-primary" id="btnConfirmAI">${isSingle ? 'Appliquer à la fiche' : 'Importer tout en historique'}</button>
         <button class="btn btn-outline" onclick="App.closeModal()">Annuler</button>
       </div>
     `);
@@ -2328,10 +2425,49 @@ Notes:
     const btn = document.getElementById('btnConfirmAI');
     if (btn) {
       btn.onclick = () => {
-        this.applyAIData(data);
         App.closeModal();
+        if (isSingle) {
+          this.applyAIData(entries[0]);
+        } else {
+          this.importBatchAIData(entries);
+        }
       };
     }
+  },
+
+  importBatchAIData(entries) {
+    App.toast(`Importation de ${entries.length} lignes...`, 'info');
+    
+    entries.forEach(e => {
+      const isTrt = (this.currentActivite === 'traitement' || this.currentActivite === 'divers');
+      const entry = {
+        id: App.nextId(App.data.production),
+        activite: this.currentActivite,
+        date: e.date || this.selectedDay,
+        client: e.client || '',
+        espece: e.espece || '',
+        calibre: e.calibre || '',
+        caissesPI: e.caissesPI || 0,
+        poidsBrutPI: e.poidsMP || 0,
+        poidsMP: e.poidsMP || 0,
+        caissesPF: e.caissesPF || 0,
+        poidsBrutPF: e.poidsPF || 0,
+        produitFini: e.produitFini || (e.espece + ' ' + (isTrt ? 'Traité' : 'Reconditionné')).toUpperCase(),
+        conditionnement: e.conditionnement || 'C12S1000',
+        phases: [],
+        phasesPF: [],
+        intrants: [],
+        // Phases par défaut pour import historique
+        phasesPF: [
+          { nom: 'Glasurage', seuil: 107, qteInit: e.poidsMP || 0, qteFinale: e.poidsPF || 0 }
+        ]
+      };
+      App.data.production.push(entry);
+    });
+
+    App.saveData();
+    this.render();
+    App.toast(`${entries.length} lignes importées avec succès`, 'success');
   },
 
   applyAIData(data) {
@@ -2346,10 +2482,9 @@ Notes:
         if (el && val !== undefined && val !== null) el.value = val;
       };
 
-      if (data.date) {
-        setVal(prefix + 'Date', data.date);
-        if (prefix === 'f') this.onDateChange(); else this.onDateChangeT();
-      }
+      const finalDate = data.date || this.selectedDay;
+      setVal(prefix + 'Date', finalDate);
+      if (prefix === 'f') this.onDateChange(); else this.onDateChangeT();
       setVal(prefix + 'Client', data.client);
       
       if (data.espece) {
@@ -2471,6 +2606,12 @@ Notes:
           dateRapport = this.parseExcelDateStr(leMatch[1]);
         }
         
+        // Check for range end "AU DD/MM/YYYY"
+        const auMatch = str.match(/AU\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+        if (auMatch && !dateEmballage) {
+          dateEmballage = this.parseExcelDateStr(auMatch[1]);
+        }
+        
         // Cell might be a Date object directly
         if (val instanceof Date && !isNaN(val)) {
           if (str.toLowerCase().includes('traitement')) {
@@ -2504,7 +2645,7 @@ Notes:
       }
     }
 
-    const finalDate = dateEmballage || dateTraitement || dateRapport || new Date();
+    const finalDate = dateEmballage || dateTraitement || dateRapport || this.selectedDay;
 
     // --- Find the header row (contains "ESPECE") ---
     let headerRow = -1;
@@ -2516,10 +2657,25 @@ Notes:
         // Map columns
         rows[r].forEach((val, c) => {
           const h = String(val || '').toUpperCase().trim();
+          const nextRow = rows[r+1] || [];
+          const hNext = String(nextRow[c] || '').toUpperCase().trim();
+          const hNextPlus = String(nextRow[c+1] || '').toUpperCase().trim();
+
           if (h.includes('ESPECE') || h.includes('ESPÈCE')) colMap.espece = c;
           else if (h.includes('NBR') && h.includes('CSS') && !h.includes('FINAL') && !colMap.caissesPI) colMap.caissesPI = c;
           else if (h.includes('NBR') && h.includes('CSS') && h.includes('FINAL')) colMap.caissesPF = c;
           else if (h.includes('POIDS INITIAL') || h.includes('POIDS INIT')) colMap.poidsPI = c;
+          else if (h.includes('MATIERE. PREMIERE') || h.includes('MATIÈRE PREMIÈRE')) {
+            // Merged header case: check row below
+            if (hNextPlus.includes('QUANT') || hNextPlus.includes('KG')) colMap.poidsPI = c + 1;
+            else if (hNext.includes('QUANT') || hNext.includes('KG')) colMap.poidsPI = c;
+            else colMap.poidsPI = c + 1; // Fallback to next col for weights
+          }
+          else if (h.includes('PRODUIT FINI')) {
+            if (hNextPlus.includes('QUANT') || hNextPlus.includes('KG')) colMap.poidsEmballe = c + 1;
+            else if (hNext.includes('QUANT') || hNext.includes('KG')) colMap.poidsEmballe = c;
+            else colMap.poidsEmballe = c + 1;
+          }
           else if (h.includes('MODE') && h.includes('TRAITEMENT')) colMap.modeTraitement = c;
           else if (h.includes('EVISCERATION') || h.includes('ÉVISCÉR')) colMap.poidsEvisceration = c;
           else if (h.includes('TREMPAGE')) colMap.poidsTrempage = c;

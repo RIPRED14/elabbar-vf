@@ -8,12 +8,15 @@ const Dashboard = {
 
   render() {
     const content = document.getElementById('pageContent');
-    const prod = App.getCurrentMonthProduction();
+    const d = new Date(this.selectedDate);
+    const q = Math.floor(d.getMonth() / 3) + 1;
     
-    // Si on est en vue quotidienne, on filtre pour le jour choisi
-    const dailyProd = App.data.production.filter(p => p.date === this.selectedDate);
+    let prod = [];
+    if (this.view === 'daily') prod = App.getDayProduction(this.selectedDate);
+    else if (this.view === 'monthly') prod = App.getMonthProduction(d.getFullYear(), d.getMonth());
+    else prod = App.getQuarterProduction(d.getFullYear(), q);
     
-    const stats = this.calcStats(this.view === 'monthly' ? prod : dailyProd);
+    const stats = this.calcStats(prod);
     const stockStats = this.calcStockStats();
     const alerts = App.getAlerts();
 
@@ -30,8 +33,11 @@ const Dashboard = {
     }
 
     const dateObj = new Date(this.selectedDate);
+    const qNum = Math.floor(dateObj.getMonth() / 3) + 1;
     const moisNom = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
     const jourNom = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    const trimNom = `Trimestre ${qNum} ${dateObj.getFullYear()}`;
+    const activeLabel = this.view === 'daily' ? jourNom : (this.view === 'monthly' ? moisNom : trimNom);
 
     content.innerHTML = `
       <div class="fade-in">
@@ -46,6 +52,7 @@ const Dashboard = {
           
           <div class="dashboard-controls-glass">
             <div class="view-switcher">
+              <button class="btn-switch ${this.view === 'quarterly' ? 'active' : ''}" onclick="Dashboard.switchView('quarterly')">Trimestre</button>
               <button class="btn-switch ${this.view === 'monthly' ? 'active' : ''}" onclick="Dashboard.switchView('monthly')">Mois</button>
               <button class="btn-switch ${this.view === 'daily' ? 'active' : ''}" onclick="Dashboard.switchView('daily')">Jour</button>
             </div>
@@ -65,12 +72,12 @@ const Dashboard = {
         </div>
 
         <div class="tab-content-area">
-          ${this.renderActiveTab(this.view === 'monthly' ? prod : dailyProd, stats, stockStats, this.view === 'monthly' ? moisNom : jourNom)}
+          ${this.renderActiveTab(prod, stats, stockStats, activeLabel)}
         </div>
       </div>
     `;
 
-    this.renderCharts(this.view === 'monthly' ? prod : dailyProd, stats);
+    this.renderCharts(prod, stats);
     this.animateNumbers();
   },
 

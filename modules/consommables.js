@@ -3,6 +3,63 @@
    ============================================ */
 const Consommables = {
   currentTab: 'stock', // 'stock', 'mouvements', 'bl'
+  viewType: 'month', // 'day' or 'month'
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: new Date().getMonth(),
+  selectedDay: new Date().toISOString().split('T')[0],
+  selectedPeriod: new Date().toISOString().substring(0, 7), // YYYY-MM
+  selectedDayISO: new Date().toISOString().substring(0, 10), // YYYY-MM-DD
+
+  onViewTypeChange(type) {
+    this.viewType = type;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onDayChange(e) {
+    this.selectedDay = e.target.value;
+    const parts = this.selectedDay.split('-');
+    this.selectedYear = parseInt(parts[0]);
+    this.selectedMonth = parseInt(parts[1]) - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onPeriodChange(e) {
+    const val = e.target.value;
+    if (!val) return;
+    const [y, m] = val.split('-').map(Number);
+    this.selectedYear = y;
+    this.selectedMonth = m - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  toggleView(mode) {
+    this.onViewTypeChange(mode);
+  },
+
+  updatePeriodISO() {
+    this.selectedPeriod = `${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}`;
+    this.selectedDayISO = this.selectedDay;
+  },
+
+  navigatePeriod(direction) {
+    if (this.viewType === 'day') {
+      const d = new Date(this.selectedDay);
+      d.setDate(d.getDate() + direction);
+      this.selectedDay = d.toISOString().split('T')[0];
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    } else {
+      let m = this.selectedMonth + direction;
+      const d = new Date(this.selectedYear, m, 1);
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    }
+    this.updatePeriodISO();
+    this.render();
+  },
 
   applyAIData(data) {
     if (!data) return;
@@ -23,9 +80,15 @@ const Consommables = {
     }).join('');
 
     App.showModal("🤖 Validation Réception IA", `
-      <div style="margin-bottom:15px;">
-        <label class="form-label">Fournisseur</label>
-        <input type="text" id="c_fournisseur" value="${data.fournisseur || ''}" class="form-input">
+      <div style="display:flex; gap:15px; margin-bottom:15px;">
+        <div style="flex:1;">
+          <label class="form-label">Fournisseur</label>
+          <input type="text" id="c_fournisseur" value="${data.fournisseur || ''}" class="form-input">
+        </div>
+        <div style="flex:1;">
+          <label class="form-label">Date Réception</label>
+          <input type="date" id="c_date" value="${data.date ? App.formatDateISO(data.date) : (this.selectedDay || new Date().toISOString().split('T')[0])}" class="form-input">
+        </div>
       </div>
       <div class="table-container">
         <table class="table">
@@ -43,6 +106,7 @@ const Consommables = {
 
   saveAI() {
     const fournisseur = document.getElementById('c_fournisseur').value;
+    const dateSaisie = document.getElementById('c_date').value || new Date().toISOString().split('T')[0];
     const rows = document.querySelectorAll('#aiConsTableBody tr');
     
     rows.forEach(row => {
@@ -66,7 +130,7 @@ const Consommables = {
           quantite: qty,
           prixUnit: pu,
           motif: fournisseur ? 'Fournisseur: ' + fournisseur : 'Réception IA',
-          date: new Date().toISOString()
+          date: dateSaisie + "T12:00:00Z"
         });
       }
     });
@@ -78,6 +142,8 @@ const Consommables = {
   },
 
   render() {
+    if (!this.selectedPeriod) this.updatePeriodISO();
+    
     const content = document.getElementById('pageContent');
     if (!content) return;
 
@@ -93,34 +159,81 @@ const Consommables = {
 
     const cons = App.data.consommables || [];
     const totalStockVal = cons.reduce((s, i) => s + ((i.stock || 0) * (i.prixUnitaire || 0)), 0);
-    const mvtsMois = (App.data.mouvementsStock || []).filter(m => m.date.startsWith(new Date().toISOString().split('-').slice(0, 2).join('-')));
-    const totalSorties = mvtsMois.filter(m => m.type === 'sortie').reduce((s, m) => s + (m.quantite || 0), 0);
+    
+    // Filtered Movements for KPI
+    const allMvts = App.data.mouvementsStock || [];
+    const filteredMvts = allMvts.filter(m => 
+      this.viewType === 'month' ? m.date.startsWith(this.selectedPeriod) : m.date.startsWith(this.selectedDayISO)
+    );
+    
+    const totalSorties = filteredMvts.filter(m => m.type === 'sortie').reduce((s, m) => s + (m.quantite || 0), 0);
+    const totalEntrees = filteredMvts.filter(m => m.type === 'entree').reduce((s, m) => s + (m.quantite || 0), 0);
 
     content.innerHTML = `
       <div class="fade-in">
         ${alertsHtml}
-        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:32px;">
-          <div>
-            <nav style="display:flex; gap:8px; margin-bottom:12px; font-size:0.85rem; font-weight:600; color:var(--text-muted);">
-              <span>Logistique</span>
-              <span>/</span>
-              <span style="color:var(--accent-blue);">Gestion Consommables</span>
-            </nav>
-            <h2 class="page-title">Consommables & Fournitures</h2>
-            <p class="page-subtitle">Suivi des stocks, alertes critiques et bons de livraison.</p>
+        
+        <!-- Module Header & Standardized Selectors -->
+        <div class="page-header" style="margin-bottom:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <nav style="display:flex; gap:8px; margin-bottom:8px; font-size:0.85rem; font-weight:600; color:var(--text-muted);">
+                <span>Logistique</span>
+                <span>/</span>
+                <span style="color:var(--accent-blue);">Gestion Consommables</span>
+              </nav>
+              <h2 class="page-title">Consommables & Fournitures</h2>
+            </div>
+            
+            <div style="display:flex; gap:12px;">
+              <button class="btn btn-outline" onclick="Consommables.showReception()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                <span>Réception</span>
+              </button>
+              <button class="btn btn-outline" onclick="Consommables.showSortie()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <span>Sortie</span>
+              </button>
+              <button class="btn btn-primary" onclick="Consommables.showAddModal()">
+                <span>+ Nouvel Article</span>
+              </button>
+            </div>
           </div>
-          <div style="display:flex; gap:12px;">
-            <button class="btn btn-outline" onclick="Consommables.showReception()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-              <span>Réception</span>
-            </button>
-            <button class="btn btn-outline" onclick="Consommables.showSortie()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-              <span>Sortie</span>
-            </button>
-            <button class="btn btn-primary" onclick="Consommables.showAddModal()">
-              <span>+ Nouvel Article</span>
-            </button>
+
+          <div style="margin-top:24px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 20px; border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.05); backdrop-filter:blur(10px);">
+            <div style="display:flex; gap:12px; align-items:flex-end;">
+              <div style="display:flex; background:rgba(0,0,0,0.2); padding:4px; border-radius:10px; display:flex; gap:4px; margin-bottom:2px;">
+                <button onclick="Consommables.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Jour</button>
+                <button onclick="Consommables.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Mois</button>
+              </div>
+
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${this.viewType === 'day' ? 'Date' : 'Période'}</label>
+                ${this.viewType === 'day' 
+                  ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Consommables.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:rgba(255,255,255,0.05); border-color:var(--accent-blue); font-weight:600; color:white;">`
+                  : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Consommables.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:rgba(255,255,255,0.05); border-color:var(--accent-blue); font-weight:600; color:white;">`
+                }
+              </div>
+            </div>
+
+            <div class="period-navigation" style="display:flex; align-items:center; gap:16px;">
+              <button class="nav-btn" onclick="Consommables.navigatePeriod(-1)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              
+              <div class="current-period-display" style="text-align:center; min-width:200px;">
+                <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700; margin-bottom:2px;">
+                  Période Sélectionnée
+                </div>
+                <div style="font-size:1.1rem; font-weight:800; color:var(--accent-blue);">
+                  ${this.viewType === 'month' ? App.formatMonthFR(this.selectedPeriod) : App.formatDateFR(this.selectedDayISO)}
+                </div>
+              </div>
+
+              <button class="nav-btn" onclick="Consommables.navigatePeriod(1)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -133,9 +246,15 @@ const Consommables = {
           </div>
           <div class="kpi-card orange">
             <div class="kpi-icon orange">📤</div>
-            <div class="kpi-label">Consommation (Mois)</div>
+            <div class="kpi-label">Sorties (${this.viewType === 'month' ? 'Mois' : 'Jour'})</div>
             <div class="kpi-value">${App.formatNumber(totalSorties, 0)}</div>
-            <div class="kpi-change">Unités sorties</div>
+            <div class="kpi-change">Unités consommées</div>
+          </div>
+          <div class="kpi-card green">
+            <div class="kpi-icon green">📥</div>
+            <div class="kpi-label">Entrées (${this.viewType === 'month' ? 'Mois' : 'Jour'})</div>
+            <div class="kpi-value">${App.formatNumber(totalEntrees, 0)}</div>
+            <div class="kpi-change">Unités reçues</div>
           </div>
           <div class="kpi-card red">
             <div class="kpi-icon red">🚨</div>
@@ -282,12 +401,16 @@ const Consommables = {
   },
 
   buildMouvementsTable() {
-    const mvts = (App.data.mouvementsStock || []).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20);
-    if (mvts.length === 0) return '<div class="empty-state"><div class="empty-state-icon">📋</div><div>Aucun mouvement</div></div>';
+    const mvts = (App.data.mouvementsStock || []).filter(m => 
+      this.viewType === 'month' ? m.date.startsWith(this.selectedPeriod) : m.date.startsWith(this.selectedDayISO)
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    if (mvts.length === 0) return '<div class="empty-state"><div class="empty-state-icon">📋</div><div>Aucun mouvement sur cette période</div></div>';
+    
     return `<table>
       <thead><tr><th>Date</th><th>Consommable</th><th>Type</th><th>Quantité</th><th>Motif</th></tr></thead>
       <tbody>${mvts.map(m => `<tr>
-        <td>${App.formatDateFR(m.date)}</td>
+        <td>${App.formatDateFR(m.date)} ${this.viewType === 'month' ? '' : '<br><small style="color:var(--text-muted)">' + m.date.split('T')[1].substring(0, 5) + '</small>'}</td>
         <td class="td-bold">${m.consommable}</td>
         <td><span class="badge ${m.type==='entree'?'badge-success':'badge-warning'}">${m.type==='entree'?'📥 Entrée':'📤 Sortie'}</span></td>
         <td class="td-right td-bold">${m.type==='entree'?'+':'-'}${App.formatNumber(m.quantite, 1)}</td>
@@ -498,16 +621,20 @@ Notes: Sois précis sur les noms des articles (ex: SACHET 25x35).`;
   },
 
   renderBL() {
-    const bls = App.data.bonsLivraisonConsommables || [];
+    const allBLs = App.data.bonsLivraisonConsommables || [];
+    const bls = allBLs.filter(b => 
+      this.viewType === 'month' ? b.date.startsWith(this.selectedPeriod) : b.date.startsWith(this.selectedDayISO)
+    ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
     return `
       <div class="card">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
-          <span class="card-title">📄 Bons de Livraison Consommables</span>
+          <span class="card-title">📄 Bons de Livraison (${this.viewType === 'month' ? 'Mois' : 'Jour'})</span>
           <button class="btn btn-primary" onclick="Consommables.showBLForm()">+ Nouveau BL</button>
         </div>
         <div class="card-body">
           <div class="table-container">
-            ${bls.length === 0 ? '<div class="empty-state">Aucun BL généré</div>' : `
+            ${bls.length === 0 ? '<div class="empty-state">Aucun BL sur cette période</div>' : `
               <table>
                 <thead>
                   <tr>
@@ -600,8 +727,9 @@ Notes: Sois précis sur les noms des articles (ex: SACHET 25x35).`;
       if (c) {
         c.stock -= l.qty;
         if (!App.data.mouvementsStock) App.data.mouvementsStock = [];
+        const mDate = date.includes('T') ? date : (date + 'T' + new Date().toISOString().split('T')[1]);
         App.data.mouvementsStock.unshift({
-          date, consommable: c.nom, type: 'sortie', quantite: l.qty, motif: 'Sortie via ' + blNum
+          date: mDate, consommable: c.nom, type: 'sortie', quantite: l.qty, motif: 'Sortie via ' + blNum
         });
         bl.lignes.push({ nom: c.nom, qty: l.qty, unite: c.unite });
       }

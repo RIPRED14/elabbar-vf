@@ -2,6 +2,64 @@
    ENERGIE — Analyse énergétique
    ============================================ */
 const Energie = {
+  viewType: 'month', // 'day' or 'month'
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: new Date().getMonth(),
+  selectedDay: new Date().toISOString().split('T')[0],
+  selectedPeriod: new Date().toISOString().substring(0, 7), // YYYY-MM
+  selectedDayISO: new Date().toISOString().substring(0, 10), // YYYY-MM-DD
+
+  onViewTypeChange(type) {
+    this.viewType = type;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onDayChange(e) {
+    this.selectedDay = e.target.value;
+    const parts = this.selectedDay.split('-');
+    this.selectedYear = parseInt(parts[0]);
+    this.selectedMonth = parseInt(parts[1]) - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  onPeriodChange(e) {
+    const val = e.target.value;
+    if (!val) return;
+    const [y, m] = val.split('-').map(Number);
+    this.selectedYear = y;
+    this.selectedMonth = m - 1;
+    this.updatePeriodISO();
+    this.render();
+  },
+
+  toggleView(mode) {
+    this.onViewTypeChange(mode);
+  },
+
+  updatePeriodISO() {
+    this.selectedPeriod = `${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}`;
+    this.selectedDayISO = this.selectedDay;
+  },
+
+  navigatePeriod(direction) {
+    if (this.viewType === 'day') {
+      const d = new Date(this.selectedDay);
+      d.setDate(d.getDate() + direction);
+      this.selectedDay = d.toISOString().split('T')[0];
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    } else {
+      let m = this.selectedMonth + direction;
+      const d = new Date(this.selectedYear, m, 1);
+      this.selectedYear = d.getFullYear();
+      this.selectedMonth = d.getMonth();
+    }
+    this.updatePeriodISO();
+    this.render();
+  },
+
   applyAIData(data) {
     if (!data) return;
 
@@ -31,7 +89,7 @@ const Energie = {
 
       App.showModal("⚡ Facture Énergie (IA)", `
         <div class="form-grid">
-          <div class="form-group"><label>Mois</label><input type="month" id="ai_eMois" value="${finalMonth}"></div>
+          <div class="form-group"><label>Mois</label><input type="month" id="ai_eMois" value="${finalMonth || this.selectedPeriod}"></div>
           <div class="form-group"><label>Conso HP (kWh)</label><input type="number" id="ai_eHP" value="${data.consoHP || 0}"></div>
           <div class="form-group"><label>Conso HPl (kWh)</label><input type="number" id="ai_eHPl" value="${data.consoHPl || 0}"></div>
           <div class="form-group"><label>Conso HC (kWh)</label><input type="number" id="ai_eHC" value="${data.consoHC || 0}"></div>
@@ -45,121 +103,216 @@ const Energie = {
 
   saveAI() {
     const mois = document.getElementById('ai_eMois').value;
+    if (!App.data.energie) App.data.energie = {};
     if (!App.data.energie.history) App.data.energie.history = {};
+    
     App.data.energie.history[mois] = {
       consoHP: parseFloat(document.getElementById('ai_eHP').value) || 0,
       consoHPl: parseFloat(document.getElementById('ai_eHPl').value) || 0,
       consoHC: parseFloat(document.getElementById('ai_eHC').value) || 0,
       montantTTC: parseFloat(document.getElementById('ai_eTotal').value) || 0
     };
+    
     App.saveData();
     App.closeModal();
-    this.render();
-    App.toast("Données énergétiques enregistrées !");
+    App.toast("Données énergétiques enregistrées", "success");
   },
+
   render() {
+    if (!this.selectedPeriod) this.updatePeriodISO();
+
     const p = App.data.parametres;
-    const currentMonth = this.getCurrentMonthKey();
-    const e = this.getMonthData();
+    const e = this.getMonthData(); // This uses this.selectedPeriod
     const content = document.getElementById('pageContent');
-    const computedZones = this.getComputedZones();
+    if (!content) return;
+
+    const computedZones = this.getComputedZones(); // This uses this.selectedDayISO
+    const facture = this.calcFacture();
 
     content.innerHTML = `
       <div class="fade-in">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-          <div>
-            <h2 class="page-title">Analyse Énergétique</h2>
-            <p class="page-subtitle">Suivi basé sur les spécifications techniques et thermographes réels</p>
+        <div class="page-header" style="margin-bottom:24px;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <nav style="display:flex; gap:8px; margin-bottom:8px; font-size:0.85rem; font-weight:600; color:var(--text-muted);">
+                <span>Infrastructure</span>
+                <span>/</span>
+                <span style="color:var(--accent-blue);">Analyse Énergétique</span>
+              </nav>
+              <h2 class="page-title">Management de l'Énergie</h2>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn btn-primary" onclick="Energie.saveEnergie()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                <span>Enregistrer</span>
+              </button>
+            </div>
           </div>
-          <button class="btn btn-primary" onclick="Energie.saveEnergie()">💾 Enregistrer les données</button>
+
+          <div style="margin-top:24px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 20px; border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.05); backdrop-filter:blur(10px);">
+            <div style="display:flex; gap:12px; align-items:flex-end;">
+              <div style="display:flex; background:rgba(0,0,0,0.2); padding:4px; border-radius:10px; display:flex; gap:4px; margin-bottom:2px;">
+                <button onclick="Energie.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Simulation Jour</button>
+                <button onclick="Energie.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Facturation Mois</button>
+              </div>
+
+              <div class="form-group" style="margin:0;">
+                <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${this.viewType === 'day' ? 'Date d\'analyse' : 'Période'}</label>
+                ${this.viewType === 'day' 
+                  ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Energie.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:rgba(255,255,255,0.05); border-color:var(--accent-blue); font-weight:600; color:white;">`
+                  : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Energie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:rgba(255,255,255,0.05); border-color:var(--accent-blue); font-weight:600; color:white;">`
+                }
+              </div>
+            </div>
+
+            <div class="period-navigation" style="display:flex; align-items:center; gap:16px;">
+              <button class="nav-btn" onclick="Energie.navigatePeriod(-1)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+              
+              <div class="current-period-display" style="text-align:center; min-width:200px;">
+                <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700; margin-bottom:2px;">
+                  Période d'Analyse
+                </div>
+                <div style="font-size:1.1rem; font-weight:800; color:var(--accent-blue);">
+                  ${this.viewType === 'month' ? App.formatMonthFR(this.selectedPeriod) : App.formatDateFR(this.selectedDayISO)}
+                </div>
+              </div>
+
+              <button class="nav-btn" onclick="Energie.navigatePeriod(1)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="kpi-grid" style="margin-bottom:24px;">
           <div class="kpi-card cyan">
-            <div class="kpi-icon cyan">⚡</div>
-            <div class="kpi-label">Charge Froid Totale</div>
+            <div class="kpi-icon cyan">❄️</div>
+            <div class="kpi-label">Charge Froid Simulation</div>
             <div class="kpi-value">${App.formatNumber(this.calcTotalFroid(computedZones),0)} <span class="kpi-unit">kWh/j</span></div>
+            <div class="kpi-change">${this.viewType === 'day' ? 'Basé sur thermographe' : 'Moyenne mensuelle estimée'}</div>
           </div>
           <div class="kpi-card blue">
             <div class="kpi-icon blue">🏢</div>
-            <div class="kpi-label">Conso. RDC (Est.)</div>
+            <div class="kpi-label">Consommation RDC</div>
             <div class="kpi-value">${App.formatNumber(this.calcTotalRDC(),1)} <span class="kpi-unit">kWh/j</span></div>
+            <div class="kpi-change">Hors froid industriel</div>
           </div>
           <div class="kpi-card yellow">
             <div class="kpi-icon yellow">💡</div>
-            <div class="kpi-label">Facture Réelle (Mois)</div>
-            <div class="kpi-value">${App.formatNumber(e.consoMensuelle||0,0)}<span class="kpi-unit">kWh</span></div>
+            <div class="kpi-label">Conso. Réelle (Mois)</div>
+            <div class="kpi-value">${App.formatNumber((e.consoHP||0)+(e.consoHPl||0)+(e.consoHC||0),0)}<span class="kpi-unit">kWh</span></div>
+            <div class="kpi-change">Données facturées</div>
           </div>
           <div class="kpi-card red">
             <div class="kpi-icon red">💰</div>
-            <div class="kpi-label">Montant Facture</div>
-            <div class="kpi-value">${App.formatNumber(this.calcFacture(),0)}<span class="kpi-unit">DH</span></div>
+            <div class="kpi-label">Estimation Facture</div>
+            <div class="kpi-value">${App.formatNumber(facture.total,0)}<span class="kpi-unit">DH</span></div>
+            <div class="kpi-change">Incl. taxes et redevances</div>
           </div>
         </div>
 
-        <div class="charts-grid" style="margin-bottom:24px;">
-          <div class="card" style="grid-column: span 2;">
-            <div class="card-header">
-              <span class="card-title">❄️ Simulation des Charges de Refroidissement (kWh/jour)</span>
-              <span class="badge badge-info">Calculé à partir des relevés thermographes du jour</span>
+        <div class="slide-up">
+          ${this.viewType === 'day' ? this.renderDayView(computedZones) : this.renderMonthView(e, p, facture)}
+        </div>
+      </div>
+    `;
+    if (this.viewType === 'month') this.updateKPI();
+  },
+
+  renderDayView(computedZones) {
+    return `
+      <div class="charts-grid" style="margin-bottom:24px;">
+        <div class="card" style="grid-column: span 2;">
+          <div class="card-header">
+            <span class="card-title">❄️ Simulation des Charges de Refroidissement (kWh/jour)</span>
+            <span class="badge badge-info">Calculé à partir des relevés thermographes du jour</span>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-container">${this.renderFroidTable(computedZones)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns: 1fr; gap:24px;">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🏢 Détail Consommation RDC (Estimation standard)</span></div>
+          <div class="card-body" style="padding:0;">
+            <div class="table-container">${this.renderRDCTable()}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  renderMonthView(e, p, facture) {
+    const currentMonth = this.selectedPeriod;
+    return `
+      <div style="display:grid;grid-template-columns: 1fr 1.5fr; gap:24px;">
+        <div class="card">
+          <div class="card-header"><span class="card-title">🏢 Profil de Consommation Mensuelle</span></div>
+          <div class="card-body">
+            <div style="padding:20px; text-align:center; background:rgba(37, 99, 255, 0.05); border-radius:12px; margin-bottom:20px;">
+              <div style="font-size:0.9rem; color:var(--text-muted);">Total kWh ce mois</div>
+              <div style="font-size:2rem; font-weight:800; color:var(--accent-blue);">${App.formatNumber((e.consoHP||0)+(e.consoHPl||0)+(e.consoHC||0), 0)}</div>
             </div>
-            <div class="card-body" style="padding:0;">
-              <div class="table-container">${this.renderFroidTable(computedZones)}</div>
+            <div class="table-container">
+              <table class="table">
+                <tbody>
+                  <tr><td>Heures de Pointe (HP)</td><td class="td-right td-bold">${App.formatNumber(e.consoHP||0)} kWh</td></tr>
+                  <tr><td>Heures Pleines (HPl)</td><td class="td-right td-bold">${App.formatNumber(e.consoHPl||0)} kWh</td></tr>
+                  <tr><td>Heures Creuses (HC)</td><td class="td-right td-bold">${App.formatNumber(e.consoHC||0)} kWh</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns: 1fr 1.5fr; gap:24px;">
-          <div class="card">
-            <div class="card-header"><span class="card-title">🏢 Détail Consommation RDC</span></div>
-            <div class="card-body" style="padding:0;">
-              <div class="table-container">${this.renderRDCTable()}</div>
-            </div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📝 Saisie Mensuelle & Tarification ONEE</span>
+            <button class="btn btn-small btn-outline" onclick="Energie.distributeConso()" title="Répartir la consommation totale selon le profil théorique">⚡ Auto-répartir</button>
           </div>
-
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">📝 Saisie Mensuelle & Tarification ONEE</span>
-              <button class="btn btn-small" onclick="Energie.distributeConso()" title="Répartir la consommation totale selon le profil théorique">⚡ Auto-répartir</button>
-            </div>
-            <div class="card-body">
-              <div class="form-grid">
-                <div class="form-group" style="grid-column: span 2;"><label class="form-label">Mois</label><input type="month" class="form-input" id="eMois" value="${e.mois || currentMonth}" onchange="Energie.loadMonthForm()"></div>
-                
-                <div class="form-group"><label class="form-label">Conso. HP (kWh)</label><input type="number" class="form-input" id="eConsoHP" value="${e.consoHP||0}" onchange="Energie.updateKPI()"></div>
-                <div class="form-group"><label class="form-label">Tarif HP (DH)</label><input type="number" step="0.0001" class="form-input" id="eTarifHP" value="${p.tarifHP||1.45}" onchange="Energie.updateKPI()"></div>
-                
-                <div class="form-group"><label class="form-label">Conso. HPl (kWh)</label><input type="number" class="form-input" id="eConsoHPl" value="${e.consoHPl||0}" onchange="Energie.updateKPI()"></div>
-                <div class="form-group"><label class="form-label">Tarif HPl (DH)</label><input type="number" step="0.0001" class="form-input" id="eTarifHPl" value="${p.tarifHPl||1.15}" onchange="Energie.updateKPI()"></div>
-                
-                <div class="form-group"><label class="form-label">Conso. HC (kWh)</label><input type="number" class="form-input" id="eConsoHC" value="${e.consoHC||0}" onchange="Energie.updateKPI()"></div>
-                <div class="form-group"><label class="form-label">Tarif HC (DH)</label><input type="number" step="0.0001" class="form-input" id="eTarifHC" value="${p.tarifHC||0.85}" onchange="Energie.updateKPI()"></div>
-                
-                <div class="form-group"><label class="form-label">Redevances Fixes</label><input type="number" class="form-input" id="eRedFixe" value="${(p.redevancePuissance||0)+(p.redevanceEntretien||0)+(p.redevanceLocation||0)}" onchange="Energie.updateKPI()"></div>
-                <div class="form-group"><label class="form-label">TVA (%)</label><input type="number" step="0.1" class="form-input" id="eTva" value="${(p.tvaEnergetique||0.14)*100}" onchange="Energie.updateKPI()"></div>
+          <div class="card-body">
+            <div class="form-grid">
+              <div class="form-group" style="grid-column: span 2;">
+                <label class="form-label">Mois de la facture</label>
+                <input type="month" class="form-input" id="eMois" value="${e.mois || currentMonth}" onchange="Energie.selectedYear=parseInt(this.value.split('-')[0]); Energie.selectedMonth=parseInt(this.value.split('-')[1]); Energie.updatePeriodISO(); Energie.render();">
               </div>
+              
+              <div class="form-group"><label class="form-label">Conso. HP (kWh)</label><input type="number" class="form-input" id="eConsoHP" value="${e.consoHP||0}" onchange="Energie.updateKPI()"></div>
+              <div class="form-group"><label class="form-label">Tarif HP (DH)</label><input type="number" step="0.0001" class="form-input" id="eTarifHP" value="${p.tarifHP||1.45}" onchange="Energie.updateKPI()"></div>
+              
+              <div class="form-group"><label class="form-label">Conso. HPl (kWh)</label><input type="number" class="form-input" id="eConsoHPl" value="${e.consoHPl||0}" onchange="Energie.updateKPI()"></div>
+              <div class="form-group"><label class="form-label">Tarif HPl (DH)</label><input type="number" step="0.0001" class="form-input" id="eTarifHPl" value="${p.tarifHPl||1.15}" onchange="Energie.updateKPI()"></div>
+              
+              <div class="form-group"><label class="form-label">Conso. HC (kWh)</label><input type="number" class="form-input" id="eConsoHC" value="${e.consoHC||0}" onchange="Energie.updateKPI()"></div>
+              <div class="form-group"><label class="form-label">Tarif HC (DH)</label><input type="number" step="0.0001" class="form-input" id="eTarifHC" value="${p.tarifHC||0.85}" onchange="Energie.updateKPI()"></div>
+              
+              <div class="form-group"><label class="form-label">Redevances Fixes</label><input type="number" class="form-input" id="eRedFixe" value="${(p.redevancePuissance||0)+(p.redevanceEntretien||0)+(p.redevanceLocation||0)}" onchange="Energie.updateKPI()"></div>
+              <div class="form-group"><label class="form-label">TVA (%)</label><input type="number" step="0.1" class="form-input" id="eTva" value="${(p.tvaEnergetique||0.14)*100}" onchange="Energie.updateKPI()"></div>
+            </div>
 
-              <div class="summary-box" style="margin-top:24px;">
-                <h3 style="margin-bottom:16px; font-size: 1rem; color: var(--primary-color);">Détail de la Facture Estimée</h3>
-                <div class="summary-row"><span class="summary-label">Montant HP / HPl / HC</span><span class="summary-value" id="eFactConso">0 DH</span></div>
-                <div class="summary-row"><span class="summary-label">Redevances HT</span><span class="summary-value" id="eFactRedev">0 DH</span></div>
-                <div class="summary-row"><span class="summary-label">TVA & Taxes</span><span class="summary-value" id="eFactTaxes">0 DH</span></div>
-                <div class="summary-row" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);">
-                  <span class="summary-label" style="font-weight:700;">TOTAL TTC</span>
-                  <span class="summary-value summary-total" id="eFactTotal" style="font-size:1.4rem; color:var(--status-danger);">0 DH</span>
-                </div>
+            <div class="summary-box" style="margin-top:24px; padding:20px; background:rgba(0,0,0,0.2); border-radius:12px;">
+              <h3 style="margin-bottom:16px; font-size: 1rem; color: var(--accent-blue);">Détail de la Facture Estimée</h3>
+              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="summary-label">Montant Consommation</span><span class="summary-value" id="eFactConso">0 DH</span></div>
+              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="summary-label">Redevances HT</span><span class="summary-value" id="eFactRedev">0 DH</span></div>
+              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="summary-label">TVA & Taxes</span><span class="summary-value" id="eFactTaxes">0 DH</span></div>
+              <div class="summary-row" style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
+                <span class="summary-label" style="font-weight:700; color:white;">TOTAL TTC ESTIMÉ</span>
+                <span class="summary-value summary-total" id="eFactTotal" style="font-size:1.6rem; color:var(--accent-red); font-weight:800;">0 DH</span>
               </div>
             </div>
           </div>
         </div>
       </div>
     `;
-    this.updateKPI();
   },
 
   getComputedZones() {
     const specs = App.data.chambresSpecs || {};
-    const today = App.formatDate(new Date());
+    const today = this.selectedDayISO || App.formatDate(new Date());
     const history = (App.data.chambresHistory || []);
     const lastReading = history.find(h => h.date === today) || history[history.length - 1] || {};
     
@@ -366,7 +519,7 @@ const Energie = {
   },
 
   getMonthKey() {
-    return document.getElementById('eMois')?.value || this.getCurrentMonthKey();
+    return this.selectedPeriod || this.getCurrentMonthKey();
   },
 
   getMonthData() {

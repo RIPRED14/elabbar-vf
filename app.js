@@ -1090,6 +1090,7 @@ const App = {
     production: [],
     mouvementsStock: [],
     energieMensuelle: {},
+    fiches_pointage: [],
     stockage: [],
     sortiesStockage: [],
     qrCodes: [],
@@ -1848,9 +1849,18 @@ const App = {
 
     // 2. Tenter de charger depuis Supabase (Source de Vérité)
     if (this.supabase) {
+      const statusEl = document.getElementById('syncStatus');
+      const iconEl = document.getElementById('syncIcon');
+      const textEl = document.getElementById('syncText');
+
       try {
+        if (statusEl) {
+            statusEl.className = 'sync-status syncing';
+            textEl.textContent = 'Sync...';
+            iconEl.textContent = 'sync';
+        }
         console.log("📥 Synchronisation avec Supabase...");
-        const tables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes'];
+        const tables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes', 'especes', 'fiches_pointage'];
         const results = await Promise.all([
           this.supabase.from('settings').select('*').eq('id', 'global').maybeSingle(),
           this.supabase.from('pointage').select('*'),
@@ -1876,10 +1886,11 @@ const App = {
         });
 
         if (pointage.data && pointage.data.length > 0) {
-          this.data.pointage = {};
+          // Keep flat pointage for quick lookups if needed, but fiches_pointage is the UI source
+          this.data.pointage_flat = {}; 
           pointage.data.forEach(p => {
-            if (!this.data.pointage[p.date]) this.data.pointage[p.date] = {};
-            this.data.pointage[p.date][p.employee_id] = p.hours;
+            if (!this.data.pointage_flat[p.date]) this.data.pointage_flat[p.date] = {};
+            this.data.pointage_flat[p.date][p.employee_id] = p.hours;
           });
           hasCloudData = true;
           console.log(`✅ Pointage hydraté (${pointage.data.length} entrées)`);
@@ -1887,16 +1898,28 @@ const App = {
 
         if (!hasCloudData && saved) {
           console.log("☁️ Supabase est vide. Déclenchement de la migration vers le cloud...");
-          this.syncToSupabase();
+          await this.syncToSupabase();
         } else {
           console.log("🚀 Données Cloud à jour.");
         }
 
         // Mettre à jour le cache local avec ce qu'on a récupéré du cloud
         localStorage.setItem('gestprod_data', JSON.stringify(this.data));
+        
+        if (statusEl) {
+          statusEl.className = 'sync-status success';
+          textEl.textContent = 'Cloud';
+          iconEl.textContent = 'cloud_done';
+          setTimeout(() => { statusEl.style.opacity = '0.6'; }, 3000);
+        }
         return;
       } catch (err) {
         console.error("❌ Erreur critique Supabase (chargement):", err);
+        if (statusEl) {
+          statusEl.className = 'sync-status error';
+          textEl.textContent = 'Erreur Load';
+          iconEl.textContent = 'cloud_off';
+        }
       }
     }
 
@@ -1966,61 +1989,168 @@ const App = {
     }
   },
 
-  saveData() {
+  async saveData(tableName = null, item = null) {
     // 1. Sauvegarde locale immédiate (Performance + Offline fallback)
     localStorage.setItem('gestprod_data', JSON.stringify(this.data));
     this.updateAlertsBadge();
     
-    // 2. Synchronisation Supabase en arrière-plan
-    this.syncToSupabase();
+    // 2. Synchronisation Supabase
+    if (this.supabase) {
+      if (tableName && item) {
+        // Synchronisation granulaire immédiate (PLUS ROBUSTE)
+        await this.saveToCloud(tableName, item);
+      } else {
+        // Synchronisation complète en arrière-plan (Safety net)
+        this.syncToSupabase();
+      }
+    }
+  },
+
+  async saveToCloud(tableName, item) {
+    if (!this.supabase) return;
+    this.setSyncStatus('syncing', 'Sync...');
+    try {
+      // Clean item of UI temporary fields if any
+      const cleanItem = JSON.parse(JSON.stringify(item));
+      const { error } = await this.supabase.from(tableName).upsert(cleanItem);
+      if (error) throw error;
+      this.setSyncStatus('success', 'Cloud');
+      console.log(`✅ [Cloud] ${tableName} synchronisé`);
+    } catch (err) {
+      console.error(`❌ [Cloud] Erreur sync ${tableName}:`, err);
+      this.setSyncStatus('error', 'Erreur');
+      // On ne bloque pas l'utilisateur, mais on signale l'erreur
+    }
+  },
+
+  async deleteFromCloud(tableName, id) {
+    if (!this.supabase) return;
+    this.setSyncStatus('syncing', 'Suppr...');
+    try {
+      const { error } = await this.supabase.from(tableName).delete().eq('id', id);
+      if (error) throw error;
+      this.setSyncStatus('success', 'Cloud');
+      console.log(`✅ [Cloud] ${tableName} item ${id} supprimé`);
+    } catch (err) {
+      console.error(`❌ [Cloud] Erreur suppression ${tableName}:`, err);
+      this.setSyncStatus('error', 'Erreur');
+    }
+  },
+
+  setSyncStatus(status, text) {
+    const statusEl = document.getElementById('syncStatus');
+    const iconEl = document.getElementById('syncIcon');
+    const textEl = document.getElementById('syncText');
+    if (!statusEl) return;
+
+    statusEl.className = `sync-status ${status}`;
+    if (textEl) textEl.textContent = text;
+    if (iconEl) {
+      if (status === 'syncing') iconEl.textContent = 'sync';
+      else if (status === 'success') iconEl.textContent = 'cloud_done';
+      else iconEl.textContent = 'cloud_off';
+    }
+
+    if (status === 'success') {
+      setTimeout(() => {
+        if (statusEl.classList.contains('success')) {
+          statusEl.style.opacity = '0.6';
+        }
+      }, 5000);
+    } else {
+      statusEl.style.opacity = '1';
+    }
   },
 
   async syncToSupabase() {
     if (!this.supabase) return;
+    
+    const statusEl = document.getElementById('syncStatus');
+    const iconEl = document.getElementById('syncIcon');
+    const textEl = document.getElementById('syncText');
+
+    if (statusEl) {
+      statusEl.className = 'sync-status syncing';
+      textEl.textContent = 'Sync...';
+      iconEl.textContent = 'sync';
+    }
 
     try {
-      console.log("☁️ Début synchronisation arrière-plan...");
-      
+      console.log("☁️ Début synchronisation cloud...");
+      let hasError = false;
+
       // 1. Settings
-      await this.supabase.from('settings').upsert({ id: 'global', data: this.data.parametres });
+      try {
+        await this.supabase.from('settings').upsert({ id: 'global', data: this.data.parametres });
+      } catch (e) { 
+        console.error("Sync Settings Error:", e);
+        hasError = true;
+      }
 
-      // 2. Pointage (Transformation)
+      // 2. Pointage
       if (this.data.pointage) {
-        const pointages = [];
-        for (const date in this.data.pointage) {
-          for (const empId in this.data.pointage[date]) {
-            pointages.push({
-              date: date,
-              employee_id: parseInt(empId),
-              hours: parseFloat(this.data.pointage[date][empId]) || 0
-            });
+        try {
+          const pointages = [];
+          for (const date in this.data.pointage) {
+            for (const empId in this.data.pointage[date]) {
+              pointages.push({
+                date: date,
+                employee_id: parseInt(empId),
+                hours: parseFloat(this.data.pointage[date][empId]) || 0
+              });
+            }
           }
-        }
-        if (pointages.length > 0) {
-          // Chunking for pointage if very large
-          const chunkSize = 1000;
-          for (let i = 0; i < pointages.length; i += chunkSize) {
-            // Utilisation de onConflict pour gérer la contrainte UNIQUE(date, employee_id)
-            await this.supabase.from('pointage').upsert(pointages.slice(i, i + chunkSize), { onConflict: 'date, employee_id' });
+          if (pointages.length > 0) {
+            const chunkSize = 500;
+            for (let i = 0; i < pointages.length; i += chunkSize) {
+              await this.supabase.from('pointage').upsert(pointages.slice(i, i + chunkSize), { onConflict: 'date, employee_id' });
+            }
           }
+        } catch (e) {
+          console.error("Sync Pointage Error:", e);
+          hasError = true;
         }
       }
 
-      // 3. Simple Array Tables
-      const arrayTables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes'];
-      
-      for (const table of arrayTables) {
+      // 3. Main Tables
+      const tables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes', 'especes', 'fiches_pointage'];
+      for (const table of tables) {
         if (Array.isArray(this.data[table]) && this.data[table].length > 0) {
-          const { error } = await this.supabase.from(table).upsert(this.data[table]);
-          if (error) {
-            console.error(`❌ Erreur sync table '${table}':`, error.message);
-          } else {
-            console.log(`✅ Table '${table}' synchronisée.`);
+          try {
+            // Clean data: remove any circular refs or UI-specific keys if needed
+            // But for now simple upsert
+            const { error } = await this.supabase.from(table).upsert(this.data[table]);
+            if (error) {
+              console.error(`❌ Erreur sync table '${table}':`, error.message);
+              // Si 404, on ne considère pas ça comme une erreur critique du flux pour l'instant (table manquante)
+              if (error.code !== 'PGRST116' && !error.message.includes('404')) hasError = true;
+            }
+          } catch (e) {
+            console.error(`Sync Table '${table}' Error:`, e);
+            hasError = true;
           }
         }
       }
 
-      console.log("✅ Synchronisation réussie.");
+      if (statusEl) {
+        if (hasError) {
+          statusEl.className = 'sync-status error';
+          textEl.textContent = 'Erreur';
+          iconEl.textContent = 'cloud_off';
+        } else {
+          statusEl.className = 'sync-status success';
+          textEl.textContent = 'Cloud';
+          iconEl.textContent = 'cloud_done';
+          // Hide after delay
+          setTimeout(() => {
+            if (statusEl.classList.contains('success')) {
+              statusEl.style.opacity = '0.6';
+            }
+          }, 5000);
+        }
+      }
+
+      console.log(hasError ? "⚠️ Synchronisation terminée avec quelques erreurs." : "✅ Synchronisation réussie.");
     } catch (err) {
       console.error("❌ Erreur critique Sync Supabase:", err);
     }
@@ -2200,15 +2330,60 @@ const App = {
     }
   },
 
+  getDayData(collection, dateStr, dateField = 'date') {
+    return (this.data[collection] || []).filter(item => this.formatDate(item[dateField]) === dateStr);
+  },
+
+  getMonthData(collection, year, month, dateField = 'date') {
+    return (this.data[collection] || []).filter(item => {
+      const d = new Date(item[dateField]);
+      return d.getFullYear() === year && d.getMonth() === month;
+    });
+  },
+
   getDayProduction(dateStr) {
-    return (this.data.production || []).filter(p => this.formatDate(p.date) === dateStr);
+    return this.getDayData('production', dateStr);
   },
 
   getMonthProduction(year, month) {
-    return (this.data.production || []).filter(p => {
-      const d = new Date(p.date);
-      return d.getFullYear() === year && d.getMonth() === month;
+    return this.getMonthData('production', year, month);
+  },
+
+  getQuarterData(collection, year, quarter, dateField = 'date') {
+    const q = parseInt(quarter);
+    const y = parseInt(year);
+    return (this.data[collection] || []).filter(item => {
+      const d = new Date(item[dateField]);
+      if (d.getFullYear() !== y) return false;
+      const m = d.getMonth(); // 0-11
+      if (q === 1) return m >= 0 && m <= 2;
+      if (q === 2) return m >= 3 && m <= 5;
+      if (q === 3) return m >= 6 && m <= 8;
+      if (q === 4) return m >= 9 && m <= 11;
+      return false;
     });
+  },
+
+  getQuarterProduction(year, quarter) {
+    return this.getQuarterData('production', year, quarter);
+  },
+
+  formatQuarter(year, quarter) {
+    return `Trimestre ${quarter} ${year}`;
+  },
+
+  getQuarterDates(year, quarter) {
+    const q = parseInt(quarter);
+    const y = parseInt(year);
+    let startMonth, endMonth;
+    if (q === 1) { startMonth = 0; endMonth = 2; }
+    else if (q === 2) { startMonth = 3; endMonth = 5; }
+    else if (q === 3) { startMonth = 6; endMonth = 8; }
+    else { startMonth = 9; endMonth = 11; }
+    
+    const start = new Date(y, startMonth, 1);
+    const end = new Date(y, endMonth + 1, 0); // Last day of endMonth
+    return { start, end };
   },
 
   getCurrentMonthProduction() {
@@ -2218,7 +2393,9 @@ const App = {
 
   nextId(arr) {
     if (!arr || arr.length === 0) return 1;
-    return Math.max(...arr.map(i => i.id || 0)) + 1;
+    const ids = arr.map(i => parseInt(i.id)).filter(id => !isNaN(id));
+    if (ids.length === 0) return 1;
+    return Math.max(...ids) + 1;
   },
 
   // --- Modal helper ---
