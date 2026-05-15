@@ -91,7 +91,7 @@ async function migrateToSupabase() {
                 }
             }
             if (pointages.length > 0) {
-                const { error } = await sb.from('pointage').upsert(pointages);
+                const { error } = await sb.from('pointage').upsert(pointages, { onConflict: 'date, employee_id' });
                 if (error) console.error("Error pointage:", error);
             }
         }

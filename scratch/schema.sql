@@ -1,139 +1,105 @@
--- ============================================
--- RCG-HAMZA — SCHÉMA COMPLET SUPABASE (V2)
--- ============================================
+-- Schema SQL compatible avec les IDs existants de ELABBAR ERP
+-- À exécuter dans le SQL Editor de Supabase
 
--- 0. Table des Paramètres (Settings)
+-- 1. Table des Paramètres
 DROP TABLE IF EXISTS settings;
 CREATE TABLE settings (
-    id TEXT PRIMARY KEY,
-    data JSONB,
+    id TEXT PRIMARY KEY, -- 'global'
+    data JSONB NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 1. Table du Personnel
+-- 2. Table du Personnel
 DROP TABLE IF EXISTS personnel;
 CREATE TABLE personnel (
     id BIGINT PRIMARY KEY,
-    nom TEXT,
+    nom TEXT NOT NULL,
     prenom TEXT,
-    cin TEXT,
-    telephone TEXT,
     type TEXT,
     poste TEXT,
     dept TEXT,
-    dateEmbauche DATE,
+    salaire NUMERIC DEFAULT 0,
     actif BOOLEAN DEFAULT true,
-    salaire NUMERIC,
-    cnss TEXT,
-    observations TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Table de Production
+-- 3. Table de Production
 DROP TABLE IF EXISTS production;
 CREATE TABLE production (
-    id BIGINT PRIMARY KEY,
-    activite TEXT,
-    date DATE,
+    id TEXT PRIMARY KEY, -- Les lots/ids de l'app sont souvent des strings ou générés
+    date DATE NOT NULL,
+    module TEXT,
     espece TEXT,
+    lot TEXT,
     client TEXT,
-    poidsBrutPF NUMERIC,
-    rendement NUMERIC,
-    coutMOJ NUMERIC,
-    prixRevient NUMERIC,
-    sourceSortieId BIGINT,
-    sourceLineIdx INTEGER,
-    receptionId BIGINT,
-    calibre TEXT,
-    produitFini TEXT,
+    bateau TEXT,
     poidsMP NUMERIC,
-    prixMP NUMERIC,
-    valeurMP NUMERIC,
+    poidsPF NUMERIC,
     caissesPF INTEGER,
-    conditionnement TEXT,
-    phases JSONB,
-    phasesPF JSONB,
-    intrants JSONB,
-    totalIntrants NUMERIC,
-    coutFactureParKg NUMERIC,
-    heuresMOF NUMERIC,
-    salaireHF NUMERIC,
-    coutPersonnelF NUMERIC,
-    equipesMO JSONB,
-    coutMOO NUMERIC,
-    poidsBrutPI NUMERIC,
     caissesPI INTEGER,
-    coutCarton NUMERIC,
-    coutSachet NUMERIC,
-    coutEtiquetteNoir NUMERIC,
-    coutEtiquette5075 NUMERIC,
-    coutScotch NUMERIC,
+    produitFini TEXT,
+    conditionnement TEXT,
+    palette TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Table de Pointage (Vraie table relationnelle)
+-- 4. Table de Pointage
 DROP TABLE IF EXISTS pointage;
 CREATE TABLE pointage (
-    date DATE,
-    employee_id BIGINT,
-    hours NUMERIC,
+    id BIGSERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    employee_id BIGINT, -- Correspond à personnel.id
+    hours NUMERIC DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (date, employee_id)
+    UNIQUE(date, employee_id)
 );
 
--- 4. Table de Stockage (Réceptions)
+-- 5. Table de Stockage
 DROP TABLE IF EXISTS stockage;
 CREATE TABLE stockage (
-    id BIGINT PRIMARY KEY,
-    reference TEXT,
-    dateEntree DATE,
+    id TEXT PRIMARY KEY,
+    lot TEXT,
+    chambre TEXT,
+    espece TEXT,
+    calibre TEXT,
+    poids NUMERIC,
+    nb_caisses INTEGER,
+    date_entree DATE,
+    date_sortie DATE,
+    statut TEXT,
     client TEXT,
-    fournisseur TEXT,
-    bateau TEXT,
-    consignataire TEXT,
-    vehicule TEXT,
-    refCapture TEXT,
-    sejour TEXT,
-    dateSortie DATE,
-    origine TEXT,
-    tarePaletteDefaut NUMERIC,
-    lignes JSONB,
-    sourceProductionId BIGINT,
-    sourceProductionType TEXT,
+    provenance TEXT,
+    type_produit TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 5. Table des Factures
+-- 6. Table des Factures
 DROP TABLE IF EXISTS factures;
 CREATE TABLE factures (
-    id BIGINT PRIMARY KEY,
+    id TEXT PRIMARY KEY,
+    numero TEXT,
     date DATE,
     fournisseur TEXT,
-    numero TEXT,
-    etatPaiement TEXT,
-    motif TEXT,
     montantHT NUMERIC,
     tva NUMERIC,
-    montant NUMERIC,
+    montantTTC NUMERIC,
     devise TEXT,
-    lignes JSONB,
-    allocation TEXT,
-    type TEXT,
+    motif TEXT,
+    lignes JSONB, -- Détails des articles
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 6. Table des Clients
+-- 7. Table des Clients
 DROP TABLE IF EXISTS clients;
 CREATE TABLE clients (
     id BIGINT PRIMARY KEY,
     nom TEXT,
-    adresse TEXT,
-    telephone TEXT,
-    email TEXT,
+    type TEXT,
+    ville TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. Table des Consommables
+-- 8. Table des Consommables
 DROP TABLE IF EXISTS consommables;
 CREATE TABLE consommables (
     id BIGINT PRIMARY KEY,
@@ -146,27 +112,20 @@ CREATE TABLE consommables (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 8. Table des Sorties Stockage
+-- 9. Table des Sorties Stockage
 DROP TABLE IF EXISTS sortiesStockage;
 CREATE TABLE sortiesStockage (
-    id BIGINT PRIMARY KEY,
-    dateSortie DATE,
-    receptionId BIGINT,
-    lineIdx INTEGER,
-    lotRef TEXT,
-    espece TEXT,
-    calibre TEXT,
-    quantite NUMERIC,
-    poidsSorti NUMERIC,
-    destination TEXT,
+    id TEXT PRIMARY KEY,
+    date DATE,
     client TEXT,
+    items JSONB, -- Liste des lots sortis
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 9. Table des Mouvements Stock
+-- 10. Table des Mouvements Stock
 DROP TABLE IF EXISTS mouvementsStock;
 CREATE TABLE mouvementsStock (
-    id BIGINT PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     date DATE,
     type TEXT, -- 'ENTREE', 'SORTIE'
     article TEXT,
@@ -175,7 +134,7 @@ CREATE TABLE mouvementsStock (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 10. Table des QR Codes
+-- 11. Table des QR Codes
 DROP TABLE IF EXISTS qrCodes;
 CREATE TABLE qrCodes (
     id TEXT PRIMARY KEY,
@@ -184,9 +143,7 @@ CREATE TABLE qrCodes (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================
--- DÉSACTIVATION RLS (POUR LA MIGRATION/DEV)
--- ============================================
+-- Désactivation RLS pour la migration
 ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE personnel DISABLE ROW LEVEL SECURITY;
 ALTER TABLE production DISABLE ROW LEVEL SECURITY;

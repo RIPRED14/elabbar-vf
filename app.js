@@ -2000,7 +2000,8 @@ const App = {
           // Chunking for pointage if very large
           const chunkSize = 1000;
           for (let i = 0; i < pointages.length; i += chunkSize) {
-            await this.supabase.from('pointage').upsert(pointages.slice(i, i + chunkSize));
+            // Utilisation de onConflict pour gérer la contrainte UNIQUE(date, employee_id)
+            await this.supabase.from('pointage').upsert(pointages.slice(i, i + chunkSize), { onConflict: 'date, employee_id' });
           }
         }
       }
