@@ -1830,10 +1830,26 @@ const App = {
     // Toujours initialiser avec les valeurs par défaut pour éviter les erreurs de nullité
     this.data = JSON.parse(JSON.stringify(this.defaults));
 
-    // 1. Tenter de charger depuis Supabase en priorité si connecté
+    // 1. Charger d'abord depuis localStorage (Fallback / Cache)
+    const saved = localStorage.getItem('gestprod_data');
+    if (saved) {
+      try {
+        this.data = JSON.parse(saved);
+        // Migration logic pour les nouveaux réglages
+        if (!this.data.parametres) this.data.parametres = { ...this.defaults.parametres };
+        if (this.data.parametres.groqApiKey === undefined) this.data.parametres.groqApiKey = this.defaults.parametres.groqApiKey;
+        if (this.data.parametres.openRouterApiKey === undefined) this.data.parametres.openRouterApiKey = this.defaults.parametres.openRouterApiKey;
+        console.log("📂 Données locales chargées");
+      } catch (err) {
+        console.error('Données locales corrompues, réinitialisation.', err);
+        this.data = JSON.parse(JSON.stringify(this.defaults));
+      }
+    }
+
+    // 2. Tenter de charger depuis Supabase (Source de Vérité)
     if (this.supabase) {
       try {
-        console.log("📥 Chargement des données depuis Supabase...");
+        console.log("📥 Synchronisation avec Supabase...");
         const tables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes'];
         const results = await Promise.all([
           this.supabase.from('settings').select('*').eq('id', 'global').maybeSingle(),
@@ -1843,127 +1859,109 @@ const App = {
 
         const [settings, pointage, ...others] = results;
 
-        // Diagnostic logs
-        results.forEach((res, i) => {
-          if (res.error) console.warn(`⚠️ Supabase Load Warning (Table index ${i}):`, res.error.message);
-        });
+        let hasCloudData = false;
 
-        if (settings.data) {
+        if (settings.data && settings.data.data) {
           this.data.parametres = settings.data.data;
-        } else {
-          console.log("ℹ️ Pas de paramètres trouvés sur Supabase, utilisation des réglages locaux.");
+          hasCloudData = true;
         }
         
-        // Map other tables
         tables.forEach((tableName, index) => {
           const result = others[index];
           if (result && result.data && result.data.length > 0) {
             this.data[tableName] = result.data;
-            console.log(`✅ Table '${tableName}' chargée (${result.data.length} lignes)`);
+            hasCloudData = true;
+            console.log(`✅ Table '${tableName}' hydratée depuis le cloud (${result.data.length} lignes)`);
           }
         });
 
-        // Rebuild pointage object structure { date: { id: hours } }
         if (pointage.data && pointage.data.length > 0) {
           this.data.pointage = {};
           pointage.data.forEach(p => {
             if (!this.data.pointage[p.date]) this.data.pointage[p.date] = {};
             this.data.pointage[p.date][p.employee_id] = p.hours;
           });
-          console.log(`✅ Pointage chargé (${pointage.data.length} entrées)`);
+          hasCloudData = true;
+          console.log(`✅ Pointage hydraté (${pointage.data.length} entrées)`);
         }
 
-        console.log("🚀 Initialisation Supabase terminée");
-        // Sync to localStorage as backup
+        if (!hasCloudData && saved) {
+          console.log("☁️ Supabase est vide. Déclenchement de la migration vers le cloud...");
+          this.syncToSupabase();
+        } else {
+          console.log("🚀 Données Cloud à jour.");
+        }
+
+        // Mettre à jour le cache local avec ce qu'on a récupéré du cloud
         localStorage.setItem('gestprod_data', JSON.stringify(this.data));
         return;
       } catch (err) {
-        console.error("❌ Erreur chargement Supabase:", err);
+        console.error("❌ Erreur critique Supabase (chargement):", err);
       }
     }
 
-    const saved = localStorage.getItem('gestprod_data');
-    if (saved) {
-      try {
-        this.data = JSON.parse(saved);
-        // Migration logic
-        if (!this.data.parametres) this.data.parametres = { ...this.defaults.parametres };
-        if (this.data.parametres.groqApiKey === undefined) {
-          this.data.parametres.groqApiKey = this.defaults.parametres.groqApiKey;
-        }
-        if (this.data.parametres.openRouterApiKey === undefined || this.data.parametres.openRouterApiKey === '') {
-          this.data.parametres.openRouterApiKey = this.defaults.parametres.openRouterApiKey;
-        }
-      } catch (err) {
-        console.error('Données locales corrompues, réinitialisation.', err);
-        this.data = JSON.parse(JSON.stringify(this.defaults));
-        this.saveData();
+    // Ensure all keys exist
+    for (const key in this.defaults) {
+      if (!(key in this.data)) this.data[key] = JSON.parse(JSON.stringify(this.defaults[key]));
+    }
+
+    // Force sync of new detailed especes (Version 4)
+    if (!localStorage.getItem('gestprod_v8_ntsamak_especes_v4_force')) {
+      this.data.especes = JSON.parse(JSON.stringify(this.defaults.especes));
+      localStorage.setItem('gestprod_v8_ntsamak_especes_v4_force', 'true');
+      this.saveData();
+    }
+    // Force sync of full scraped clients (Version 4)
+    if (!localStorage.getItem('gestprod_v8_ntsamak_clients_v4_force')) {
+      this.data.clients = JSON.parse(JSON.stringify(this.defaults.clients));
+      localStorage.setItem('gestprod_v8_ntsamak_clients_v4_force', 'true');
+      this.saveData();
+    }
+    // Force sync of personnel from Excel import
+    if (!localStorage.getItem('gestprod_v8_personnel_excel_force')) {
+      this.data.personnel = JSON.parse(JSON.stringify(this.defaults.personnel));
+      localStorage.setItem('gestprod_v8_personnel_excel_force', 'true');
+      this.saveData();
+    }
+    
+    // Patch: Force taux horaire occasionnel à 16.95
+    if (this.data.parametres && (this.data.parametres.salaireHoraireOcc === 17 || this.data.parametres.salaireHoraireOcc === 16.8)) {
+      this.data.parametres.salaireHoraireOcc = 16.95;
+      this.saveData();
+    }
+
+    // Senior Control Migration (V9)
+    if (!localStorage.getItem('gestprod_v9_senior_control_init')) {
+      if (!this.data.parametres) this.data.parametres = {};
+      if (this.data.parametres.productivityTarget === undefined) this.data.parametres.productivityTarget = 25;
+      if (!this.data.parametres.yieldTargets) {
+        this.data.parametres.yieldTargets = {
+          'OCTOPUS': 75,
+          'SEICHE': 72,
+          'CALAMAR': 78,
+          'CREVETTE': 45,
+          'DEFAULT': 70
+        };
       }
-      // Ensure all keys exist
-      for (const key in this.defaults) {
-        if (!(key in this.data)) this.data[key] = JSON.parse(JSON.stringify(this.defaults[key]));
-      }
-      // Force sync of new detailed especes (Version 4)
-      if (!localStorage.getItem('gestprod_v8_ntsamak_especes_v4_force')) {
-        this.data.especes = JSON.parse(JSON.stringify(this.defaults.especes));
-        localStorage.setItem('gestprod_v8_ntsamak_especes_v4_force', 'true');
-        this.saveData();
-      }
-      // Force sync of full scraped clients (Version 4)
-      if (!localStorage.getItem('gestprod_v8_ntsamak_clients_v4_force')) {
-        this.data.clients = JSON.parse(JSON.stringify(this.defaults.clients));
-        localStorage.setItem('gestprod_v8_ntsamak_clients_v4_force', 'true');
-        this.saveData();
-      }
-      // Force sync of personnel from Excel import
-      if (!localStorage.getItem('gestprod_v8_personnel_excel_force')) {
-        this.data.personnel = JSON.parse(JSON.stringify(this.defaults.personnel));
-        localStorage.setItem('gestprod_v8_personnel_excel_force', 'true');
-        this.saveData();
-      }
+      localStorage.setItem('gestprod_v9_senior_control_init', 'true');
+      this.saveData();
+    }
+
+    // Enterprise Cockpit Migration (V10)
+    if (!localStorage.getItem('gestprod_v10_enterprise_init')) {
+      if (!this.data.parametres.stockCapacityTotal) this.data.parametres.stockCapacityTotal = 1200;
+      if (this.data.parametres.marginTarget === undefined) this.data.parametres.marginTarget = 15;
+      if (this.data.parametres.fixedCostTarget === undefined) this.data.parametres.fixedCostTarget = 3000;
       
-      // Patch: Force taux horaire occasionnel à 16.95
-      if (this.data.parametres && (this.data.parametres.salaireHoraireOcc === 17 || this.data.parametres.salaireHoraireOcc === 16.8)) {
-        this.data.parametres.salaireHoraireOcc = 16.95;
-        this.saveData();
-      }
-
-      // Senior Control Migration (V9)
-      if (!localStorage.getItem('gestprod_v9_senior_control_init')) {
-        if (!this.data.parametres) this.data.parametres = {};
-        if (this.data.parametres.productivityTarget === undefined) this.data.parametres.productivityTarget = 25;
-        if (!this.data.parametres.yieldTargets) {
-          this.data.parametres.yieldTargets = {
-            'OCTOPUS': 75,
-            'SEICHE': 72,
-            'CALAMAR': 78,
-            'CREVETTE': 45,
-            'DEFAULT': 70
-          };
+      // Sync prices for species
+      this.data.especes.forEach(esp => {
+        if (esp.prixMoyenVente === undefined) {
+          const def = this.defaults.especes.find(e => e.nom === esp.nom);
+          esp.prixMoyenVente = def ? (def.prixMoyenVente || 50) : 50;
         }
-        localStorage.setItem('gestprod_v9_senior_control_init', 'true');
-        this.saveData();
-      }
-
-      // Enterprise Cockpit Migration (V10)
-      if (!localStorage.getItem('gestprod_v10_enterprise_init')) {
-        if (!this.data.parametres.stockCapacityTotal) this.data.parametres.stockCapacityTotal = 1200;
-        if (this.data.parametres.marginTarget === undefined) this.data.parametres.marginTarget = 15;
-        if (this.data.parametres.fixedCostTarget === undefined) this.data.parametres.fixedCostTarget = 3000;
-        
-        // Sync prices for species
-        this.data.especes.forEach(esp => {
-          if (esp.prixMoyenVente === undefined) {
-            const def = this.defaults.especes.find(e => e.nom === esp.nom);
-            esp.prixMoyenVente = def ? (def.prixMoyenVente || 50) : 50;
-          }
-        });
-        
-        localStorage.setItem('gestprod_v10_enterprise_init', 'true');
-        this.saveData();
-      }
-    } else {
-      this.data = JSON.parse(JSON.stringify(this.defaults));
+      });
+      
+      localStorage.setItem('gestprod_v10_enterprise_init', 'true');
       this.saveData();
     }
   },
@@ -1981,10 +1979,12 @@ const App = {
     if (!this.supabase) return;
 
     try {
-      // 1. Settings (Single Row)
-      this.supabase.from('settings').upsert({ id: 'global', data: this.data.parametres }).catch(e => console.error(e));
+      console.log("☁️ Début synchronisation arrière-plan...");
+      
+      // 1. Settings
+      await this.supabase.from('settings').upsert({ id: 'global', data: this.data.parametres });
 
-      // 2. Pointage (Transformation complexe)
+      // 2. Pointage (Transformation)
       if (this.data.pointage) {
         const pointages = [];
         for (const date in this.data.pointage) {
@@ -1997,19 +1997,29 @@ const App = {
           }
         }
         if (pointages.length > 0) {
-          this.supabase.from('pointage').upsert(pointages).catch(e => console.error(e));
+          // Chunking for pointage if very large
+          const chunkSize = 1000;
+          for (let i = 0; i < pointages.length; i += chunkSize) {
+            await this.supabase.from('pointage').upsert(pointages.slice(i, i + chunkSize));
+          }
         }
       }
 
       // 3. Simple Array Tables
       const arrayTables = ['personnel', 'production', 'stockage', 'factures', 'clients', 'consommables', 'sortiesStockage', 'mouvementsStock', 'qrCodes'];
       
-      arrayTables.forEach(table => {
+      for (const table of arrayTables) {
         if (Array.isArray(this.data[table]) && this.data[table].length > 0) {
-          this.supabase.from(table).upsert(this.data[table]).catch(e => console.error(`Sync error for ${table}:`, e));
+          const { error } = await this.supabase.from(table).upsert(this.data[table]);
+          if (error) {
+            console.error(`❌ Erreur sync table '${table}':`, error.message);
+          } else {
+            console.log(`✅ Table '${table}' synchronisée.`);
+          }
         }
-      });
+      }
 
+      console.log("✅ Synchronisation réussie.");
     } catch (err) {
       console.error("❌ Erreur critique Sync Supabase:", err);
     }
