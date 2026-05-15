@@ -4,6 +4,8 @@
 const Saisie = {
   editingId: null,
   currentActivite: 'reconditionnement',
+  viewType: 'month',
+  selectedDay: new Date().toISOString().split('T')[0],
   selectedMonth: new Date().getMonth(),
   selectedYear: new Date().getFullYear(),
   phasesList: ['Triage-Lavage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Mélançage','Trempage','Congélation','DECONGELATION'],
@@ -104,7 +106,10 @@ const Saisie = {
     { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 },
   ],
   render() {
-    let prod = App.getMonthProduction(this.selectedYear, this.selectedMonth);
+    let prod = this.viewType === 'day' 
+      ? App.getDayProduction(this.selectedDay)
+      : App.getMonthProduction(this.selectedYear, this.selectedMonth);
+
     prod = prod.filter(p => (p.activite||'reconditionnement') === this.currentActivite);
     const content = document.getElementById('pageContent');
     content.innerHTML = `
@@ -120,9 +125,17 @@ const Saisie = {
             <p class="page-subtitle">Enregistrement et suivi des opérations de production en temps réel.</p>
           </div>
           <div style="display:flex; gap:12px; align-items:flex-end;">
+            <div style="display:flex; background:var(--bg-card); padding:4px; border-radius:8px; border:1px solid var(--border-color); margin-bottom:2px;">
+              <button onclick="Saisie.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Jour</button>
+              <button onclick="Saisie.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Mois</button>
+            </div>
+
             <div class="form-group" style="margin:0;">
-              <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Période</label>
-              <input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Saisie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">
+              <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${this.viewType === 'day' ? 'Date' : 'Période'}</label>
+              ${this.viewType === 'day' 
+                ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Saisie.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+                : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Saisie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">`
+              }
             </div>
             <button class="btn btn-outline" onclick="Saisie.printTable()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
@@ -161,7 +174,7 @@ const Saisie = {
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
               <span class="card-title">📋 Historique des opérations</span>
               <div style="display:flex; gap:12px; align-items:center;">
-                <div class="badge badge-info">${prod.length} entrées ce mois</div>
+                <div class="badge badge-info">${prod.length} entrées ${this.viewType === 'day' ? 'aujourd\'hui' : 'ce mois'}</div>
                 <select class="form-select" id="filterEspece" onchange="Saisie.renderTable()" style="width:180px; padding:8px 12px; font-size:0.85rem;">
                   <option value="">Toutes les espèces</option>
                   ${App.data.especes.map(e => `<option value="${e.nom}">${e.nom}</option>`).join('')}
@@ -179,8 +192,21 @@ const Saisie = {
     `;
   },
 
+  onViewTypeChange(type) {
+    this.viewType = type;
+    this.render();
+  },
+
+  onDayChange(e) {
+    this.selectedDay = e.target.value;
+    this.render();
+  },
+
   renderTable() {
-    let prod = App.getMonthProduction(this.selectedYear, this.selectedMonth);
+    let prod = this.viewType === 'day' 
+      ? App.getDayProduction(this.selectedDay)
+      : App.getMonthProduction(this.selectedYear, this.selectedMonth);
+
     prod = prod.filter(p => (p.activite||'reconditionnement') === this.currentActivite);
     const filter = document.getElementById('filterEspece')?.value;
     if (filter) prod = prod.filter(p => p.espece === filter);
@@ -2853,6 +2879,8 @@ Notes:
       const firstDate = new Date(entries[0].date);
       this.selectedYear = firstDate.getFullYear();
       this.selectedMonth = firstDate.getMonth();
+      this.selectedDay = entries[0].date; // Use the raw date string from entry
+      // Optionnel: this.viewType = 'day'; // On pourrait forcer la vue jour après import
     }
 
     App.saveData();

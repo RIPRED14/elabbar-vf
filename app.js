@@ -2200,6 +2200,10 @@ const App = {
     }
   },
 
+  getDayProduction(dateStr) {
+    return (this.data.production || []).filter(p => this.formatDate(p.date) === dateStr);
+  },
+
   getMonthProduction(year, month) {
     return (this.data.production || []).filter(p => {
       const d = new Date(p.date);
