@@ -72,6 +72,8 @@ const Stockage = {
       tabContent = this.renderSorties();
     } else if (this.currentTab === 'pending') {
       tabContent = this.renderPendingEntries();
+    } else if (this.currentTab === 'direct') {
+      tabContent = this.renderDirectFlow();
     } else if (this.currentTab === 'mouvements') {
       tabContent = this.renderMouvements();
     }
@@ -117,6 +119,7 @@ const Stockage = {
             ⏳ Attente 
             ${pendingCount > 0 ? `<span class="badge" style="background:var(--status-danger); color:white; padding:2px 6px; margin-left:6px;">${pendingCount}</span>` : ''}
           </div>
+          <div class="tab ${this.currentTab==='direct'?'active':''}" onclick="Stockage.switchTab('direct')">🚀 Flux Direct</div>
           <div class="tab ${this.currentTab==='mouvements'?'active':''}" onclick="Stockage.switchTab('mouvements')">🔄 Traçabilité</div>
         </div>
 
@@ -217,11 +220,34 @@ const Stockage = {
     };
   },
 
-  buildListTable() {
-    const entries = (App.data.stockage || []).sort((a,b) => new Date(b.dateEntree) - new Date(a.dateEntree));
+  renderDirectFlow() {
+    const entries = (App.data.stockage || []).filter(e => 
+      e.lignes.some(l => l.chambre === 'direct')
+    ).sort((a,b) => new Date(b.dateEntree) - new Date(a.dateEntree));
+
+    return `
+      <div class="card">
+        <div class="card-header" style="background:linear-gradient(135deg, rgba(245,158,11,0.1), transparent); border-bottom:1px solid rgba(245,158,11,0.2);">
+          <span class="card-title">🚀 Lots en Passage Direct</span>
+          <div class="badge badge-warning">${entries.length} flux en cours</div>
+        </div>
+        <div class="card-body">
+          <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:20px;">
+            Ces lots sont enregistrés dans le système mais contournent le stockage en chambre froide pour une utilisation immédiate en production.
+          </p>
+          <div class="table-container">
+            ${this.buildListTable(entries)}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  buildListTable(filteredEntries) {
+    const entries = (filteredEntries || App.data.stockage || []).sort((a,b) => new Date(b.dateEntree) - new Date(a.dateEntree));
     if (entries.length === 0) return '<div class="empty-state"><div class="empty-state-icon">📥</div><div class="empty-state-text">Aucune entrée de stockage</div></div>';
     return `<table>
-      <thead><tr><th>Référence</th><th>N° / Info Palette</th><th>Date</th><th>Client</th><th>Fournisseur</th><th>Origine</th><th class="td-right">Lignes</th><th class="td-right">Qté (Cs)</th><th class="td-right">Pds Brut</th><th class="td-right">Pds Net</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Référence</th><th>N° / Info Palette</th><th>Date</th><th>Client</th><th>Fournisseur</th><th>Origine</th><th>Emplacement</th><th class="td-right">Lignes</th><th class="td-right">Qté (Cs)</th><th class="td-right">Pds Brut</th><th class="td-right">Pds Net</th><th>Actions</th></tr></thead>
       <tbody>${entries.map(e => {
         const totalNbCs = e.lignes.reduce((s,l) => s + (l.nbCaisses||0), 0);
         const totalBrut = e.lignes.reduce((s,l) => s + (l.quantite||l.pdsBrutTotal||0), 0);
@@ -231,7 +257,6 @@ const Stockage = {
           ? `${palettes[0]} <span class="badge badge-info" style="margin-left:6px;">+${palettes.length - 1}</span>`
           : (palettes[0] || '-');
         
-        // Dynamic origin badge color and label
         const isTransfer = !!e.sourceProductionId;
         const originClass = (e.origine === 'Traitement' || e.sourceProductionType === 'traitement') ? 'badge-warning' : 
                            (e.origine === 'Reconditionnement' || e.sourceProductionType === 'reconditionnement') ? 'badge-purple' : 'badge-info';
@@ -242,6 +267,13 @@ const Stockage = {
           originLabel = `${typeLabel} ${e.bateau ? `<span style="opacity:0.8;font-size:0.65rem;">(${e.bateau})</span>` : ''}`;
         }
 
+        const chambers = [...new Set(e.lignes.map(l => l.chambre || 'non_affecte'))];
+        const chamberBadges = chambers.map(ch => {
+          const cls = ch === 'direct' ? 'badge-warning' : (ch === 'non_affecte' ? 'badge-danger' : 'badge-info');
+          const label = ch === 'direct' ? '🚀 Flux Direct' : (ch === 'chambre1' ? '❄️ CH 1' : ch === 'chambre2' ? '❄️ CH 2' : ch === 'entreposage' ? '📦 Ent.' : 'N/A');
+          return `<span class="badge ${cls}" style="font-size:0.65rem; padding:2px 6px;">${label}</span>`;
+        }).join(' ');
+
         return `<tr>
           <td class="td-bold"><span class="badge badge-purple">${e.reference}</span></td>
           <td><span style="font-size:0.72rem;color:var(--accent-cyan);font-weight:700;max-width:240px;display:inline-block;white-space:normal;word-break:break-word;line-height:1.45;">${paletteSummary}</span></td>
@@ -249,15 +281,17 @@ const Stockage = {
           <td>${e.client}</td>
           <td>${e.fournisseur}</td>
           <td><span class="badge ${originClass}">${originLabel}</span></td>
+          <td>${chamberBadges}</td>
           <td class="td-right">${e.lignes.length}</td>
           <td class="td-right td-bold">${App.formatNumber(totalNbCs,0)}</td>
           <td class="td-right">${App.formatNumber(totalBrut,2)} kg</td>
           <td class="td-right">${App.formatNumber(totalNet,2)} kg</td>
-          <td class="td-center">
+          <td class="td-center" style="white-space:nowrap;">
             <button class="btn-icon" onclick="Stockage.viewEntry(${e.id})" title="Voir détail"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+            <button class="btn-icon" onclick="Stockage.showMoveChambreModal(${e.id})" title="Changer d'emplacement" style="color:var(--accent-orange);">🔄</button>
             ${!isTransfer ? `<button class="btn-icon" onclick="Stockage.editEntry(${e.id})" title="Modifier"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>` : ''}
             <button class="btn-icon" onclick="Stockage.printBon(${e.id})" title="Imprimer le Bon">🖨️</button>
-            <button class="btn-icon danger" onclick="Stockage.deleteEntry(${e.id})" title="Supprimer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>
+            <button class="btn-icon" style="color:var(--accent-red);" onclick="Stockage.deleteEntry(${e.id})" title="Supprimer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
           </td>
         </tr>`;
       }).join('')}</tbody>
@@ -550,6 +584,7 @@ const Stockage = {
         <option value="chambre1" ${l.chambre==='chambre1'?'selected':''}>Chambre 1</option>
         <option value="chambre2" ${l.chambre==='chambre2'?'selected':''}>Chambre 2</option>
         <option value="entreposage" ${l.chambre==='entreposage'?'selected':''}>Entreposage</option>
+        <option value="direct" ${l.chambre==='direct'?'selected':''}>🚀 Passage Direct</option>
       </select></td>
       <td><input type="text" class="form-input" style="width:100px;padding:6px;font-size:0.75rem" value="${l.notaBene||''}" data-field="notaBene" placeholder="N.B."></td>
       <td style="display:flex; gap:4px; padding-top:6px;">
@@ -1757,6 +1792,64 @@ Notes:
     }
   },
 
+  showMoveChambreModal(entryId) {
+    const entry = App.data.stockage.find(e => e.id === entryId);
+    if (!entry) return;
+
+    const modalHtml = `
+      <div id="moveChambreModal" class="modal-overlay" style="display:flex;">
+        <div class="modal-content slide-up" style="max-width:450px;">
+          <div class="modal-header">
+            <h3 class="modal-title">📦 Changer l'emplacement du lot</h3>
+            <button class="btn-icon" onclick="document.getElementById('moveChambreModal').remove()">✕</button>
+          </div>
+          <div class="modal-body">
+            <div style="margin-bottom:20px; padding:12px; background:rgba(99,102,241,0.05); border-radius:8px;">
+              <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:4px;">Lot : <strong>${entry.reference}</strong></div>
+              <div style="font-size:0.85rem;">Client : <strong>${entry.client}</strong></div>
+              <div style="font-size:0.85rem;">Produit : <strong>${entry.lignes[0]?.espece || 'N/A'}</strong></div>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Nouvel Emplacement</label>
+              <select class="form-select" id="newChambreSelect" style="font-size:1rem; padding:12px;">
+                <option value="direct">🚀 Flux Direct (Hors Froid)</option>
+                <option value="chambre1">❄️ Chambre Froide 1</option>
+                <option value="chambre2">❄️ Chambre Froide 2</option>
+                <option value="entreposage">📦 Entreposage / Quai</option>
+                <option value="non_affecte">❌ Non Affecté</option>
+              </select>
+            </div>
+            
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-top:15px;">
+              * Cette action déplacera l'intégralité des lignes de ce lot vers le nouvel emplacement sélectionné.
+            </p>
+          </div>
+          <div class="modal-footer" style="display:flex; gap:12px;">
+            <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('moveChambreModal').remove()">Annuler</button>
+            <button class="btn btn-primary" style="flex:2;" onclick="Stockage.applyMoveChambre(${entry.id})">Confirmer le Transfert</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  },
+
+  applyMoveChambre(entryId) {
+    const entry = App.data.stockage.find(e => e.id === entryId);
+    if (!entry) return;
+
+    const newChambre = document.getElementById('newChambreSelect').value;
+    entry.lignes.forEach(l => {
+      l.chambre = newChambre;
+    });
+
+    App.saveData();
+    document.getElementById('moveChambreModal').remove();
+    App.toast("Emplacement mis à jour avec succès.", "success");
+    this.render();
+  },
+
   printBon(id) {
     try {
       const e = (App.data.stockage || []).find(x => x.id === id);
@@ -2165,7 +2258,7 @@ Notes:
     const pending = (App.data.pendingStorageEntries || []).filter(e => e.status === 'pending');
     const validated = (App.data.pendingStorageEntries || []).filter(e => e.status !== 'pending');
     const all = [...pending, ...validated].sort((a,b) => new Date(b.dateEnvoi) - new Date(a.dateEnvoi));
-    const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage' };
+    const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage', direct: '🚀 Passage Direct' };
 
     return `
       <div class="kpi-grid">
@@ -2240,7 +2333,7 @@ Notes:
   viewPendingEntry(id) {
     const e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     if (!e) return;
-    const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage' };
+    const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage', direct: '🚀 Passage Direct' };
     const isPending = e.status === 'pending';
 
     const phasesHTML = (phases, title) => {
@@ -2334,7 +2427,7 @@ Notes:
     const e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     if (!e || e.status !== 'pending') { App.toast('Élément introuvable ou déjà validé', 'error'); return; }
 
-    const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage' };
+    const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage', direct: '🚀 Passage Direct' };
 
     App.showModal('✅ Confirmer Validation', `
       <div style="text-align:center;padding:20px 0;">

@@ -27,6 +27,7 @@ const Chambres = {
     const invCh1 = inventory.chambre1;
     const invCh2 = inventory.chambre2;
     const invEnt = inventory.entreposage;
+    const invDirect = inventory.direct || { lots: [], caisses: 0, poids: 0 };
     const processing = this.getProcessingInventory();
 
     content.innerHTML = `
@@ -136,6 +137,34 @@ const Chambres = {
             </div>
           </div>
 
+
+          <!-- FLUX DIRECT -->
+          <div class="card" onclick="Chambres.showChambreDetail('direct')" style="position:relative;cursor:pointer;border-top:4px solid var(--accent-orange); background:linear-gradient(to bottom, rgba(245,158,11,0.03), transparent);">
+            <div class="card-header">
+              <span class="card-title">🚀 Flux Direct</span>
+              <span class="badge badge-warning">Hors Froid</span>
+            </div>
+            <div class="card-body">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <div>
+                  <div style="font-size:0.85rem;color:var(--text-muted);">Poids Transféré</div>
+                  <div style="font-size:1.4rem;font-weight:800;">${(invDirect.poids/1000).toFixed(1)} <span style="font-size:0.9rem;font-weight:500;color:var(--text-secondary);">T</span></div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:0.85rem;color:var(--text-muted);">Statut</div>
+                  <div style="font-size:1.1rem;font-weight:700;color:var(--accent-orange);">TRANSIT</div>
+                </div>
+              </div>
+              <div style="background:rgba(245,158,11,0.05);border-radius:8px;padding:12px;margin-top:10px;">
+                <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:8px;">Lots en transit direct vers activité</div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <span class="badge badge-info">${invDirect.lots.length} lots</span>
+                  <span class="badge badge-purple">${App.formatNumber(invDirect.poids,0)} kg</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- SALLE DE TRAITEMENT -->
@@ -175,6 +204,8 @@ const Chambres = {
              </div>
           </div>
         </div>
+
+
       </div>
     `;
 
@@ -228,7 +259,7 @@ const Chambres = {
   },
 
   getCapacityStats() {
-    const stats = { chambre1: 0, chambre2: 0, entreposage: 0, non_affecte: 0 };
+    const stats = { chambre1: 0, chambre2: 0, entreposage: 0, direct: 0, non_affecte: 0 };
     (App.data.stockage || []).forEach(entry => {
       (entry.lignes || []).forEach((line, idx) => {
         const emplacement = line.chambre && stats[line.chambre] !== undefined ? line.chambre : 'non_affecte';
@@ -246,6 +277,7 @@ const Chambres = {
       chambre1: { lots: [], caisses: 0, poids: 0 },
       chambre2: { lots: [], caisses: 0, poids: 0 },
       entreposage: { lots: [], caisses: 0, poids: 0 },
+      direct: { lots: [], caisses: 0, poids: 0 },
       non_affecte: { lots: [], caisses: 0, poids: 0 }
     };
 
@@ -294,10 +326,11 @@ const Chambres = {
               <th>Produit</th>
               <th class="td-right">Caisses</th>
               <th class="td-right">Poids Net</th>
+              <th style="width:40px"></th>
             </tr>
           </thead>
           <tbody>
-            ${group.lots.length === 0 ? '<tr><td colspan="6" class="td-center">Aucun stock</td></tr>' : 
+            ${group.lots.length === 0 ? '<tr><td colspan="7" class="td-center">Aucun stock</td></tr>' : 
               group.lots.map(lot => `
                 <tr>
                   <td>${App.formatDateFR(lot.date)}</td>
@@ -306,6 +339,9 @@ const Chambres = {
                   <td><strong>${lot.espece}</strong><br><small>${lot.calibre}</small></td>
                   <td class="td-right">${App.formatNumber(lot.caisses,0)}</td>
                   <td class="td-right td-bold">${App.formatNumber(lot.poids,2)} kg</td>
+                  <td>
+                    <button class="btn-icon" title="Déplacer" onclick="App.closeModal(); Stockage.showMoveChambreModal(${lot.recId})">🔄</button>
+                  </td>
                 </tr>
               `).join('')}
           </tbody>

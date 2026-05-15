@@ -4,6 +4,8 @@
 const Saisie = {
   editingId: null,
   currentActivite: 'reconditionnement',
+  selectedMonth: new Date().getMonth(),
+  selectedYear: new Date().getFullYear(),
   phasesList: ['Triage-Lavage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Mélançage','Trempage','Congélation','DECONGELATION'],
 
   emballagesList: [
@@ -102,7 +104,7 @@ const Saisie = {
     { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 },
   ],
   render() {
-    let prod = App.getCurrentMonthProduction();
+    let prod = App.getMonthProduction(this.selectedYear, this.selectedMonth);
     prod = prod.filter(p => (p.activite||'reconditionnement') === this.currentActivite);
     const content = document.getElementById('pageContent');
     content.innerHTML = `
@@ -117,7 +119,11 @@ const Saisie = {
             <h2 class="page-title">Saisie Journalière</h2>
             <p class="page-subtitle">Enregistrement et suivi des opérations de production en temps réel.</p>
           </div>
-          <div style="display:flex; gap:12px;">
+          <div style="display:flex; gap:12px; align-items:flex-end;">
+            <div class="form-group" style="margin:0;">
+              <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Période</label>
+              <input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Saisie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:var(--bg-card); border-color:var(--accent-blue); font-weight:600;">
+            </div>
             <button class="btn btn-outline" onclick="Saisie.printTable()">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
               <span>Imprimer</span>
@@ -174,7 +180,7 @@ const Saisie = {
   },
 
   renderTable() {
-    let prod = App.getCurrentMonthProduction();
+    let prod = App.getMonthProduction(this.selectedYear, this.selectedMonth);
     prod = prod.filter(p => (p.activite||'reconditionnement') === this.currentActivite);
     const filter = document.getElementById('filterEspece')?.value;
     if (filter) prod = prod.filter(p => p.espece === filter);
@@ -292,7 +298,7 @@ const Saisie = {
               <div class="form-grid">
                 <div class="form-group">
                   <label class="form-label">Date</label>
-                  <input type="date" class="form-input" id="fDate" value="${entry ? App.formatDate(entry.date) : App.formatDate(new Date())}" onchange="Saisie.onDateChange()">
+                  <input type="date" class="form-input" id="fDate" value="${entry ? App.formatDate(entry.date) : ((new Date().getMonth() === this.selectedMonth && new Date().getFullYear() === this.selectedYear) ? App.formatDate(new Date()) : App.formatDate(new Date(this.selectedYear, this.selectedMonth, 1)))}" onchange="Saisie.onDateChange()">
                 </div>
                 <div class="form-group">
                   <label class="form-label">Client</label>
@@ -927,6 +933,15 @@ const Saisie = {
 
   switchActivite(act) {
     this.currentActivite = act;
+    this.render();
+  },
+
+  onPeriodChange(e) {
+    const val = e.target.value;
+    if (!val) return;
+    const [y, m] = val.split('-').map(Number);
+    this.selectedYear = y;
+    this.selectedMonth = m - 1;
     this.render();
   },
 
@@ -2125,6 +2140,7 @@ const Saisie = {
                 <option value="chambre1">❄️ Chambre de Stockage 1</option>
                 <option value="chambre2">❄️ Chambre de Stockage 2</option>
                 <option value="entreposage">📦 Entreposage</option>
+                <option value="direct">🚀 Flux Direct (Sans Stockage)</option>
               </select>
             </div>
           </div>
@@ -2832,6 +2848,12 @@ Notes:
       App.data.production.push(entry);
       imported++;
     });
+
+    if (entries.length > 0) {
+      const firstDate = new Date(entries[0].date);
+      this.selectedYear = firstDate.getFullYear();
+      this.selectedMonth = firstDate.getMonth();
+    }
 
     App.saveData();
     App.closeModal();
