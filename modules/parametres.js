@@ -333,8 +333,9 @@ const Parametres = {
     const val = input.value.trim().toUpperCase();
     if (!val) return;
     if (App.data.especes.some(e => e.nom === val)) { App.toast('Cette espèce existe déjà', 'error'); return; }
-    App.data.especes.push({ nom: val, calibres: ['1', '2', '3', '4'] });
-    App.saveData();
+    const newEsp = { nom: val, calibres: ['1', '2', '3', '4'] };
+    App.data.especes.push(newEsp);
+    App.saveData('especes', newEsp);
     input.value = '';
     this.render();
     App.toast(`Espèce "${val}" ajoutée`, 'success');
@@ -350,6 +351,7 @@ const Parametres = {
     }
     if (!confirm(`Supprimer l'espèce "${nom}" ?`)) return;
     App.data.especes = App.data.especes.filter(e => e.nom !== nom);
+    App.deleteFromCloud('especes', nom, 'nom');
     App.saveData();
     this.render();
     App.toast(`Espèce "${nom}" supprimée`, 'info');

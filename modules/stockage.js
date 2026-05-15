@@ -1217,7 +1217,7 @@ Notes:
       App.data.stockage.push(entry);
     }
 
-    App.saveData();
+    App.saveData('stockage', entry);
     this.hideForm();
     this.render();
     App.toast(this.editingId ? 'Entrée mise à jour' : 'Entrée enregistrée', 'success');
@@ -1259,7 +1259,9 @@ Notes:
 
   confirmDelete(id) {
     App.closeModal();
+    const entry = (App.data.stockage || []).find(e => e.id === id);
     App.data.stockage = (App.data.stockage || []).filter(e => e.id !== id);
+    App.deleteFromCloud('stockage', id);
     App.saveData();
     this.render();
     App.toast('Entrée supprimée', 'info');

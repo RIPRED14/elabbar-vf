@@ -2023,11 +2023,11 @@ const App = {
     }
   },
 
-  async deleteFromCloud(tableName, id) {
+  async deleteFromCloud(tableName, id, idField = 'id') {
     if (!this.supabase) return;
     this.setSyncStatus('syncing', 'Suppr...');
     try {
-      const { error } = await this.supabase.from(tableName).delete().eq('id', id);
+      const { error } = await this.supabase.from(tableName).delete().eq(idField, id);
       if (error) throw error;
       this.setSyncStatus('success', 'Cloud');
       console.log(`✅ [Cloud] ${tableName} item ${id} supprimé`);
