@@ -1,0 +1,423 @@
+[
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/3p-cookies/step1.html",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache, must-revalidate, no-transform, no-store",
+      "connection": "keep-alive",
+      "content-length": "2318",
+      "content-security-policy": "frame-src 'self'; object-src 'none';",
+      "content-type": "text/html;charset=utf-8",
+      "date": "Sun, 17 May 2026 23:19:10 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-robots-tag": "none"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/3p-cookies/step2.html",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache, must-revalidate, no-transform, no-store",
+      "connection": "keep-alive",
+      "content-length": "686",
+      "content-security-policy": "frame-src 'self'; object-src 'none';",
+      "content-type": "text/html;charset=utf-8",
+      "date": "Sun, 17 May 2026 23:19:11 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-robots-tag": "none"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/login-status-iframe.html",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache, must-revalidate, no-transform, no-store",
+      "connection": "keep-alive",
+      "content-length": "5600",
+      "content-security-policy": "frame-src 'self'; object-src 'none';",
+      "content-type": "text/html;charset=utf-8",
+      "date": "Sun, 17 May 2026 23:19:11 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-robots-tag": "none"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/login-status-iframe.html/init?client_id=ntsamak-web&origin=https%3A%2F%2Fntsamak.ntwtec.com",
+    "method": "GET",
+    "status": 204,
+    "headers": {
+      "connection": "keep-alive",
+      "date": "Sun, 17 May 2026 23:19:11 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/auth?client_id=ntsamak-web&redirect_uri=https%3A%2F%2Fntsamak.ntwtec.com%2F%23%2Fhome&state=e25959f4-3229-4acd-b914-3ebe66aa042d&response_mode=fragment&response_type=code&scope=openid&nonce=515b0ec0-524f-4845-a486-5220485355e2&code_challenge=dRK3SXBtN0f4s9QsBHwX91Rg3_tvW6idcLhG8LbVTPw&code_challenge_method=S256",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-store, must-revalidate, max-age=0",
+      "connection": "keep-alive",
+      "content-language": "en",
+      "content-length": "5216",
+      "content-security-policy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+      "content-type": "text/html;charset=utf-8",
+      "date": "Sun, 17 May 2026 23:19:12 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "set-cookie": "AUTH_SESSION_ID=YTA0ZjUwOGItY2QyYS00OTIwLWFmOGYtZDU4ZTZmNTVjOTliLjNZY284S2hzTWcyVGZOSmg1emFBMmt5aVB1OGNDdTF6QVlNS0FjM213VWhXNUhDVDQ3MHI4ZFdncGFlOEtvTVJiTllCVTJsTEozZ3hTRWpYcndFczdn.b2a4bf0d5db8-25441;Version=1;Path=/realms/ntsamak/;Secure;HttpOnly;SameSite=None\nKC_AUTH_SESSION_HASH=\"zYZ9ZRQmigYgvG4u58/oc7ldnztTa7Knke2dIYiAfHc\";Version=1;Path=/realms/ntsamak/;Max-Age=60;Secure;SameSite=None\nKC_RESTART=eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..tMbSY3lEB-dmTfTehCYVVg.PyhNY7ksVn6VNjcuIkPr-s_-leNlk6IFf1PDWB0dScEM_7-gLK9NIXZx7iuEv7Njvw4hEhAmVtG-HgD4OfOSRqxCRKcBPpTDkvT7wBnQ__irrn-6xqPaQlgmCYHhMnPnh_3FxJhpPbxJpZRdVo3n4ZBODIh_bFfZz8jZl9-bOl0DlUCvHuKQ1GQM-MrED0J5wAYCQy8Kgs5g6MeRrOkzERqCCWMb8FENuVJaB4AVlooCvSO_2cDPotdqW68vqu0-UVN4fO4e264bQeL7DUN-0pV-a2CIHW7RdXXv2AKmr8hiroFFn6vH71k3rVRfX76kBLb-dYouao86z1hDxg-1TxMlp4pb8X5tc-qBQ_1o42cuVkJEoBLX71ALhy_sBhFXXMkgL7IQsr1EnE0MPl7vVBdmQS2O5amaMlS2lPgEAhBNJPdch4iWtedUD3HUxAnRkhSeVwmVLbklyMF_KP8BsUarEqcrLOGQAbRKACa6Zv5tZqgEnpQAxZ0T6gsg_i8SjBKTqwIo9LA074zgweT_u2IK2sxrRNGIBnpf6VJ57f7CJ02PMmTU0x6Z5FbpIttarkqlVlyJl2a3ekMx3gCk74IqvulKx68xLOr9Ov4G8BZ6cJ-rIG9Ao9uLqrVITEm-ldSC5brOyYEqJQGSDO4KlgB_KGBgojXpHhZusUgi-aboG3-0IUNjkRj5IclzjTa78svEJv4Q0BEYkoQgNLSveonF4fLYWigmwKXfUOezhfhe_ntQuMRiVW6ZP695AKaTVyKKPunj7AUNjDp4_Uok5g-OLeVd3C-uYAlgOCGwbWO8P1DzyU6kHXJk68Eg95QI1oUHGdkRbRrF89zykxKyEVMfohlXRzyLyrKn3lgtWGRZs5bXAp95mEJL8xNqsXIqXRTHGnc0beyRI6UgU-LXTGy-3lSdUeUWWPYTQgIctWmxPeoH9xGPxeLD-9aQTBbm-Y2uM_l1glyw_rDOQfOGP4jh61CRODoksJ4C-IC30BeDZKlp_ZrCTd6UKFRDLnhBE_r0o3R7lBjd8pbiFuap0xScV_rGxBnliyFm-8_eaeUiNVUGgH2BPwB3dPL7zDJxWFij97a14dPreXkwhzXV8w.vIGDLOkUNM_ceTcBWmpOnQ;Version=1;Path=/realms/ntsamak/;Secure;HttpOnly;SameSite=None",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-robots-tag": "none"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/login-actions/authenticate?session_code=vjM0wxTfx30L8RxoUR5389b5aWE-TUt_uJwuYx6Z13M&execution=4c77b83d-ea73-4d30-9c15-afeaa32b3f51&client_id=ntsamak-web&tab_id=Hw1eAuGOC_g&client_data=eyJydSI6Imh0dHBzOi8vbnRzYW1hay5udHd0ZWMuY29tLyMvaG9tZSIsInJ0IjoiY29kZSIsInJtIjoiZnJhZ21lbnQiLCJzdCI6ImUyNTk1OWY0LTMyMjktNGFjZC1iOTE0LTNlYmU2NmFhMDQyZCJ9",
+    "method": "POST",
+    "status": 302,
+    "headers": {
+      "cache-control": "no-store, must-revalidate, max-age=0",
+      "connection": "keep-alive",
+      "content-length": "0",
+      "content-security-policy": "frame-src 'self'; frame-ancestors 'self'; object-src 'none';",
+      "date": "Sun, 17 May 2026 23:19:13 GMT",
+      "location": "https://ntsamak.ntwtec.com/#/home&state=e25959f4-3229-4acd-b914-3ebe66aa042d&session_state=a04f508b-cd2a-4920-af8f-d58e6f55c99b&iss=https%3A%2F%2Fauth.ntwtec.com%2Frealms%2Fntsamak&code=a0a63c69-1359-4867-9871-e4b1d04027e8.a04f508b-cd2a-4920-af8f-d58e6f55c99b.c984dcd5-35a8-43e0-8e3f-56a31896198f",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "set-cookie": "KC_RESTART=;Version=1;Path=/realms/ntsamak/;Max-Age=0\nKEYCLOAK_IDENTITY=eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyZjY2MTE3OC1hNGVjLTQ0NWItODA5MC00YWE3MTgwNmZiODAifQ.eyJleHAiOjE3NzkwOTU5NTMsImlhdCI6MTc3OTA1OTk1MywianRpIjoiOGIyZGRmMGYtZGY0YS00M2U4LWVmZjAtMTc3NzkxZWUzNGU1IiwiaXNzIjoiaHR0cHM6Ly9hdXRoLm50d3RlYy5jb20vcmVhbG1zL250c2FtYWsiLCJzdWIiOiIzNzBhZjRmMC1jNzI1LTQ4YTctYWM2YS04NGZlN2ZiNTQ1OGIiLCJ0eXAiOiJTZXJpYWxpemVkLUlEIiwic2lkIjoiYTA0ZjUwOGItY2QyYS00OTIwLWFmOGYtZDU4ZTZmNTVjOTliIiwic3RhdGVfY2hlY2tlciI6IkxScDdHYnJKeGZxOWJ5c1ZhanA2bkp4dmVxMnRzNlVRdzhEY0ZURTN3YU0ifQ.toSDA2GiIYUZxIAKV2ymoygXvmc5r8zWbOgD5f58BnBcv4_chh-HWb4yYyP00gPzp7aURxIWAXVDEkWro4Jnog;Version=1;Path=/realms/ntsamak/;Secure;HttpOnly;SameSite=None\nKEYCLOAK_SESSION=zYZ9ZRQmigYgvG4u58_oc7ldnztTa7Knke2dIYiAfHc;Version=1;Path=/realms/ntsamak/;Max-Age=36000;Secure;SameSite=None",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-robots-tag": "none"
+    },
+    "postData": "username=ff-hamza&password=HAMZA357&credentialId="
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/3p-cookies/step1.html",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache, must-revalidate, no-transform, no-store",
+      "connection": "keep-alive",
+      "content-length": "2318",
+      "content-security-policy": "frame-src 'self'; object-src 'none';",
+      "content-type": "text/html;charset=utf-8",
+      "date": "Sun, 17 May 2026 23:19:14 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-robots-tag": "none"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/3p-cookies/step2.html",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache, must-revalidate, no-transform, no-store",
+      "connection": "keep-alive",
+      "content-length": "686",
+      "content-security-policy": "frame-src 'self'; object-src 'none';",
+      "content-type": "text/html;charset=utf-8",
+      "date": "Sun, 17 May 2026 23:19:14 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-robots-tag": "none"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/login-status-iframe.html",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "cache-control": "no-cache, must-revalidate, no-transform, no-store",
+      "connection": "keep-alive",
+      "content-length": "5600",
+      "content-security-policy": "frame-src 'self'; object-src 'none';",
+      "content-type": "text/html;charset=utf-8",
+      "date": "Sun, 17 May 2026 23:19:14 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-robots-tag": "none"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/token",
+    "method": "POST",
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-origin": "https://ntsamak.ntwtec.com",
+      "access-control-expose-headers": "Access-Control-Allow-Methods",
+      "cache-control": "no-store",
+      "connection": "keep-alive",
+      "content-length": "3270",
+      "content-type": "application/json",
+      "date": "Sun, 17 May 2026 23:19:14 GMT",
+      "pragma": "no-cache",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "postData": "code=a0a63c69-1359-4867-9871-e4b1d04027e8.a04f508b-cd2a-4920-af8f-d58e6f55c99b.c984dcd5-35a8-43e0-8e3f-56a31896198f&grant_type=authorization_code&client_id=ntsamak-web&redirect_uri=https%3A%2F%2Fntsamak.ntwtec.com%2F%23%2Fhome&code_verifier=vdrT8LJOg0lwuHGlwAkVFZOEDbhSDTj2BADWKM6yCGpNYwgv5BQIwpJrpXydBJ6NarDWgelOFBD4ME1yGW5uWemV39YA2kY8",
+    "responseLength": 3270,
+    "responseSample": "{\"access_token\":\"eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJULWtPLV8tU0pGdmR4LThkd0lSYWZIalpnMkdQSWFXNGR1bnBMeHR2bUtnIn0.eyJleHAiOjE3NzkwNjAyNTQsImlhdCI6MTc3OTA1OTk1NCwiYXV0aF90aW1lIjoxNzc5MDU5OTUzLCJqdGkiOiJvbnJ0YWM6YjFjMDc1Y2UtMzdhMi01NzcxLTk2YWYtOWUxNDQwMDYxMmM0IiwiaXNzIjoiaHR0cHM6Ly9hdXR",
+    "fullResponse": {
+      "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJULWtPLV8tU0pGdmR4LThkd0lSYWZIalpnMkdQSWFXNGR1bnBMeHR2bUtnIn0.eyJleHAiOjE3NzkwNjAyNTQsImlhdCI6MTc3OTA1OTk1NCwiYXV0aF90aW1lIjoxNzc5MDU5OTUzLCJqdGkiOiJvbnJ0YWM6YjFjMDc1Y2UtMzdhMi01NzcxLTk2YWYtOWUxNDQwMDYxMmM0IiwiaXNzIjoiaHR0cHM6Ly9hdXRoLm50d3RlYy5jb20vcmVhbG1zL250c2FtYWsiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMzcwYWY0ZjAtYzcyNS00OGE3LWFjNmEtODRmZTdmYjU0NThiIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoibnRzYW1hay13ZWIiLCJzaWQiOiJhMDRmNTA4Yi1jZDJhLTQ5MjAtYWY4Zi1kNThlNmY1NWM5OWIiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHBzOi8vbnRzYW1hay5udHd0ZWMuY29tIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLW50c2FtYWsiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibnRzYW1hay13ZWIiOnsicm9sZXMiOlsiVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwicHJlZmVycmVkX3VzZXJuYW1lIjoiZmYtaGFtemEifQ.UQVsx88dsARacGHMtXROwxzZV9DN0yX-jve3Y_xnE1CnSCMpiA60lcUbJyzy04IV0_kaJZtDCYUT5CLC5NW7XHBEmQ8m82ENor1bO6U0wFnsOlaH0CMcMvKDANRZKhnJLkbLeUDh2sp0yuKnq2r3WAhUpZLGyQd3fyyZBJF0cYrBwsJULxtRWWq7jkSFNX0cyErHwhX4e5Qju0njV6BDvqIMrFCNIw149piUYsHPX-PPu8geJyUyKEgRt76Uew64atkrjAmrJ9N5ZxKLyOd2lGYL4nywnUrelCPpENAXUbVDofVZzy5L7zW9nUUHN_7zaKYlJzpt5KAT1AP3osw0uA",
+      "expires_in": 300,
+      "refresh_expires_in": 1800,
+      "refresh_token": "eyJhbGciOiJIUzUxMiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICIyZjY2MTE3OC1hNGVjLTQ0NWItODA5MC00YWE3MTgwNmZiODAifQ.eyJleHAiOjE3NzkwNjE3NTQsImlhdCI6MTc3OTA1OTk1NCwianRpIjoiZTFjZGIzNzgtMzc3OS05OGRiLTE4NGEtY2E5ODg1NTc5ZmZlIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLm50d3RlYy5jb20vcmVhbG1zL250c2FtYWsiLCJhdWQiOiJodHRwczovL2F1dGgubnR3dGVjLmNvbS9yZWFsbXMvbnRzYW1hayIsInN1YiI6IjM3MGFmNGYwLWM3MjUtNDhhNy1hYzZhLTg0ZmU3ZmI1NDU4YiIsInR5cCI6IlJlZnJlc2giLCJhenAiOiJudHNhbWFrLXdlYiIsInNpZCI6ImEwNGY1MDhiLWNkMmEtNDkyMC1hZjhmLWQ1OGU2ZjU1Yzk5YiIsInNjb3BlIjoib3BlbmlkIHdlYi1vcmlnaW5zIGVtYWlsIHByb2ZpbGUgYWNyIHJvbGVzIGJhc2ljIn0.cTno5WuLIzW_xk2G7E638oJ3YNVGMf1jDbPsYmMVujkyjah7222kcU2SFvPqRYjVA01GtwhHD-yWkSCxt4spfA",
+      "token_type": "Bearer",
+      "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJULWtPLV8tU0pGdmR4LThkd0lSYWZIalpnMkdQSWFXNGR1bnBMeHR2bUtnIn0.eyJleHAiOjE3NzkwNjAyNTQsImlhdCI6MTc3OTA1OTk1NCwiYXV0aF90aW1lIjoxNzc5MDU5OTUzLCJqdGkiOiI3Nzg5NmRmOS04MWFhLTllYTQtZjc0ZC00YzdiMjA1MmZlMzAiLCJpc3MiOiJodHRwczovL2F1dGgubnR3dGVjLmNvbS9yZWFsbXMvbnRzYW1hayIsImF1ZCI6Im50c2FtYWstd2ViIiwic3ViIjoiMzcwYWY0ZjAtYzcyNS00OGE3LWFjNmEtODRmZTdmYjU0NThiIiwidHlwIjoiSUQiLCJhenAiOiJudHNhbWFrLXdlYiIsIm5vbmNlIjoiNTE1YjBlYzAtNTI0Zi00ODQ1LWE0ODYtNTIyMDQ4NTM1NWUyIiwic2lkIjoiYTA0ZjUwOGItY2QyYS00OTIwLWFmOGYtZDU4ZTZmNTVjOTliIiwiYXRfaGFzaCI6InFEM3hGeURXMlRjMmRYa3JNTGdOV1EiLCJhY3IiOiIxIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJmZi1oYW16YSJ9.sR67ohb4oYUW7X45tVqaMcDvmKYbFYA4Dgk_Eoh4Xc6xC86tkuf6uuoJf9GAs1XNhYN2bnhK0oArcQqogizLNE5mg2_0NFXUZzvx35tmLMe5EKU-IJA42wOl9tIZuRgN1njai0dm72ImXN_Rb4JTcA0wmGoPvwKoMmqzTylRoT1nZ_ul0XswBMsUi1sAkMJTRA14rrVatUrUaxhdecjlMvtQToowzFrpZnCPAEJgyrOpzhzJI-_F2Gh0_pZMPsM6Hg2ne-1abceOXDd2TglG0-KBt4uJgtHpuoE1Ekk0DnntGbPeDu8n03aKHFBnjtvNIB-D9c0YcKnwnfmAARfC9A",
+      "not-before-policy": 0,
+      "session_state": "a04f508b-cd2a-4920-af8f-d58e6f55c99b",
+      "scope": "openid email profile"
+    }
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/account",
+    "method": "OPTIONS",
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-headers": "Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, DPoP, Authorization",
+      "access-control-allow-methods": "HEAD, DELETE, POST, GET, OPTIONS, PUT",
+      "access-control-allow-origin": "https://ntsamak.ntwtec.com",
+      "access-control-max-age": "3600",
+      "connection": "keep-alive",
+      "content-length": "0",
+      "date": "Sun, 17 May 2026 23:19:14 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/account",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-origin": "https://ntsamak.ntwtec.com",
+      "cache-control": "no-cache",
+      "connection": "keep-alive",
+      "content-length": "1299",
+      "content-type": "application/json;charset=UTF-8",
+      "date": "Sun, 17 May 2026 23:19:15 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN"
+    },
+    "postData": null,
+    "responseLength": 1299,
+    "responseSample": "{\"id\":\"370af4f0-c725-48a7-ac6a-84fe7fb5458b\",\"username\":\"ff-hamza\",\"userProfileMetadata\":{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"required\":true,\"readOnly\":true,\"validators\":{\"username-prohibited-characters\":{\"ignore.empty.value\":true},\"multivalued\":{\"max\":\"1\"},\"length\":{\"max\":",
+    "fullResponse": {
+      "id": "370af4f0-c725-48a7-ac6a-84fe7fb5458b",
+      "username": "ff-hamza",
+      "userProfileMetadata": {
+        "attributes": [
+          {
+            "name": "username",
+            "displayName": "${username}",
+            "required": true,
+            "readOnly": true,
+            "validators": {
+              "username-prohibited-characters": {
+                "ignore.empty.value": true
+              },
+              "multivalued": {
+                "max": "1"
+              },
+              "length": {
+                "max": 255,
+                "ignore.empty.value": true,
+                "min": 3
+              },
+              "up-username-not-idn-homograph": {
+                "ignore.empty.value": true
+              }
+            },
+            "multivalued": false
+          },
+          {
+            "name": "email",
+            "displayName": "${email}",
+            "required": true,
+            "readOnly": false,
+            "annotations": {},
+            "validators": {
+              "multivalued": {
+                "max": "1"
+              },
+              "length": {
+                "max": 255,
+                "ignore.empty.value": true
+              },
+              "email": {
+                "ignore.empty.value": true
+              }
+            },
+            "multivalued": false
+          },
+          {
+            "name": "firstName",
+            "displayName": "${firstName}",
+            "required": true,
+            "readOnly": false,
+            "validators": {
+              "person-name-prohibited-characters": {
+                "ignore.empty.value": true
+              },
+              "multivalued": {
+                "max": "1"
+              },
+              "length": {
+                "max": 255,
+                "ignore.empty.value": true
+              }
+            },
+            "multivalued": false
+          },
+          {
+            "name": "lastName",
+            "displayName": "${lastName}",
+            "required": true,
+            "readOnly": false,
+            "validators": {
+              "person-name-prohibited-characters": {
+                "ignore.empty.value": true
+              },
+              "multivalued": {
+                "max": "1"
+              },
+              "length": {
+                "max": 255,
+                "ignore.empty.value": true
+              }
+            },
+            "multivalued": false
+          }
+        ],
+        "groups": [
+          {
+            "name": "user-metadata",
+            "displayHeader": "User metadata",
+            "displayDescription": "Attributes, which refer to user metadata"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "url": "https://auth.ntwtec.com/realms/ntsamak/protocol/openid-connect/login-status-iframe.html/init?client_id=ntsamak-web&origin=https%3A%2F%2Fntsamak.ntwtec.com",
+    "method": "GET",
+    "status": 204,
+    "headers": {
+      "connection": "keep-alive",
+      "date": "Sun, 17 May 2026 23:19:15 GMT",
+      "referrer-policy": "no-referrer",
+      "server": "nginx/1.20.1",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-content-type-options": "nosniff"
+    },
+    "postData": null
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/webUser/login",
+    "method": "GET",
+    "status": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "access-control-allow-origin": "https://ntsamak.ntwtec.com",
+      "access-control-expose-headers": "Authorization, x-auth-token",
+      "cache-control": "no-cache, no-store, max-age=0, must-revalidate",
+      "connection": "keep-alive",
+      "content-type": "application/json",
+      "date": "Sun, 17 May 2026 23:19:15 GMT",
+      "expires": "0",
+      "pragma": "no-cache",
+      "server": "nginx/1.20.1",
+      "transfer-encoding": "chunked",
+      "vary": "Origin\nAccess-Control-Request-Method\nAccess-Control-Request-Headers",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "x-xss-protection": "0"
+    },
+    "postData": null,
+    "responseLength": 638,
+    "responseSample": "{\"id\":139,\"ntclientId\":26,\"ntclientActivite\":\"V,S,T,A\",\"ntclientRaisonSociale\":\"FISH & FOOD PROCESS\",\"ntclientCodifArticle\":false,\"ntclientLongueurArticle\":5,\"ntclientCodifMatricule\":true,\"ntclientLongueurMatricule\":4,\"login\":\"ff-hamza\",\"nom\":\"Hamza Mjid\",\"platform\":\"B\",\"photo\":null,\"initiale\":null,",
+    "fullResponse": {
+      "id": 139,
+      "ntclientId": 26,
+      "ntclientActivite": "V,S,T,A",
+      "ntclientRaisonSociale": "FISH & FOOD PROCESS",
+      "ntclientCodifArticle": false,
+      "ntclientLongueurArticle": 5,
+      "ntclientCodifMatricule": true,
+      "ntclientLongueurMatricule": 4,
+      "login": "ff-hamza",
+      "nom": "Hamza Mjid",
+      "platform": "B",
+      "photo": null,
+      "initiale": null,
+      "deviceToken": null,
+      "browserToken": null,
+      "societeIds": [],
+      "userRoles": [
+        {
+          "id": null,
+          "privilegeCode": "ADMIN",
+          "privilegeDesignation": null,
+          "privilegeId": null,
+          "privilegeRoles": null,
+          "roles": null,
+          "webUserId": null
+        },
+        {
+          "id": null,
+          "privilegeCode": "USER",
+          "privilegeDesignation": null,
+          "privilegeId": null,
+          "privilegeRoles": null,
+          "roles": null,
+          "webUserId": null
+        }
+      ]
+    }
+  }
+]

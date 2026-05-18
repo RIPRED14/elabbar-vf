@@ -389,7 +389,7 @@ const Personnel = {
           <div class="kpi-value">${App.formatNumber(totalFixe + totalMOProd, 0)}<span class="kpi-unit">DH</span></div>
         </div>
         <div class="kpi-card green">
-          <div class="kpi-icon green"> green"> green"> green">🏭</div>
+          <div class="kpi-icon green">🏭</div>
           <div class="kpi-label">Coût M.O. Production</div>
           <div class="kpi-value">${App.formatNumber(totalMOProd, 0)}<span class="kpi-unit">DH</span></div>
         </div>

@@ -1,0 +1,66 @@
+[
+  {
+    "url": "https://ntsamak-api.ntwtec.com/webUser/login",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/modeleList/byPage?page=ENTREE_STOCK_S_GLOBALE",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/societe/byUserStesAndActivite/S",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/devise/byNtclient",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/emballage/byUserStes",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/clientFrs/byUserStes",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/chambre/byNtclient",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/calibre/byNtclient",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/modeleList/byPage?page=SORTIE_STOCK_S_GLOBALE",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/societe/byUserStesAndActivite/S",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/devise/byNtclient",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/clientFrs/byUserStes",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/modeleList/byPage?page=SORTIE_TRAITEMENT_undefined_GLOBALE",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/societe/byUserStesAndActivite/T",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/devise/byNtclient",
+    "method": "GET"
+  },
+  {
+    "url": "https://ntsamak-api.ntwtec.com/clientFrs/byUserStes",
+    "method": "GET"
+  }
+]
