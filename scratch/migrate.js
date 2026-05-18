@@ -145,6 +145,20 @@ async function migrateToSupabase() {
             if (error) console.error("Error qrCodes:", error);
         }
 
+        // 12. Espèces
+        console.log("--- Migrating Espèces ---");
+        if (data.especes && data.especes.length > 0) {
+            const { error } = await sb.from('especes').upsert(data.especes);
+            if (error) console.error("Error especes:", error);
+        }
+
+        // 13. Fiches Pointage
+        console.log("--- Migrating Fiches Pointage ---");
+        if (data.fiches_pointage && data.fiches_pointage.length > 0) {
+            const { error } = await sb.from('fiches_pointage').upsert(data.fiches_pointage);
+            if (error) console.error("Error fiches_pointage:", error);
+        }
+
         console.log("✅ Migration complete!");
         alert("Félicitations ! Vos données sont maintenant sur Supabase.");
     } catch (err) {

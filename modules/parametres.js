@@ -85,6 +85,7 @@ const Parametres = {
         geminiApiKey: document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiApiKey,
         groqApiKey: document.getElementById('pGroqKey')?.value ?? App.data.parametres.groqApiKey,
         openRouterApiKey: document.getElementById('pOpenRouterKey')?.value ?? App.data.parametres.openRouterApiKey,
+        ntsamakToken: document.getElementById('pNtsamakToken')?.value ?? App.data.parametres.ntsamakToken,
       };
     }
   },
@@ -153,12 +154,26 @@ const Parametres = {
               <input type="password" class="form-input" id="pOpenRouterKey" value="${p.openRouterApiKey||''}" placeholder="sk-or-v1-...">
             </div>
             <div class="form-group" style="grid-column: span 2;">
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px; margin-bottom: 15px;">
                 Le système bascule automatiquement sur Groq ou OpenRouter si Gemini atteint son quota.
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><span class="card-title">🔌 Portail Externe Ntsamak</span></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group" style="grid-column: span 2;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <label class="form-label" style="margin-bottom:0;">Jeton JWT Ntsamak (Bearer Token)</label>
+                <div style="font-size:0.75rem; color:var(--text-muted);">Configuré par défaut avec votre clé de session active</div>
+              </div>
+              <input type="password" class="form-input" id="pNtsamakToken" value="${p.ntsamakToken||''}" placeholder="Bearer eyJhbGciOiJSUzI1Ni...">
+            </div>
+          </div>
       </div>
     `;
   },

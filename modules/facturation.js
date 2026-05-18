@@ -23,15 +23,19 @@ const Facturation = {
     this.render();
     
     const entry = {
+      societe: data.societe || 'FISH & FOOD TRAITEMENT',
       fournisseur: data.fournisseur || '',
       numero: data.numero || '',
       date: finalDate,
+      dateEcheance: data.dateEcheance || finalDate,
       montantHT: parseFloat(data.montantHT) || 0,
       tva: parseFloat(data.tva) || 0,
       montant: parseFloat(data.montantTTC || data.montant) || 0,
       devise: data.devise || 'MAD',
       motif: data.motif || '',
       allocation: data.allocation || 'general',
+      origine: data.origine || 'Divers achats',
+      type: data.type || 'Facture',
       etatPaiement: 'En attente',
       lignes: Array.isArray(data.lignes) ? data.lignes : []
     };
@@ -83,7 +87,11 @@ const Facturation = {
               }
             </div>
 
-            <button class="btn btn-primary" onclick="Facturation.showForm()">
+            <button class="btn btn-outline" style="border-color:var(--accent-blue); color:var(--accent-blue); height:38px; display:flex; align-items:center;" onclick="Facturation.showSyncModal()">
+              <span>📥 Portail Ntsamak</span>
+            </button>
+
+            <button class="btn btn-primary" onclick="Facturation.showForm()" style="height:38px; display:flex; align-items:center;">
               <span>+ Nouvelle Facture</span>
             </button>
           </div>
@@ -124,7 +132,8 @@ const Facturation = {
                   <table>
                     <thead>
                       <tr>
-                        <th>Date</th>
+                        <th>Société / Type</th>
+                        <th>Date / Échéance</th>
                         <th>N° Facture</th>
                         <th>Fournisseur</th>
                         <th>État</th>
@@ -135,7 +144,14 @@ const Facturation = {
                     <tbody>
                       ${[...factures].sort((a,b) => new Date(b.date) - new Date(a.date)).map(f => `
                         <tr>
-                          <td><div style="font-weight:600;">${App.formatDateFR(f.date)}</div></td>
+                          <td>
+                            <div style="font-weight:700; font-size:0.75rem; color:var(--text-muted);">${f.societe || 'FF TRAITEMENT'}</div>
+                            <div style="font-size:0.8rem; font-weight:600;">${f.type || 'Facture'}</div>
+                          </td>
+                          <td>
+                            <div style="font-weight:600;">${App.formatDateFR(f.date)}</div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">Dû le: ${f.dateEcheance ? App.formatDateFR(f.dateEcheance) : '-'}</div>
+                          </td>
                           <td><span class="badge badge-info" style="font-family:var(--font-mono);">${f.numero || '-'}</span></td>
                           <td><div style="font-weight:600; color:var(--text-primary);">${f.fournisseur}</div></td>
                           <td>
@@ -148,10 +164,10 @@ const Facturation = {
                           </td>
                           <td class="td-center">
                             <div style="display:flex; gap:4px; justify-content:center;">
-                              <button class="btn-icon" onclick="Facturation.editEntry(${f.id})" title="Modifier">
+                              <button class="btn-icon" onclick="Facturation.editEntry('${f.id}')" title="Modifier">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                               </button>
-                              <button class="btn-icon danger" onclick="Facturation.deleteEntry(${f.id})" title="Supprimer">
+                              <button class="btn-icon danger" onclick="Facturation.deleteEntry('${f.id}')" title="Supprimer">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                               </button>
                             </div>
@@ -214,10 +230,29 @@ const Facturation = {
 
           <h4 style="margin-bottom:15px; color:var(--accent-blue); border-bottom:1px solid #eee; padding-bottom:5px;">Informations Générales</h4>
           <div class="form-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
-            <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="fDate" value="${entry ? entry.date : (this.selectedDay || App.formatDate(new Date()))}"></div>
+            <div class="form-group">
+              <label class="form-label">Société</label>
+              <select class="form-select" id="fSociete">
+                <option value="FISH & FOOD TRAITEMENT" ${entry?.societe === 'FISH & FOOD TRAITEMENT' ? 'selected' : ''}>FISH & FOOD TRAITEMENT</option>
+                <option value="FISH AND FOOD PROCESS" ${entry?.societe === 'FISH AND FOOD PROCESS' ? 'selected' : ''}>FISH AND FOOD PROCESS</option>
+                <option value="LAMBDA FISH SUD" ${entry?.societe === 'LAMBDA FISH SUD' ? 'selected' : ''}>LAMBDA FISH SUD</option>
+              </select>
+            </div>
+            <div class="form-group"><label class="form-label">Origine</label><input type="text" class="form-input" id="fOrigine" value="${entry?.origine||'Divers achats'}" placeholder="Ex: Divers achats"></div>
+            <div class="form-group"><label class="form-label">Date Facture</label><input type="date" class="form-input" id="fDate" value="${entry ? entry.date : (this.selectedDay || App.formatDate(new Date()))}"></div>
+            <div class="form-group"><label class="form-label">Date Échéance</label><input type="date" class="form-input" id="fDateEcheance" value="${entry?.dateEcheance || entry?.date || ''}"></div>
             <div class="form-group"><label class="form-label">Fournisseur</label><input type="text" class="form-input" id="fFournisseur" value="${entry?.fournisseur||''}" placeholder="Ex: AMENDIS"></div>
             <div class="form-group"><label class="form-label">N° Facture</label><input type="text" class="form-input" id="fNumero" value="${entry?.numero||''}" placeholder="FA-2026-01"></div>
-            <div class="form-group"><label class="form-label">État du Paiement</label>
+            <div class="form-group">
+              <label class="form-label">Type</label>
+              <select class="form-select" id="fType">
+                <option value="Facture" ${entry?.type === 'Facture' ? 'selected' : ''}>Facture</option>
+                <option value="Proforma" ${entry?.type === 'Proforma' ? 'selected' : ''}>Proforma</option>
+                <option value="Avoir" ${entry?.type === 'Avoir' ? 'selected' : ''}>Avoir</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">État du Paiement</label>
               <select class="form-select" id="fEtatPaiement">
                 <option value="En attente" ${entry?.etatPaiement === 'En attente' ? 'selected' : ''}>⏳ En attente</option>
                 <option value="Payée" ${entry?.etatPaiement === 'Payée' ? 'selected' : ''}>✅ Payée</option>
@@ -401,10 +436,16 @@ const Facturation = {
     // Filtrer les lignes vides
     const lignesValides = this.currentLignes.filter(l => l.description.trim() !== '' || l.totalLigne > 0);
 
+    const societe = document.getElementById('fSociete').value;
+    const origine = document.getElementById('fOrigine').value.trim();
+    const type = document.getElementById('fType').value;
+    const dateEcheance = document.getElementById('fDateEcheance').value;
+
     App.data.factures = App.data.factures || [];
     const entry = { 
       id: this.editingId || App.nextId(App.data.factures), 
       date, 
+      dateEcheance,
       fournisseur, 
       numero, 
       etatPaiement,
@@ -415,7 +456,9 @@ const Facturation = {
       devise,
       lignes: lignesValides,
       allocation: document.getElementById('fAllocation')?.value || 'general',
-      type: 'Achat'
+      societe,
+      origine,
+      type
     };
 
     if (this.editingId) {
@@ -425,7 +468,7 @@ const Facturation = {
       App.data.factures.push(entry);
     }
 
-    App.saveData();
+    App.saveData('factures', entry);
     this.hideForm();
     this.render();
     App.toast('Facture enregistrée', 'success');
@@ -436,9 +479,10 @@ const Facturation = {
     if (entry) this.showForm(entry);
   },
 
-  deleteEntry(id) {
+  async deleteEntry(id) {
     if (!confirm('Supprimer cette facture ?')) return;
     App.data.factures = (App.data.factures || []).filter(e => e.id !== id);
+    await App.deleteFromCloud('factures', id);
     App.saveData();
     this.render();
     App.toast('Facture supprimée', 'info');
@@ -490,5 +534,73 @@ Note pour l'allocation: utilise 'traitement' si c'est du poisson, sel ou matéri
     } finally {
       event.target.value = '';
     }
+  },
+
+  showSyncModal() {
+    const activeNtsamakCount = (App.data.factures || []).filter(f => String(f.id).startsWith('nt_')).length;
+    
+    let modal = document.getElementById('ntsamakSyncModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'ntsamakSyncModal';
+      modal.style = `
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      `;
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div class="card" style="width: 100%; max-width: 500px; border: 1px solid var(--accent-blue); box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); background: var(--bg-card);">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-color); padding: 16px 24px;">
+          <span class="card-title" style="display:flex; align-items:center; gap:8px; font-weight:750; color:var(--text-main);">📥 Portail Automatique Ntsamak</span>
+          <button class="btn-icon" onclick="Facturation.hideSyncModal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem;">✕</button>
+        </div>
+        <div class="card-body" style="padding: 24px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="font-size: 3rem; margin-bottom: 12px;">🔌</div>
+            <h4 style="margin: 0 0 6px 0; color: var(--text-main); font-weight:700;">Pipeline d'Extraction Automatique</h4>
+            <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Synchronisez vos factures fournisseurs directement avec l'ERP</p>
+          </div>
+
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+              <span style="font-size: 0.85rem; color: var(--text-muted);">Factures Ntsamak synchronisées :</span>
+              <span style="font-weight: 700; color: var(--accent-blue);">${activeNtsamakCount}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="font-size: 0.85rem; color: var(--text-muted);">État du service :</span>
+              <span style="font-weight: 700; color: var(--status-success);">🟢 Opérationnel</span>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <h5 style="margin: 0 0 8px 0; font-size: 0.9rem; color: var(--text-main); font-weight:600;">⚙️ Lancer la synchronisation :</h5>
+            <p style="margin: 0 0 12px 0; font-size: 0.8rem; color: var(--text-muted);">Pour exécuter le crawler en arrière-plan et récupérer toutes les factures fournisseurs activement mises à jour :</p>
+            
+            <div style="background: #0f172a; color: #38bdf8; font-family: monospace; padding: 12px 16px; border-radius: 8px; font-size: 0.85rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155;">
+              <span>npm run sync-invoices</span>
+              <button class="btn btn-sm" style="border: 1px solid #38bdf8; background:transparent; color: #38bdf8; padding: 4px 8px; font-size: 0.7rem; border-radius: 4px; cursor:pointer;" onclick="navigator.clipboard.writeText('npm run sync-invoices'); App.toast('Commande copiée !', 'success')">Copier</button>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid var(--border-color); padding-top:16px; margin-top:24px;">
+            <button class="btn btn-outline" onclick="Facturation.hideSyncModal()">Fermer</button>
+          </div>
+        </div>
+      </div>
+    `;
+    modal.style.display = 'flex';
+  },
+
+  hideSyncModal() {
+    const modal = document.getElementById('ntsamakSyncModal');
+    if (modal) modal.style.display = 'none';
   }
 };

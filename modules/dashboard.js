@@ -594,26 +594,31 @@ const Dashboard = {
     const sorties = App.data.sortiesStockage || [];
 
     const nbReceptions = monthEntries.length;
-    const totalPoidsRecu = monthEntries.reduce((s, e) => s + e.lignes.reduce((ss, l) => ss + (l.pdsNetTotal || 0), 0), 0);
+    const totalPoidsRecu = monthEntries.reduce((s, e) => {
+      const lignes = Array.isArray(e.lignes) ? e.lignes : [];
+      return s + lignes.reduce((ss, l) => ss + (l.pdsNetTotal || 0), 0);
+    }, 0);
 
     let lotsEnStock = 0;
     let poidsEnStock = 0;
     entries.forEach(e => {
-      e.lignes.forEach((l, idx) => {
-        const available = typeof Stockage !== 'undefined' && Stockage.getLineAvailable
-          ? Stockage.getLineAvailable(e, idx)
-          : (() => {
-              const sortiesForLine = sorties.filter(s => s.receptionId === e.id && s.lineIdx === idx);
-              const qteSortie = sortiesForLine.reduce((s, so) => s + (so.quantite || 0), 0);
-              const remaining = (l.quantite || 0) - qteSortie;
-              const avgWeight = l.quantite > 0 ? l.pdsNetTotal / l.quantite : 0;
-              return { quantite: remaining, poids: remaining * avgWeight };
-            })();
-        if ((available.quantite || 0) > 0) {
-          lotsEnStock++;
-          poidsEnStock += Math.max(0, available.poids || 0);
-        }
-      });
+      if (Array.isArray(e.lignes)) {
+        e.lignes.forEach((l, idx) => {
+          const available = typeof Stockage !== 'undefined' && Stockage.getLineAvailable
+            ? Stockage.getLineAvailable(e, idx)
+            : (() => {
+                const sortiesForLine = sorties.filter(s => s.receptionId === e.id && s.lineIdx === idx);
+                const qteSortie = sortiesForLine.reduce((s, so) => s + (so.quantite || 0), 0);
+                const remaining = (l.quantite || 0) - qteSortie;
+                const avgWeight = l.quantite > 0 ? l.pdsNetTotal / l.quantite : 0;
+                return { quantite: remaining, poids: remaining * avgWeight };
+              })();
+          if ((available.quantite || 0) > 0) {
+            lotsEnStock++;
+            poidsEnStock += Math.max(0, available.poids || 0);
+          }
+        });
+      }
     });
 
     return { nbReceptions, totalPoidsRecu, lotsEnStock, poidsEnStock };

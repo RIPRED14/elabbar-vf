@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "npx serve ./",
-    "start": "npx serve ./"
+    "start": "npx serve ./",
+    "sync-invoices": "node scratch/sync_invoices.js"
   },
   "dependencies": {
     "pdf-parse": "^2.4.5",
@@ -11,6 +12,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "puppeteer": "^25.0.2",
     "supabase": "^2.98.2"
   }
 }

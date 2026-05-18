@@ -143,6 +143,26 @@ CREATE TABLE qrCodes (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 12. Table des Espèces
+DROP TABLE IF EXISTS especes;
+CREATE TABLE especes (
+    nom TEXT PRIMARY KEY,
+    prixMoyenVente NUMERIC DEFAULT 0,
+    calibres JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 13. Table des Fiches de Pointages (personnel)
+DROP TABLE IF EXISTS fiches_pointage;
+CREATE TABLE fiches_pointage (
+    id BIGINT PRIMARY KEY,
+    date DATE,
+    activite TEXT,
+    titre TEXT,
+    presences JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Désactivation RLS pour la migration
 ALTER TABLE settings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE personnel DISABLE ROW LEVEL SECURITY;
@@ -155,3 +175,5 @@ ALTER TABLE consommables DISABLE ROW LEVEL SECURITY;
 ALTER TABLE sortiesStockage DISABLE ROW LEVEL SECURITY;
 ALTER TABLE mouvementsStock DISABLE ROW LEVEL SECURITY;
 ALTER TABLE qrCodes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE especes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE fiches_pointage DISABLE ROW LEVEL SECURITY;

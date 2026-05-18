@@ -1078,6 +1078,7 @@ const App = {
       geminiApiKey: '',
       groqApiKey: '',
       openRouterApiKey: '',
+      ntsamakToken: 'Bearer eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJULWtPLV8tU0pGdmR4LThkd0lSYWZIalpnMkdQSWFXNGR1bnBMeHR2bUtnIn0.eyJleHAiOjE3NzkwNTk3OTAsImlhdCI6MTc3OTA1OTQ5MCwiYXV0aF90aW1lIjoxNzc5MDU5NDM4LCJqdGkiOiJvbnJ0YWM6M2I4NTM2YTgtN2MwYi05MzMwLWYxYTUtYWNjMGY2NjY2OWQyIiwiaXNzIjoiaHR0cHM6Ly9hdXRoLm50d3RlYy5jb20vcmVhbG1zL250c2FtYWsiLCJhdWQiOiJhY2NvdW50Iiwic3ViIjoiMzcwYWY0ZjAtYzcyNS00OGE3LWFjNmEtODRmZTdmYjU0NThiIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoibnRzYW1hay13ZWIiLCJzaWQiOiI2ZGU2NjQxZS02MmQzLTQ2MGYtOWJjOS1iMjE0ZjY0ZGQ5ODUiLCJhY3IiOiIwIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHBzOi8vbnRzYW1hay5udHd0ZWMuY29tIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLW50c2FtYWsiLCJvZmZsaW5lX2FjY2VzcyIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsibnRzYW1hay13ZWIiOnsicm9sZXMiOlsiVVNFUiJdfSwiYWNjb3VudCI6eyJyb2xlcyI6WyJtYW5hZ2UtYWNjb3VudCIsIm1hbmFnZS1hY2NvdW50LWxpbmtzIiwidmlldy1wcm9maWxlIl19fSwic2NvcGUiOiJvcGVuaWQgZW1haWwgcHJvZmlsZSIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwicHJlZmVycmVkX3VzZXJuYW1lIjoiZmYtaGFtemEifQ.SloAm419dhMc1bzpQUqngjvpRAtZi5kvHdHmL65jNisKd1UR10MYJ3PaZzX4sz8piLqMxBvuJ7Z1LEgjGDG2xDzkHvlJM9i_7YL_ieBWRZtSYz7y0BZZ79LPYAWaRXxnQzqvRv9V-7hOywtxRJiiiJVaDPB7zELb00TRSWp_d-nulpxoILBzKOc0302XuOqC95iOV20i2Hf0wXx4DRc35oSIc_PgUz44auf3MhDs74RIzZxWZUfO0bevJPK14no8bzHorkQzpzP3Oqehyu1iM83ZHTLV6pVFoDAZPN8k4f4KP9MUDe129U_bzFnDQN27IcPiOeJJbAS--yNFFbE1cw',
       productivityTarget: 25, // KG per hour target
       yieldTargets: {
         'OCTOPUS': 75,
@@ -1840,6 +1841,7 @@ const App = {
         if (!this.data.parametres) this.data.parametres = { ...this.defaults.parametres };
         if (this.data.parametres.groqApiKey === undefined) this.data.parametres.groqApiKey = this.defaults.parametres.groqApiKey;
         if (this.data.parametres.openRouterApiKey === undefined) this.data.parametres.openRouterApiKey = this.defaults.parametres.openRouterApiKey;
+        if (this.data.parametres.ntsamakToken === undefined) this.data.parametres.ntsamakToken = this.defaults.parametres.ntsamakToken;
         console.log("📂 Données locales chargées");
       } catch (err) {
         console.error('Données locales corrompues, réinitialisation.', err);
@@ -1864,7 +1866,7 @@ const App = {
         const results = await Promise.all([
           this.supabase.from('settings').select('*').eq('id', 'global').maybeSingle(),
           this.supabase.from('pointage').select('*'),
-          ...tables.map(t => this.supabase.from(t).select('*'))
+          ...tables.map(t => this.supabase.from(t.toLowerCase()).select('*'))
         ]);
 
         const [settings, pointage, ...others] = results;
@@ -1884,6 +1886,30 @@ const App = {
             console.log(`✅ Table '${tableName}' hydratée depuis le cloud (${result.data.length} lignes)`);
           }
         });
+
+        // Désérialisation des métadonnées de factures
+        if (Array.isArray(this.data.factures)) {
+          this.data.factures = this.data.factures.map(f => {
+            if (f.montantttc !== undefined) f.montant = f.montantttc;
+            if (f.montantht !== undefined) f.montantHT = f.montantht;
+
+            if (f.lignes && !Array.isArray(f.lignes)) {
+              try {
+                const meta = f.lignes;
+                f.societe = meta.societe || 'FISH & FOOD TRAITEMENT';
+                f.allocation = meta.allocation || 'general';
+                f.type = meta.type || 'Facture';
+                f.origine = meta.origine || 'Divers achats';
+                f.dateEcheance = meta.dateEcheance || f.date;
+                f.etatPaiement = meta.etatPaiement || 'En attente';
+                f.lignes = meta.items || [];
+              } catch (e) {
+                console.error("Error deserializing invoice metadata:", e);
+              }
+            }
+            return f;
+          });
+        }
 
         if (pointage.data && pointage.data.length > 0) {
           // Keep flat pointage for quick lookups if needed, but fiches_pointage is the UI source
@@ -1989,6 +2015,29 @@ const App = {
     }
   },
 
+  cleanAndSerializeFacture(item) {
+    return {
+      id: item.id,
+      numero: item.numero || null,
+      date: item.date || null,
+      fournisseur: item.fournisseur || null,
+      montantht: item.montantHT !== undefined ? item.montantHT : (item.montantht !== undefined ? item.montantht : null),
+      tva: item.tva !== undefined ? item.tva : null,
+      montantttc: item.montant !== undefined ? item.montant : (item.montantttc !== undefined ? item.montantttc : null),
+      devise: item.devise || 'MAD',
+      motif: item.motif || null,
+      lignes: {
+        items: Array.isArray(item.lignes) ? item.lignes : [],
+        societe: item.societe || 'FISH & FOOD TRAITEMENT',
+        allocation: item.allocation || 'general',
+        type: item.type || 'Facture',
+        origine: item.origine || 'Divers achats',
+        dateEcheance: item.dateEcheance || item.date || null,
+        etatPaiement: item.etatPaiement || 'En attente'
+      }
+    };
+  },
+
   async saveData(tableName = null, item = null) {
     // 1. Sauvegarde locale immédiate (Performance + Offline fallback)
     localStorage.setItem('gestprod_data', JSON.stringify(this.data));
@@ -2011,8 +2060,11 @@ const App = {
     this.setSyncStatus('syncing', 'Sync...');
     try {
       // Clean item of UI temporary fields if any
-      const cleanItem = JSON.parse(JSON.stringify(item));
-      const { error } = await this.supabase.from(tableName).upsert(cleanItem);
+      let cleanItem = JSON.parse(JSON.stringify(item));
+      if (tableName === 'factures') {
+        cleanItem = this.cleanAndSerializeFacture(cleanItem);
+      }
+      const { error } = await this.supabase.from(tableName.toLowerCase()).upsert(cleanItem);
       if (error) throw error;
       this.setSyncStatus('success', 'Cloud');
       console.log(`✅ [Cloud] ${tableName} synchronisé`);
@@ -2027,7 +2079,7 @@ const App = {
     if (!this.supabase) return;
     this.setSyncStatus('syncing', 'Suppr...');
     try {
-      const { error } = await this.supabase.from(tableName).delete().eq(idField, id);
+      const { error } = await this.supabase.from(tableName.toLowerCase()).delete().eq(idField, id);
       if (error) throw error;
       this.setSyncStatus('success', 'Cloud');
       console.log(`✅ [Cloud] ${tableName} item ${id} supprimé`);
@@ -2119,7 +2171,11 @@ const App = {
           try {
             // Clean data: remove any circular refs or UI-specific keys if needed
             // But for now simple upsert
-            const { error } = await this.supabase.from(table).upsert(this.data[table]);
+            let payload = this.data[table];
+            if (table === 'factures') {
+              payload = this.data[table].map(f => this.cleanAndSerializeFacture(f));
+            }
+            const { error } = await this.supabase.from(table.toLowerCase()).upsert(payload);
             if (error) {
               console.error(`❌ Erreur sync table '${table}':`, error.message);
               // Si 404, on ne considère pas ça comme une erreur critique du flux pour l'instant (table manquante)
@@ -2315,6 +2371,20 @@ const App = {
     if (!d) return '';
     const date = d instanceof Date ? d : new Date(d);
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  },
+
+  formatMonthFR(d) {
+    if (!d) return '';
+    let date;
+    if (typeof d === 'string' && d.includes('-')) {
+      const parts = d.split('-');
+      date = new Date(parts[0], parseInt(parts[1]) - 1, 1);
+    } else {
+      date = d instanceof Date ? d : new Date(d);
+    }
+    if (isNaN(date.getTime())) return '';
+    const formatted = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
   },
 
   formatNumber(n, decimals = 2) {
