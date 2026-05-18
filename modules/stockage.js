@@ -262,19 +262,19 @@ const Stockage = {
         <div class="kpi-card purple">
           <div class="kpi-icon purple">📦</div>
           <div class="kpi-label">Total Caisses</div>
-          <div class="kpi-value">${App.formatNumber(monthEntries.reduce((s,e)=>s+e.lignes.reduce((ss,l)=>ss+(l.nbCaisses||0),0),0),0)}</div>
+          <div class="kpi-value">${App.formatNumber(monthEntries.reduce((s,e)=>s+(e.lignes || []).reduce((ss,l)=>ss+(l.nbCaisses||0),0),0),0)}</div>
           <div class="kpi-change">Volumes mensuels</div>
         </div>
         <div class="kpi-card green">
           <div class="kpi-icon green">⚖️</div>
           <div class="kpi-label">Poids Net Total</div>
-          <div class="kpi-value">${App.formatNumber(monthEntries.reduce((s,e)=>s+e.lignes.reduce((ss,l)=>ss+(l.pdsNetTotal||0),0),0),0)}<span class="kpi-unit">kg</span></div>
+          <div class="kpi-value">${App.formatNumber(monthEntries.reduce((s,e)=>s+(e.lignes || []).reduce((ss,l)=>ss+(l.pdsNetTotal||0),0),0),0)}<span class="kpi-unit">kg</span></div>
           <div class="kpi-change up">↑ Stock stable</div>
         </div>
         <div class="kpi-card cyan">
           <div class="kpi-icon cyan">🚢</div>
           <div class="kpi-label">Navires actifs</div>
-          <div class="kpi-value">${new Set(monthEntries.flatMap(e=>[e.bateau, ...e.lignes.map(l=>l.bateau)]).filter(Boolean)).size}</div>
+          <div class="kpi-value">${new Set(monthEntries.flatMap(e=>[e.bateau, ...(e.lignes || []).map(l=>l.bateau)]).filter(Boolean)).size}</div>
           <div class="kpi-change">Diversité d'origine</div>
         </div>
       </div>
@@ -340,7 +340,7 @@ const Stockage = {
 
   renderDirectFlow() {
     const entries = (App.data.stockage || []).filter(e => 
-      e.lignes.some(l => l.chambre === 'direct')
+      (e.lignes || []).some(l => l.chambre === 'direct')
     ).sort((a,b) => new Date(b.dateEntree) - new Date(a.dateEntree));
 
     return `
@@ -367,10 +367,11 @@ const Stockage = {
     return `<table>
       <thead><tr><th>Référence</th><th>N° / Info Palette</th><th>Date</th><th>Client</th><th>Fournisseur</th><th>Origine</th><th>Emplacement</th><th class="td-right">Lignes</th><th class="td-right">Qté (Cs)</th><th class="td-right">Pds Brut</th><th class="td-right">Pds Net</th><th>Actions</th></tr></thead>
       <tbody>${entries.map(e => {
-        const totalNbCs = e.lignes.reduce((s,l) => s + (l.nbCaisses||0), 0);
-        const totalBrut = e.lignes.reduce((s,l) => s + (l.quantite||l.pdsBrutTotal||0), 0);
-        const totalNet = e.lignes.reduce((s,l) => s + (l.pdsNetTotal||0), 0);
-        const palettes = e.lignes.map((l, idx) => this.getKanbanLabel(e, l, idx)).filter(Boolean);
+        const eLignes = e.lignes || [];
+        const totalNbCs = eLignes.reduce((s,l) => s + (l.nbCaisses||0), 0);
+        const totalBrut = eLignes.reduce((s,l) => s + (l.quantite||l.pdsBrutTotal||0), 0);
+        const totalNet = eLignes.reduce((s,l) => s + (l.pdsNetTotal||0), 0);
+        const palettes = eLignes.map((l, idx) => this.getKanbanLabel(e, l, idx)).filter(Boolean);
         const paletteSummary = palettes.length > 1
           ? `${palettes[0]} <span class="badge badge-info" style="margin-left:6px;">+${palettes.length - 1}</span>`
           : (palettes[0] || '-');
@@ -385,7 +386,7 @@ const Stockage = {
           originLabel = `${typeLabel} ${e.bateau ? `<span style="opacity:0.8;font-size:0.65rem;">(${e.bateau})</span>` : ''}`;
         }
 
-        const chambers = [...new Set(e.lignes.map(l => l.chambre || 'non_affecte'))];
+        const chambers = [...new Set(eLignes.map(l => l.chambre || 'non_affecte'))];
         const chamberBadges = chambers.map(ch => {
           const cls = ch === 'direct' ? 'badge-warning' : (ch === 'non_affecte' ? 'badge-danger' : 'badge-info');
           const label = ch === 'direct' ? '🚀 Flux Direct' : (ch === 'chambre1' ? '❄️ CH 1' : ch === 'chambre2' ? '❄️ CH 2' : ch === 'entreposage' ? '📦 Ent.' : 'N/A');
@@ -400,7 +401,7 @@ const Stockage = {
           <td>${e.fournisseur}</td>
           <td><span class="badge ${originClass}">${originLabel}</span></td>
           <td>${chamberBadges}</td>
-          <td class="td-right">${e.lignes.length}</td>
+          <td class="td-right">${eLignes.length}</td>
           <td class="td-right td-bold">${App.formatNumber(totalNbCs,0)}</td>
           <td class="td-right">${App.formatNumber(totalBrut,2)} kg</td>
           <td class="td-right">${App.formatNumber(totalNet,2)} kg</td>
@@ -430,7 +431,7 @@ const Stockage = {
     // Si on a des lignes pré-chargées (via IA) et qu'on n'édite pas une entrée existante
     let lignes = [this.emptyLigne()];
     if (entry) {
-      lignes = entry.lignes;
+      lignes = entry.lignes || [this.emptyLigne()];
     } else if (this.currentLignes && this.currentLignes.length > 0) {
       lignes = this.currentLignes;
       // On vide currentLignes après usage pour éviter les effets de bord au prochain showForm manuel
@@ -579,7 +580,7 @@ const Stockage = {
     
     // Si un client est sélectionné, on montre d\'abord ses bateaux officiels
     // On ajoute les bateaux historiques seulement s'ils ne sont pas déjà dans la liste du client
-    const historicalBateaux = [...new Set((App.data.stockage||[]).flatMap(e => [e.bateau, ...e.lignes.map(l => l.bateau)]).filter(Boolean))];
+    const historicalBateaux = [...new Set((App.data.stockage||[]).flatMap(e => [e.bateau, ...(e.lignes || []).map(l => l.bateau)]).filter(Boolean))];
     
     let allBateaux = [];
     if (clientNom) {
@@ -1270,9 +1271,9 @@ Notes:
   viewEntry(id) {
     const e = (App.data.stockage || []).find(x => x.id === id);
     if (!e) return;
-    const totalQty = e.lignes.reduce((s,l) => s+(l.quantite||0), 0);
-    const totalBrut = e.lignes.reduce((s,l) => s+(l.pdsBrutTotal||0), 0);
-    const totalNet = e.lignes.reduce((s,l) => s+(l.pdsNetTotal||0), 0);
+    const totalQty = (e.lignes || []).reduce((s,l) => s+(l.quantite||0), 0);
+    const totalBrut = (e.lignes || []).reduce((s,l) => s+(l.pdsBrutTotal||0), 0);
+    const totalNet = (e.lignes || []).reduce((s,l) => s+(l.pdsNetTotal||0), 0);
 
     const isTransfer = !!e.sourceProductionId;
     const originClass = (e.origine === 'Traitement' || e.sourceProductionType === 'traitement') ? 'badge-warning' : 
@@ -1311,7 +1312,7 @@ Notes:
         <table>
           <thead><tr><th>#</th><th>Kanban Palette</th><th>Bateau</th><th>Espèce</th><th>Calibre</th><th>Emb.</th><th class="td-right">Nb Cs</th><th class="td-right">Qté Reçue</th><th class="td-right">Pds Net</th><th>Emplacement</th></tr></thead>
           <tbody>
-            ${e.lignes.map((l,i) => `<tr>
+            ${(e.lignes || []).map((l,i) => `<tr>
               <td>${i+1}</td>
               <td><span style="font-size:0.7rem;color:var(--accent-cyan);font-weight:600;max-width:200px;display:inline-block;word-break:break-all;">${l.palette||'-'}</span></td>
               <td>${l.bateau}</td><td><span class="badge badge-info">${l.espece||'-'}</span></td><td class="td-bold">${l.calibre}</td><td>${l.emballage}</td>
@@ -1322,7 +1323,7 @@ Notes:
             </tr>`).join('')}
             <tr style="background:rgba(99,102,241,0.1);">
               <td colspan="6" class="td-bold">TOTAL</td>
-              <td class="td-right td-bold">${App.formatNumber(e.lignes.reduce((s,l)=>s+(l.nbCaisses||0),0),0)}</td>
+              <td class="td-right td-bold">${App.formatNumber((e.lignes || []).reduce((s,l)=>s+(l.nbCaisses||0),0),0)}</td>
               <td class="td-right td-bold">${App.formatNumber(totalQty,2)} kg</td>
               <td class="td-right td-bold">${App.formatNumber(totalNet,2)} kg</td>
               <td></td>
@@ -1376,7 +1377,7 @@ Notes:
     const container = document.getElementById('stockageFormContainer');
     const availableLots = [];
     (App.data.stockage || []).forEach(e => {
-      e.lignes.forEach((l, idx) => {
+      (e.lignes || []).forEach((l, idx) => {
         const available = this.getLineAvailable(e, idx);
         if (available.quantite <= 0 && available.poids <= 0) return;
         availableLots.push({
@@ -1594,7 +1595,7 @@ Notes:
   /* --- ONGLET TRAÇABILITÉ --- */
   renderMouvements() {
     const clients = [...new Set((App.data.stockage || []).map(e => e.client).filter(Boolean))];
-    const especes = [...new Set((App.data.stockage || []).flatMap(e => e.lignes.map(l => l.espece)).filter(Boolean))];
+    const especes = [...new Set((App.data.stockage || []).flatMap(e => (e.lignes || []).map(l => l.espece)).filter(Boolean))];
 
     return `
       <div class="card" style="margin-bottom:22px;">
@@ -1674,7 +1675,7 @@ Notes:
       if (dateDebut && entryDate < dateDebut) return;
       if (dateFin && entryDate > dateFin) return;
 
-      e.lignes.forEach((l, idx) => {
+      (e.lignes || []).forEach((l, idx) => {
         // Line level filters
         if (espece && l.espece !== espece) return;
         
@@ -1960,7 +1961,7 @@ Notes:
     if (!entry) return;
 
     const newChambre = document.getElementById('newChambreSelect').value;
-    entry.lignes.forEach(l => {
+    (entry.lignes || []).forEach(l => {
       l.chambre = newChambre;
     });
 
