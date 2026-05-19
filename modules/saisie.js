@@ -411,6 +411,16 @@ const Saisie = {
                 <span>🔹 Main-d'œuvre</span>
                 <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO()" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
               </div>
+
+              <div style="margin-bottom:15px; display:flex; gap:12px; align-items:center;">
+                <label class="form-label" style="margin:0; font-weight:600;">Période d'allocation :</label>
+                <select class="form-select" id="fAllocationPeriod" onchange="Saisie.calc()" style="width:200px; padding:6px; font-size:0.85rem;">
+                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>📅 Journalière (Jour)</option>
+                  <option value="month" ${!entry || entry.allocationPeriod === 'month' || !entry.allocationPeriod ? 'selected' : ''}>📊 Mensuelle (Mois)</option>
+                  <option value="quarter" ${entry?.allocationPeriod === 'quarter' ? 'selected' : ''}>📈 Trimestrielle (Trimestre)</option>
+                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>🏆 Annuelle (Année)</option>
+                </select>
+              </div>
               
               <div style="margin-bottom:15px;">
                 <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
@@ -438,6 +448,7 @@ const Saisie = {
                 <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
                 <span class="form-computed" id="fCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
+              <div id="fAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
             </div>
 
             <div class="form-section">
@@ -552,7 +563,7 @@ const Saisie = {
     });
 
     const coutPF = v('fHeuresMOF') * v('fSalaireHF');
-    const coutMOJ = coutMOO + coutPF;
+    const localCost = coutMOO + coutPF;
 
     // Automation: Calculate Intrants from Nb Caisses PF
     const caissesPF = v('fCaissesPF');
@@ -612,7 +623,6 @@ const Saisie = {
       totalEmb += val;
     });
 
-    const totalJ = coutMOJ + totalEmb;
     let poidsPF = v('fPoidsPF');
     
     // Automation: Link Phase qteFinale to Poids Net PF
@@ -636,6 +646,54 @@ const Saisie = {
       });
     }
 
+    // Dynamic Labor Cost Allocation
+    const dateStr = document.getElementById('fDate')?.value || '';
+    const allocationPeriod = document.getElementById('fAllocationPeriod')?.value || 'month';
+    const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
+    
+    let coutMOJ = localCost;
+    const infoEl = document.getElementById('fAllocationMOInfo');
+    if (infoEl) {
+      if (pesos.fallback) {
+        infoEl.style.display = 'block';
+        infoEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
+            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
+            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
+          </div>
+        `;
+      } else {
+        infoEl.style.display = 'block';
+        let labelPeriode = 'Mensuelle';
+        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
+        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
+        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
+
+        let labelMasse = 'Masse Salariale Période';
+        let labelTonnage = 'Tonnage Total Période';
+        if (allocationPeriod === 'day') {
+          labelMasse = 'Masse Salariale du Jour';
+          labelTonnage = 'Tonnage Total du Jour';
+        }
+
+        infoEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
+            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (${labelPeriode})</div>
+            <div style="color:var(--text-secondary); line-height:1.4;">
+              ${labelMasse} : <strong>${App.formatNumber(pesos.totalLaborCost, 0)} DH</strong><br>
+              ${labelTonnage} : <strong>${App.formatNumber(pesos.totalTonnage, 1)} kg</strong><br>
+              Ratio Alloué : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
+            </div>
+            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
+              Coût M.O. Alloué Journalier : ${App.formatNumber(pesos.allocatedCost, 2)} DH
+            </div>
+          </div>
+        `;
+        coutMOJ = pesos.allocatedCost;
+      }
+    }
+
+    const totalJ = coutMOJ + totalEmb;
     const parKg = poidsPF > 0 ? totalJ / poidsPF : 0;
 
     const poidsPI = v('fPoidsPI');
@@ -654,7 +712,6 @@ const Saisie = {
     const elSumTotal = document.getElementById('sumTotal'); if(elSumTotal) elSumTotal.textContent = App.formatNumber(totalJ, 0) + ' DH';
     
     // --- Calcul Impact Facturation Intelligent (Reconditionnement) ---
-    const dateStr = document.getElementById('fDate')?.value || '';
     const monthStr = dateStr ? dateStr.substring(0, 7) : new Date().toISOString().substring(0, 7);
     
     // 1. Tonnages
@@ -858,10 +915,11 @@ const Saisie = {
       conditionnement: document.getElementById('fConditionnement')?.value || '',
       reliquatNom: document.getElementById('fReliquatNom')?.value || '',
       reliquatPoids: v('fReliquatPoids'),
+      allocationPeriod: document.getElementById('fAllocationPeriod')?.value || 'month',
       equipesMO,
       coutMOO,
       heuresMOF: v('fHeuresMOF'), salaireHF: v('fSalaireHF'), coutPersonnelF: coutPF,
-      coutMOJ: coutMOO + coutPF,
+      coutMOJ: parseFloat(document.getElementById('fCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||(coutMOO + coutPF),
       phasesPF,
       intrants,
       totalIntrants,
@@ -1139,6 +1197,18 @@ const Saisie = {
                 <span>🔹 Main-d'œuvre</span>
                 <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO('tEquipesMO')" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
               </div>
+              <div style="margin-bottom: 12px; padding: 10px; background: rgba(99,102,241,0.05); border-radius: 8px; border: 1px solid rgba(99,102,241,0.2);">
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Période d'Allocation des Coûts MO</label>
+                <select id="tAllocationPeriod" class="form-select" style="max-width: 300px; border-color: var(--accent-blue);" onchange="Saisie.calcT()">
+                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>Journalière (Présence du jour)</option>
+                  <option value="month" ${(entry?.allocationPeriod === 'month' || !entry?.allocationPeriod) ? 'selected' : ''}>Mensuelle (Mois en cours)</option>
+                  <option value="quarter" ${entry?.allocationPeriod === 'quarter' ? 'selected' : ''}>Trimestrielle (3 mois fixes)</option>
+                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>Annuelle (12 mois fixes)</option>
+                </select>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                  Sert à diviser la masse salariale totale de la période choisie sur le tonnage total de cette même période.
+                </div>
+              </div>
               
               <div style="margin-bottom:15px;">
                 <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
@@ -1166,6 +1236,7 @@ const Saisie = {
                 <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
                 <span class="form-computed" id="tCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
+              <div id="tAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
             </div>
 
             <div class="form-section">
@@ -1466,7 +1537,54 @@ const Saisie = {
       coutMOO += val;
     });
     const coutPF = v('tHeuresMOF') * v('tSalaireHF');
-    const coutMOJ = coutMOO + coutPF;
+    const localCost = coutMOO + coutPF;
+
+    // Dynamic Labor Cost Allocation (Traitement)
+    const allocationPeriod = document.getElementById('tAllocationPeriod')?.value || 'month';
+    const pesos = App.getPeriodLaborCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod);
+    
+    let coutMOJ = localCost;
+    const infoEl = document.getElementById('tAllocationMOInfo');
+    if (infoEl) {
+      if (pesos.fallback) {
+        infoEl.style.display = 'block';
+        infoEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
+            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
+            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
+          </div>
+        `;
+      } else {
+        infoEl.style.display = 'block';
+        let labelPeriode = 'Mensuelle';
+        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
+        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
+        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
+
+        let labelMasse = 'Masse Salariale Période';
+        let labelTonnage = 'Tonnage Total Période';
+        if (allocationPeriod === 'day') {
+          labelMasse = 'Masse Salariale du Jour';
+          labelTonnage = 'Tonnage Total du Jour';
+        }
+
+        infoEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
+            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (${labelPeriode})</div>
+            <div style="color:var(--text-secondary); line-height:1.4;">
+              ${labelMasse} : <strong>${App.formatNumber(pesos.totalLaborCost, 0)} DH</strong><br>
+              ${labelTonnage} : <strong>${App.formatNumber(pesos.totalTonnage, 1)} kg</strong><br>
+              Ratio Alloué : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
+            </div>
+            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
+              Coût M.O. Alloué Journalier : ${App.formatNumber(pesos.allocatedCost, 2)} DH
+            </div>
+          </div>
+        `;
+        coutMOJ = pesos.allocatedCost;
+      }
+    }
+
     document.getElementById('tCoutPF').textContent = App.formatNumber(coutPF) + ' DH';
     document.getElementById('tCoutMOO').textContent = App.formatNumber(coutMOO) + ' DH';
     document.getElementById('tCoutMOJ').textContent = App.formatNumber(coutMOJ) + ' DH';
@@ -1658,6 +1776,7 @@ const Saisie = {
       coutFactureParKg,
       prixRevient: prixRevientBase + (poidsPF > 0 ? (parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0)/poidsPF : 0) + coutFactureParKg,
       // Main-d'œuvre
+      allocationPeriod: document.getElementById('tAllocationPeriod')?.value || 'month',
       heuresMOF: v('tHeuresMOF'),
       salaireHF: v('tSalaireHF'),
       coutPersonnelF: v('tHeuresMOF') * v('tSalaireHF'),

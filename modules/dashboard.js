@@ -540,37 +540,54 @@ const Dashboard = {
     
     let totalHeures = 0, totalCoutMOO = 0, totalCoutMOF = 0, totalHeuresTotales = 0;
     
-    if (this.view === 'daily') {
-      const dateStr = this.selectedDate;
-      const monthStr = dateStr.substring(0, 7);
-      const ptg = (App.data.pointage && App.data.pointage[monthStr]) ? App.data.pointage[monthStr] : null;
-      const dayData = ptg?.jours?.[dateStr];
-      const presences = (typeof Personnel !== 'undefined' && Personnel.getDayPresences) 
-                        ? Personnel.getDayPresences(dayData) 
-                        : (dayData?.presences || []);
-      
-      presences.forEach(pt => {
-        totalHeuresTotales += (pt.heures || 0);
-        const emp = App.data.personnel.find(e => e.id === pt.personnelId);
-        if (emp) {
-          const taux = emp.type === 'occasionnel' ? (App.data.parametres.salaireHoraireOcc || 17.92) : (emp.salaire / 191);
-          const cost = (pt.heures * taux);
-          if (emp.type === 'occasionnel') totalCoutMOO += cost;
-          else totalCoutMOF += cost;
-        }
-      });
-      totalHeures = totalHeuresTotales;
-    } else {
-      totalHeures = prod.reduce((s, p) => s + (p.heuresMOO || 0), 0);
-      totalCoutMOO = prod.reduce((s, p) => s + (p.coutMOO || 0), 0);
-      totalCoutMOF = prod.reduce((s, p) => s + (p.coutPersonnelF || 0), 0);
-      totalHeuresTotales = totalHeures + prod.reduce((s, p) => s + (p.heuresMOF || 0), 0);
-    }
+    // Dynamic Labor Cost Per Kg based on period
+    const coutMOParKg = App.getPeriodLaborCostPerKg(this.view, this.selectedDate);
+    const totalCoutMO = totalPoidsPF * coutMOParKg;
     
-    const totalCoutMO = totalCoutMOO + totalCoutMOF;
+    // Split occasional vs fixed based on period ratio
+    const occasionalRatio = App.getPeriodOccasionalRatio(this.view, this.selectedDate);
+    totalCoutMOO = totalCoutMO * occasionalRatio;
+    totalCoutMOF = totalCoutMO * (1 - occasionalRatio);
+
+    // Dynamic hour tabulation based on pointage logs for attendance tracking
+    let monthsList = [];
+    const d = new Date(this.selectedDate);
+    const year = d.getFullYear();
+    if (this.view === 'quarterly') {
+      const q = Math.floor(d.getMonth() / 3);
+      monthsList = [
+        `${year}-${String(q * 3 + 1).padStart(2, '0')}`,
+        `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
+        `${year}-${String(q * 3 + 3).padStart(2, '0')}`
+      ];
+    } else {
+      monthsList = [this.selectedDate.substring(0, 7)];
+    }
+
+    monthsList.forEach(m => {
+      const ptg = (App.data.pointage && App.data.pointage[m]) ? App.data.pointage[m] : null;
+      if (ptg) {
+        if (this.view === 'daily') {
+          const dayData = ptg.jours?.[this.selectedDate];
+          const presences = (typeof Personnel !== 'undefined' && Personnel.getDayPresences) 
+                            ? Personnel.getDayPresences(dayData) 
+                            : (dayData?.presences || []);
+          presences.forEach(pt => {
+            totalHeuresTotales += (pt.heures || 0);
+            const emp = App.data.personnel.find(e => e.id === pt.personnelId);
+            if (emp && emp.type === 'occasionnel') {
+              totalHeures += (pt.heures || 0);
+            }
+          });
+        } else {
+          totalHeures += (ptg.totalHeuresOcc || 0);
+          totalHeuresTotales += (ptg.totalHeuresOcc || 0) + (ptg.totalHeuresOuvriersFixe || 0) + (ptg.totalHeuresAdmin || 0);
+        }
+      }
+    });
+
     const totalCoutEmballage = prod.reduce((s, p) => s + (p.coutCarton || 0) + (p.coutSachet || 0) + (p.coutEtiquetteNoir || 0) + (p.coutEtiquette5075 || 0) + (p.coutScotch || 0), 0);
     const productivite = totalHeuresTotales > 0 ? totalPoidsPF / totalHeuresTotales : 0;
-    const coutMOParKg = totalPoidsPF > 0 ? totalCoutMO / totalPoidsPF : 0;
     const coutEmballageParKg = totalPoidsPF > 0 ? totalCoutEmballage / totalPoidsPF : 0;
     const coutDirectParKg = coutMOParKg + coutEmballageParKg;
     const rendement = totalPoidsPI > 0 ? (totalPoidsPF / totalPoidsPI * 100) : 0;
@@ -633,8 +650,11 @@ const Dashboard = {
       <thead><tr><th>Date</th><th>Activité</th><th>Espèce</th><th>Calibre</th><th class="td-right">Poids PI</th><th class="td-right">Poids PF</th><th class="td-right">Heures</th><th class="td-right">Coût Direct</th></tr></thead>
       <tbody>${recent.map(p => {
         const act = p.activite === 'traitement' ? '🔧 Trait.' : '📦 Recond.';
+        const monthStr = (p.date || '').substring(0, 7);
+        const coutMOJ = (p.poidsBrutPF || 0) * App.getMonthlyLaborCostPerKg(monthStr);
         const coutEmb = (p.coutCarton||0)+(p.coutSachet||0)+(p.coutEtiquetteNoir||0)+(p.coutEtiquette5075||0)+(p.coutScotch||0);
-        const coutTotal = (p.coutMOO||0)+(p.coutPersonnelF||0)+coutEmb;
+        const coutTotal = coutMOJ + coutEmb;
+        const coutDirectUnit = p.poidsBrutPF > 0 ? (coutTotal / p.poidsBrutPF) : 0;
         return `<tr>
         <td>${App.formatDateFR(p.date)}</td>
         <td><span class="badge badge-info">${act}</span></td>
@@ -643,7 +663,7 @@ const Dashboard = {
         <td class="td-right">${App.formatNumber(p.poidsBrutPI || p.poidsMP || 0, 1)}</td>
         <td class="td-right td-bold">${App.formatNumber(p.poidsBrutPF, 1)}</td>
         <td class="td-right">${App.formatNumber((p.heuresMOO || 0) + (p.heuresMOF || 0), 1)}</td>
-        <td class="td-right td-bold">${App.formatNumber(coutTotal, 0)} DH/kg</td>
+        <td class="td-right td-bold">${App.formatNumber(coutDirectUnit, 2)} DH/kg</td>
       </tr>`}).join('')}</tbody>
     </table>`;
   },

@@ -1808,6 +1808,119 @@ const App = {
     return { dailyFixed, avgTariff };
   },
 
+  getPeriodLaborCostAllocation(dateStr, currentPoidsPF, editingId, periodType = 'month') {
+    if (!dateStr) return { allocatedCost: 0, ratio: 0, totalLaborCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
+
+    const dateObj = new Date(dateStr);
+    if (isNaN(dateObj.getTime())) {
+      return { allocatedCost: 0, ratio: 0, totalLaborCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
+    }
+
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth(); // 0-11
+
+    if (periodType === 'day') {
+      const mStr = dateStr.substring(0, 7);
+      if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
+        try {
+          Personnel.recalcPointageMensuel(mStr);
+        } catch(e) {
+          console.error("Error recalcing pointage for " + mStr, e);
+        }
+      }
+      const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
+      let totalLaborCost = 0;
+      if (ptg) {
+        let dayOccHours = 0;
+        const jour = ptg.jours && ptg.jours[dateStr];
+        if (jour && typeof Personnel !== 'undefined') {
+          const presences = Personnel.getDayPresences(jour);
+          presences.forEach(p => {
+            const emp = this.data.personnel.find(e => e.id === p.personnelId);
+            if (emp && emp.type === 'occasionnel') {
+              dayOccHours += p.heures || 0;
+            }
+          });
+        }
+        const totalOccCost = dayOccHours * (ptg.tauxHoraireOcc || 16.95);
+        const monthlyFixed = (ptg.totalSalairesFixeAdmin || 0) +
+                             (ptg.totalSalairesFixeAutre || 0) +
+                             (ptg.totalSalairesOuvriersFixe || 0);
+        const dayFixedCost = monthlyFixed / 26;
+        totalLaborCost = totalOccCost + dayFixedCost;
+      }
+      
+      const otherEntries = (this.data.production || []).filter(p => p.date === dateStr && p.id != editingId);
+      const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
+      const totalTonnage = dbTonnage + currentPoidsPF;
+      const ratio = totalTonnage > 0 ? totalLaborCost / totalTonnage : 0;
+      const allocatedCost = ratio * currentPoidsPF;
+
+      return {
+        allocatedCost,
+        ratio,
+        totalLaborCost,
+        totalTonnage,
+        targetMonths: [dateStr],
+        fallback: (ratio === 0)
+      };
+    }
+
+    let targetMonths = [];
+    if (periodType === 'quarter') {
+      const startMonth = Math.floor(month / 3) * 3;
+      targetMonths = [
+        `${year}-${String(startMonth + 1).padStart(2, '0')}`,
+        `${year}-${String(startMonth + 2).padStart(2, '0')}`,
+        `${year}-${String(startMonth + 3).padStart(2, '0')}`
+      ];
+    } else if (periodType === 'year') {
+      targetMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+    } else {
+      // Default to month
+      targetMonths = [`${year}-${String(month + 1).padStart(2, '0')}`];
+    }
+
+    let totalLaborCost = 0;
+    targetMonths.forEach(mStr => {
+      if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
+        try {
+          Personnel.recalcPointageMensuel(mStr);
+        } catch(e) {
+          console.error("Error recalcing pointage for " + mStr, e);
+        }
+      }
+      const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
+      if (ptg) {
+        totalLaborCost += (ptg.totalSalairesFixeAdmin || 0) +
+                          (ptg.totalSalairesFixeAutre || 0) +
+                          (ptg.totalSalairesOuvriersFixe || 0) +
+                          (ptg.totalMontantOcc || 0);
+      }
+    });
+
+    const otherEntries = (this.data.production || []).filter(p => {
+      const isTargetMonth = targetMonths.some(mStr => p.date && p.date.startsWith(mStr));
+      const isNotCurrent = p.id != editingId;
+      return isTargetMonth && isNotCurrent;
+    });
+
+    const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
+    const totalTonnage = dbTonnage + currentPoidsPF;
+
+    const ratio = totalTonnage > 0 ? totalLaborCost / totalTonnage : 0;
+    const allocatedCost = ratio * currentPoidsPF;
+
+    return {
+      allocatedCost,
+      ratio,
+      totalLaborCost,
+      totalTonnage,
+      targetMonths,
+      fallback: (ratio === 0)
+    };
+  },
+
   async init() {
     console.log("🚀 Initialisation App...");
     this.initSupabase();
@@ -2520,6 +2633,81 @@ const App = {
   getCurrentMonthProduction() {
     const now = new Date();
     return this.getMonthProduction(now.getFullYear(), now.getMonth());
+  },
+
+  getMonthlyLaborCost(monthStr) {
+    if (typeof Personnel !== 'undefined' && Personnel.getPointageData) {
+      const ptg = Personnel.getPointageData(monthStr);
+      const flatSalaries = (ptg.totalSalairesFixeAdmin || 0) + (ptg.totalSalairesFixeAutre || 0) + (ptg.totalSalairesOuvriersFixe || 0);
+      const totalOccasional = (ptg.totalMontantOcc || 0);
+      return flatSalaries + totalOccasional;
+    }
+    return 0;
+  },
+
+  getMonthlyTonnage(monthStr) {
+    const prod = this.data.production || [];
+    const monthProd = prod.filter(p => (p.date || '').startsWith(monthStr));
+    return monthProd.reduce((sum, p) => sum + (parseFloat(p.poidsBrutPF) || 0), 0);
+  },
+
+  getMonthlyLaborCostPerKg(monthStr) {
+    const cost = this.getMonthlyLaborCost(monthStr);
+    const tonnage = this.getMonthlyTonnage(monthStr);
+    return tonnage > 0 ? (cost / tonnage) : 0;
+  },
+
+  getPeriodLaborCostPerKg(view, selectedDate) {
+    let months = [];
+    const d = new Date(selectedDate);
+    const year = d.getFullYear();
+    if (view === 'quarterly') {
+      const q = Math.floor(d.getMonth() / 3);
+      months = [
+        `${year}-${String(q * 3 + 1).padStart(2, '0')}`,
+        `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
+        `${year}-${String(q * 3 + 3).padStart(2, '0')}`
+      ];
+    } else {
+      months = [selectedDate.substring(0, 7)];
+    }
+    let totalCost = 0;
+    let totalTonnage = 0;
+    months.forEach(m => {
+      totalCost += this.getMonthlyLaborCost(m);
+      totalTonnage += this.getMonthlyTonnage(m);
+    });
+    return totalTonnage > 0 ? (totalCost / totalTonnage) : 0;
+  },
+
+  getPeriodOccasionalRatio(view, selectedDate) {
+    let months = [];
+    const d = new Date(selectedDate);
+    const year = d.getFullYear();
+    if (view === 'quarterly') {
+      const q = Math.floor(d.getMonth() / 3);
+      months = [
+        `${year}-${String(q * 3 + 1).padStart(2, '0')}`,
+        `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
+        `${year}-${String(q * 3 + 3).padStart(2, '0')}`
+      ];
+    } else {
+      months = [selectedDate.substring(0, 7)];
+    }
+    let totalCost = 0;
+    let totalOccasional = 0;
+    months.forEach(m => {
+      const ptg = (typeof Personnel !== 'undefined' && Personnel.getPointageData) 
+        ? Personnel.getPointageData(m) 
+        : null;
+      if (ptg) {
+        const flatSalaries = (ptg.totalSalairesFixeAdmin || 0) + (ptg.totalSalairesFixeAutre || 0) + (ptg.totalSalairesOuvriersFixe || 0);
+        const occasional = (ptg.totalMontantOcc || 0);
+        totalCost += (flatSalaries + occasional);
+        totalOccasional += occasional;
+      }
+    });
+    return totalCost > 0 ? (totalOccasional / totalCost) : 1;
   },
 
   nextId(arr) {
