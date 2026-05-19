@@ -1374,6 +1374,7 @@ LIVRABLE JSON :
   "date": "YYYY-MM-DD",
   "activite": "EMBALLAGE" | "TRAITEMENT" | "RECONDITIONNEMENT",
   "titre": "Nom de l'équipe (ex: Equipe d'Emballage)",
+  "totalHeuresFeuille": "number (Le grand total des heures écrit en bas de la feuille, s'il y en a un)",
   "presences": [
     { 
       "nom": "NOM COMPLET", 
@@ -1416,6 +1417,23 @@ RÈGLES CRUCIALES :
     if (!this.pendingScanData) return;
     const data = this.pendingScanData;
     
+    let sumExtracted = 0;
+    if (data.presences) {
+       data.presences.forEach(p => {
+         sumExtracted += (parseFloat(p.totalHeures) || (parseFloat(p.matinHeures)||0) + (parseFloat(p.soirHeures)||0));
+       });
+    }
+
+    let warningHtml = '';
+    if (data.totalHeuresFeuille && Math.abs(sumExtracted - data.totalHeuresFeuille) > 0.1) {
+       warningHtml = `
+         <div style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--status-danger); padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+           <strong style="color: var(--status-danger);">⚠️ Écart détecté !</strong><br>
+           La somme des heures de tous les employés scannés (<b>${sumExtracted}h</b>) ne correspond pas au total inscrit sur la feuille (<b>${data.totalHeuresFeuille}h</b>). Veuillez vérifier attentivement les données ci-dessous.
+         </div>
+       `;
+    }
+
     const html = `
       <div class="modal-header">
         <h2 class="modal-title">🔍 Validation du Scan</h2>
@@ -1436,6 +1454,8 @@ RÈGLES CRUCIALES :
             <input type="text" class="form-input" id="vFicheTitre" value="${data.titre || ''}" style="width:200px; height:32px;">
           </div>
         </div>
+
+        ${warningHtml}
 
         <div style="max-height:400px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px;">
           <table class="table">
