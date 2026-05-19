@@ -205,6 +205,18 @@ const Personnel = {
   },
 
   render() {
+    // Nettoyage automatique des erreurs d'import OCR ou Excel (En-têtes scannés par erreur)
+    if (App.data && App.data.personnel) {
+      const initialLength = App.data.personnel.length;
+      App.data.personnel = App.data.personnel.filter(p => {
+        const n = (p.nom || '').toUpperCase();
+        return n !== 'NOM ET PRENOM' && n !== 'NOMS ET PRENOMS' && n !== 'TOTAL' && n !== 'POINTAGE';
+      });
+      if (App.data.personnel.length < initialLength) {
+        App.saveData(); // Sauvegarder la suppression
+      }
+    }
+
     this.updatePeriodISO();
     this.recalcPointageMensuel(this.selectedPeriod);
     const content = document.getElementById('pageContent');
@@ -1202,7 +1214,7 @@ const Personnel = {
 
             for(let i=headerIdx+1; i<rows.length; i++) {
                let nom = String(rows[i][0] || '').trim().toUpperCase();
-               if(!nom || nom === 'TOTAL' || nom === '0' || nom.includes('PAGE')) continue;
+               if(!nom || nom === 'TOTAL' || nom === '0' || nom.includes('PAGE') || nom.includes('PRENOM') || nom === 'NOM ET PRENOM') continue;
                if(!pointages[nom]) pointages[nom] = {};
                
                dateCols.forEach(dc => {
@@ -1378,6 +1390,7 @@ RÈGLES CRUCIALES :
 - Si une ligne est vide (pas d'heures), ne l'inclus pas ou mets des heures à 0.
 - Si tu vois une croix ou un trait dans "Nbr Heures", cela signifie généralement 4h pour la session (8h total).
 - Capture TOUS les noms, y compris ceux dans le petit tableau en bas de la feuille.
+- N'inclus PAS les entêtes de colonnes tels que "NOM ET PRENOM", "NOM & PRENOM" ou "TOTAL" en tant qu'employés.
 - Sois très précis sur l'orthographe des noms.`;
 
       const result = await App.AI.analyzeImage(file, prompt);
