@@ -455,6 +455,7 @@ const Saisie = {
                 <span class="form-computed" id="fCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
               <div id="fAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
+              <div id="fAllocationEnergieInfo" style="margin-top:8px;padding:12px;background:rgba(234,179,8,0.05);border-radius:8px;border-left:4px solid #eab308;display:none;"></div>
             </div>
 
             <div class="form-section">
@@ -582,7 +583,7 @@ const Saisie = {
       pfRows.forEach((row, i) => {
         const qiInput = row.querySelector('[data-ph="qteInit"]');
         if (qiInput) {
-          if (i === 0 && !qiInput.value && poidsPI > 0) qiInput.value = poidsPI;
+          if (i === 0 && poidsPI > 0) qiInput.value = poidsPI;
           else if (i > 0) qiInput.value = prevQF;
         }
         
@@ -691,9 +692,16 @@ const Saisie = {
     const dateStr = document.getElementById('fDate')?.value || '';
     const allocationPeriod = document.getElementById('fAllocationPeriod')?.value || 'quarter';
     const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
+    const energieAlloc = App.getPeriodEnergyCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
     
     let coutMOJ = localCost;
     const infoEl = document.getElementById('fAllocationMOInfo');
+    
+    let labelPeriode = 'Mensuelle';
+    if (allocationPeriod === 'day') labelPeriode = 'Journalière';
+    else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
+    else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
+
     if (infoEl) {
       if (pesos.fallback) {
         infoEl.style.display = 'block';
@@ -705,11 +713,6 @@ const Saisie = {
         `;
       } else {
         infoEl.style.display = 'block';
-        let labelPeriode = 'Mensuelle';
-        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
-        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
-        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
-
         let labelMasse = 'Masse Salariale Période';
         let labelTonnage = 'Tonnage Total Période';
         if (allocationPeriod === 'day') {
@@ -734,7 +737,31 @@ const Saisie = {
       }
     }
 
-    const totalJ = coutMOJ + totalEmb;
+    let coutEnergie = 0;
+    const infoEnergieEl = document.getElementById('fAllocationEnergieInfo');
+    if (infoEnergieEl) {
+      if (!energieAlloc.fallback && energieAlloc.totalEnergyCost > 0) {
+        infoEnergieEl.style.display = 'block';
+        infoEnergieEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
+            <div style="font-weight:700; color:#eab308; display:flex; align-items:center; gap:4px;">⚡ Ventilation Énergie (${labelPeriode})</div>
+            <div style="color:var(--text-secondary); line-height:1.4;">
+              Facture Globale Énergie : <strong>${App.formatNumber(energieAlloc.totalEnergyCost, 2)} DH</strong><br>
+              Tonnage Total Période : <strong>${App.formatNumber(energieAlloc.totalTonnage, 1)} kg</strong><br>
+              Ratio Alloué : <strong>${App.formatNumber(energieAlloc.ratio, 4)} DH/kg</strong>
+            </div>
+            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(234,179,8,0.1); color:var(--text-primary); font-weight:600;">
+              Coût Énergie Alloué : ${App.formatNumber(energieAlloc.allocatedCost, 2)} DH
+            </div>
+          </div>
+        `;
+        coutEnergie = energieAlloc.allocatedCost;
+      } else {
+        infoEnergieEl.style.display = 'none';
+      }
+    }
+
+    const totalJ = coutMOJ + totalEmb + coutEnergie;
     const parKg = poidsPF > 0 ? totalJ / poidsPF : 0;
 
     const poidsReliquat = v('fReliquatPoids');
@@ -1387,6 +1414,7 @@ const Saisie = {
                 <span class="form-computed" id="tCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
               <div id="tAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
+              <div id="tAllocationEnergieInfo" style="margin-top:8px;padding:12px;background:rgba(234,179,8,0.05);border-radius:8px;border-left:4px solid #eab308;display:none;"></div>
             </div>
 
             <div class="form-section">
@@ -1500,7 +1528,7 @@ const Saisie = {
       const qiInput = row.querySelector('[data-ph="qteInit"]');
       // Phase 0: fill with poidsMP if empty; Phase i>0: always fill with previous qteFinale
       if (qiInput) {
-        if (i === 0 && !qiInput.value && poidsMP > 0) {
+        if (i === 0 && poidsMP > 0) {
           qiInput.value = poidsMP;
         } else if (i > 0) {
           if (!qiInput.value || qiInput.value == "0") {
@@ -1751,6 +1779,48 @@ const Saisie = {
           </div>
         `;
         coutMOJ = pesos.allocatedCost;
+      }
+    }
+
+    // Dynamic Energy Cost Allocation (Traitement)
+    const energieAlloc = App.getPeriodEnergyCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod);
+    const energieInfoEl = document.getElementById('tAllocationEnergieInfo');
+    if (energieInfoEl) {
+      if (energieAlloc.fallback) {
+        energieInfoEl.style.display = 'block';
+        energieInfoEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
+            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Énergie Activé</div>
+            <div style="color:var(--text-secondary);">Aucune donnée d'énergie ou de tonnage pour la période <strong>${energieAlloc.targetMonths.join(', ')}</strong>.</div>
+          </div>
+        `;
+      } else {
+        energieInfoEl.style.display = 'block';
+        let labelPeriode = 'Mensuelle';
+        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
+        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
+        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
+
+        energieInfoEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
+            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">⚡ Ventilation Énergie (${labelPeriode})</div>
+            <div style="color:var(--text-secondary); line-height:1.4;">
+              Coût Énergie Période : <strong>${App.formatNumber(energieAlloc.totalEnergyCost, 2)} DH</strong><br>
+              Tonnage Total Période : <strong>${App.formatNumber(energieAlloc.totalTonnage, 1)} kg</strong><br>
+              Ratio Alloué : <strong>${App.formatNumber(energieAlloc.ratio, 4)} DH/kg</strong>
+            </div>
+            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
+              Coût Énergie Alloué : ${App.formatNumber(energieAlloc.allocatedCost, 2)} DH
+            </div>
+          </div>
+        `;
+        // Add to facture costs
+        if (coutFactureParKg === App.data.parametres.coutStructureEstime) {
+           // If it was estimated, overwrite with this specific ratio if we prefer, but for now just add.
+           coutFactureParKg += energieAlloc.ratio;
+        } else {
+           coutFactureParKg += energieAlloc.ratio;
+        }
       }
     }
 

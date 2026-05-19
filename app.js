@@ -1808,6 +1808,78 @@ const App = {
     return { dailyFixed, avgTariff };
   },
 
+  getPeriodEnergyCostAllocation(dateStr, currentPoidsPF, editingId, periodType = 'month') {
+    if (!dateStr) return { allocatedCost: 0, ratio: 0, totalEnergyCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
+
+    const dateObj = new Date(dateStr);
+    if (isNaN(dateObj.getTime())) {
+      return { allocatedCost: 0, ratio: 0, totalEnergyCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
+    }
+
+    const year = dateObj.getFullYear();
+    const month = dateObj.getMonth();
+
+    let targetMonths = [];
+    if (periodType === 'quarter') {
+      const startMonth = Math.floor(month / 3) * 3;
+      targetMonths = [
+        `${year}-${String(startMonth + 1).padStart(2, '0')}`,
+        `${year}-${String(startMonth + 2).padStart(2, '0')}`,
+        `${year}-${String(startMonth + 3).padStart(2, '0')}`
+      ];
+    } else if (periodType === 'year') {
+      targetMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+    } else if (periodType === 'day') {
+      targetMonths = [dateStr.substring(0, 7)];
+    } else {
+      // Default to month
+      targetMonths = [`${year}-${String(month + 1).padStart(2, '0')}`];
+    }
+
+    let totalEnergyCost = 0;
+    targetMonths.forEach(mStr => {
+      const energieMensuelle = this.data.energieMensuelle || {};
+      // fallback to history if not in energieMensuelle, but let's just use history directly if available
+      // Actually, the energie module stores data in App.data.energie.history[YYYY-MM]
+      if (this.data.energie && this.data.energie.history && this.data.energie.history[mStr]) {
+        const entry = this.data.energie.history[mStr];
+        const coutElect = (entry.electHp || 0) * (entry.tarifHp || 1.45) + (entry.electHpl || 0) * (entry.tarifHpl || 1.15) + (entry.electHc || 0) * (entry.tarifHc || 0.85);
+        const coutEau = (entry.eauVol || 0) * (entry.eauTarif || 5.00);
+        const redevances = (entry.electRed || 0) + (entry.eauRed || 0);
+        totalEnergyCost += coutElect + coutEau + redevances;
+      }
+    });
+
+    if (periodType === 'day') {
+      totalEnergyCost = totalEnergyCost / 26; // Approx daily cost allocation
+    }
+
+    const otherEntries = (this.data.production || []).filter(p => {
+      if (periodType === 'day') {
+        return p.date === dateStr && p.id != editingId;
+      } else {
+        const isTargetMonth = targetMonths.some(mStr => p.date && p.date.startsWith(mStr));
+        const isNotCurrent = p.id != editingId;
+        return isTargetMonth && isNotCurrent;
+      }
+    });
+
+    const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
+    const totalTonnage = dbTonnage + currentPoidsPF;
+
+    const ratio = totalTonnage > 0 ? totalEnergyCost / totalTonnage : 0;
+    const allocatedCost = ratio * currentPoidsPF;
+
+    return {
+      allocatedCost,
+      ratio,
+      totalEnergyCost,
+      totalTonnage,
+      targetMonths,
+      fallback: (ratio === 0)
+    };
+  },
+
   getPeriodLaborCostAllocation(dateStr, currentPoidsPF, editingId, periodType = 'month') {
     if (!dateStr) return { allocatedCost: 0, ratio: 0, totalLaborCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
 
