@@ -737,7 +737,6 @@ const Saisie = {
     const totalJ = coutMOJ + totalEmb;
     const parKg = poidsPF > 0 ? totalJ / poidsPF : 0;
 
-    const poidsPI = v('fPoidsPI');
     const poidsReliquat = v('fReliquatPoids');
     const poidsNetEngage = Math.max(0, poidsPI - poidsReliquat);
     const rendement = poidsNetEngage > 0 ? (poidsPF / poidsNetEngage * 100) : 0;
