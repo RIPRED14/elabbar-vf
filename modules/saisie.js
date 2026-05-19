@@ -188,6 +188,10 @@ const Saisie = {
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
               <span class="card-title">📋 Historique des opérations</span>
               <div style="display:flex; gap:12px; align-items:center;">
+                <button class="btn btn-success" onclick="Saisie.confirmBatchSend()" style="padding:8px 12px; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+                  Valider la sélection
+                </button>
                 <div class="badge badge-info">${prod.length} entrées ${this.viewType === 'day' ? "aujourd'hui" : this.viewType === 'month' ? "ce mois" : "ce trimestre"}</div>
                 <select class="form-select" id="filterEspece" onchange="Saisie.renderTable()" style="width:180px; padding:8px 12px; font-size:0.85rem;">
                   <option value="">Toutes les espèces</option>
@@ -236,6 +240,7 @@ const Saisie = {
       <table>
         <thead>
           <tr>
+            <th><input type="checkbox" onchange="Saisie.toggleAllBatchSelection(event)" title="Tout sélectionner" /></th>
             <th>Date</th>
             <th>Espèce</th>
             <th>Calibre</th>
@@ -259,6 +264,7 @@ const Saisie = {
 
             return `
               <tr>
+                <td><input type="checkbox" class="batch-select-cb" value="${p.id}" ${isSent || !hasPF ? 'disabled' : ''} /></td>
                 <td>
                   <div style="font-weight:600; color:var(--text-primary);">${App.formatDateFR(p.date)}</div>
                   <div style="font-size:0.75rem; color:var(--text-muted);">${p.activite}</div>
@@ -416,8 +422,8 @@ const Saisie = {
                 <label class="form-label" style="margin:0; font-weight:600;">Période d'allocation :</label>
                 <select class="form-select" id="fAllocationPeriod" onchange="Saisie.calc()" style="width:200px; padding:6px; font-size:0.85rem;">
                   <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>📅 Journalière (Jour)</option>
-                  <option value="month" ${!entry || entry.allocationPeriod === 'month' || !entry.allocationPeriod ? 'selected' : ''}>📊 Mensuelle (Mois)</option>
-                  <option value="quarter" ${entry?.allocationPeriod === 'quarter' ? 'selected' : ''}>📈 Trimestrielle (Trimestre)</option>
+                  <option value="month" ${entry?.allocationPeriod === 'month' ? 'selected' : ''}>📊 Mensuelle (Mois)</option>
+                  <option value="quarter" ${!entry || entry.allocationPeriod === 'quarter' || !entry.allocationPeriod ? 'selected' : ''}>📈 Trimestrielle (Trimestre)</option>
                   <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>🏆 Annuelle (Année)</option>
                 </select>
               </div>
@@ -648,7 +654,7 @@ const Saisie = {
 
     // Dynamic Labor Cost Allocation
     const dateStr = document.getElementById('fDate')?.value || '';
-    const allocationPeriod = document.getElementById('fAllocationPeriod')?.value || 'month';
+    const allocationPeriod = document.getElementById('fAllocationPeriod')?.value || 'quarter';
     const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
     
     let coutMOJ = localCost;
@@ -915,7 +921,7 @@ const Saisie = {
       conditionnement: document.getElementById('fConditionnement')?.value || '',
       reliquatNom: document.getElementById('fReliquatNom')?.value || '',
       reliquatPoids: v('fReliquatPoids'),
-      allocationPeriod: document.getElementById('fAllocationPeriod')?.value || 'month',
+      allocationPeriod: document.getElementById('fAllocationPeriod')?.value || 'quarter',
       equipesMO,
       coutMOO,
       heuresMOF: v('fHeuresMOF'), salaireHF: v('fSalaireHF'), coutPersonnelF: coutPF,
@@ -966,7 +972,7 @@ const Saisie = {
     const c = App.data.consommables.find(c => c.nom === nom);
     if (c && qty > 0) {
       c.stock = Math.max(0, c.stock - qty);
-      App.data.mouvementsStock.push({ date: new Date().toISOString(), consommable: nom, type: 'sortie', quantite: qty, motif: 'Production' });
+      App.data.mouvementsStock.push({ id: crypto.randomUUID(), date: new Date().toISOString(), consommable: nom, type: 'sortie', quantite: qty, motif: 'Production' });
     }
   },
 
@@ -993,7 +999,7 @@ const Saisie = {
       }
       if (c && qty > 0) {
         c.stock = c.stock - qty;
-        App.data.mouvementsStock.push({ date: new Date().toISOString(), consommable: nom, type: 'sortie', quantite: qty, motif });
+        App.data.mouvementsStock.push({ id: crypto.randomUUID(), date: new Date().toISOString(), consommable: nom, type: 'sortie', quantite: qty, motif });
       }
     });
   },
@@ -1008,7 +1014,7 @@ const Saisie = {
       }
       if (c && qty > 0) {
         c.stock += qty;
-        App.data.mouvementsStock.push({ date: new Date().toISOString(), consommable: nom, type: 'entree', quantite: qty, motif });
+        App.data.mouvementsStock.push({ id: crypto.randomUUID(), date: new Date().toISOString(), consommable: nom, type: 'entree', quantite: qty, motif });
       }
     });
   },
@@ -1046,6 +1052,89 @@ const Saisie = {
     App.saveData();
     this.render();
     App.toast('Saisie supprimée', 'info');
+  },
+
+  toggleAllBatchSelection(e) {
+    const isChecked = e.target.checked;
+    const cbs = document.querySelectorAll('.batch-select-cb:not([disabled])');
+    cbs.forEach(cb => cb.checked = isChecked);
+  },
+
+  confirmBatchSend() {
+    const cbs = document.querySelectorAll('.batch-select-cb:checked');
+    if (cbs.length === 0) {
+      App.toast("Veuillez sélectionner au moins une saisie à transférer.", "error");
+      return;
+    }
+    
+    if (!confirm(`Voulez-vous vraiment transférer ces ${cbs.length} saisies vers le stockage ?`)) return;
+    
+    let transferCount = 0;
+    if (!App.data.pendingStorageEntries) App.data.pendingStorageEntries = [];
+
+    cbs.forEach(cb => {
+      const id = cb.value;
+      const p = App.data.production.find(x => x.id === id);
+      if (p && !p.sentToStorage && (p.poidsBrutPF > 0)) {
+        const chambre = 'chambre1'; // Default to chambre 1 for batch
+        const activiteLabel = (p.activite === 'traitement') ? 'Traitement' : (p.activite === 'reconditionnement' ? 'Reconditionnement' : p.activite);
+        
+        let sourceBateau = '';
+        let sourceFournisseur = '';
+        if (p.receptionId) {
+          const originalRec = (App.data.stockage || []).find(s => s.id === p.receptionId);
+          if (originalRec) {
+            sourceBateau = originalRec.bateau || '';
+            sourceFournisseur = originalRec.fournisseur || '';
+          }
+        }
+
+        const pendingEntry = {
+          id: App.nextId(App.data.pendingStorageEntries),
+          productionId: p.id,
+          activite: p.activite,
+          origine: activiteLabel,
+          dateEnvoi: new Date().toISOString().split('T')[0],
+          dateProd: p.date,
+          client: p.client || 'Interne',
+          espece: p.espece || '',
+          calibre: p.calibre || '',
+          produitFini: p.produitFini || '',
+          poidsPF: p.poidsBrutPF || 0,
+          caissesPF: p.caissesPF || 0,
+          conditionnement: p.conditionnement || '',
+          chambreDestination: chambre,
+          receptionId: p.receptionId || null,
+          bateau: sourceBateau,
+          fournisseur: sourceFournisseur,
+          rendement: p.rendement || 0,
+          prixRevient: p.prixRevient || 0,
+          poidsMP: p.poidsMP || p.poidsBrutPI || 0,
+          valeurMP: p.valeurMP || 0,
+          totalIntrants: p.totalIntrants || 0,
+          phases: p.phases || [],
+          phasesPF: p.phasesPF || [],
+          intrants: p.intrants || [],
+          status: 'pending'
+        };
+
+        App.data.pendingStorageEntries.push(pendingEntry);
+
+        // Mark the production entry
+        p.sentToStorage = true;
+        p.sentToStorageDate = new Date().toISOString();
+        p.sentToChambre = chambre;
+        transferCount++;
+      }
+    });
+
+    if (transferCount > 0) {
+      App.saveData();
+      this.render();
+      App.toast(`${transferCount} saisies ont été marquées pour transfert.`, "success");
+    } else {
+      App.toast("Aucune saisie valide n'a pu être transférée.", "info");
+    }
   },
 
   switchActivite(act) {

@@ -2580,8 +2580,14 @@ const App = {
 
   getMonthData(collection, year, month, dateField = 'date') {
     return (this.data[collection] || []).filter(item => {
-      const d = new Date(item[dateField]);
-      return d.getFullYear() === year && d.getMonth() === month;
+      if (!item[dateField]) return false;
+      const parts = item[dateField].split('-');
+      if (parts.length >= 2) {
+        const itemYear = parseInt(parts[0], 10);
+        const itemMonth = parseInt(parts[1], 10) - 1; // 0-indexed month
+        return itemYear === year && itemMonth === month;
+      }
+      return false;
     });
   },
 
@@ -2597,13 +2603,18 @@ const App = {
     const q = parseInt(quarter);
     const y = parseInt(year);
     return (this.data[collection] || []).filter(item => {
-      const d = new Date(item[dateField]);
-      if (d.getFullYear() !== y) return false;
-      const m = d.getMonth(); // 0-11
-      if (q === 1) return m >= 0 && m <= 2;
-      if (q === 2) return m >= 3 && m <= 5;
-      if (q === 3) return m >= 6 && m <= 8;
-      if (q === 4) return m >= 9 && m <= 11;
+      const dStr = item[dateField];
+      if (!dStr) return false;
+      const parts = dStr.split('-');
+      if (parts.length < 2) return false;
+      const itemY = parseInt(parts[0]);
+      const itemM = parseInt(parts[1]) - 1; // 0-11
+      
+      if (itemY !== y) return false;
+      if (q === 1) return itemM >= 0 && itemM <= 2;
+      if (q === 2) return itemM >= 3 && itemM <= 5;
+      if (q === 3) return itemM >= 6 && itemM <= 8;
+      if (q === 4) return itemM >= 9 && itemM <= 11;
       return false;
     });
   },

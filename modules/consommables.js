@@ -124,7 +124,7 @@ const Consommables = {
         art.stock += qty;
         if (!App.data.mouvementsStock) App.data.mouvementsStock = [];
         App.data.mouvementsStock.unshift({
-          id: Date.now() + Math.random(),
+          id: crypto.randomUUID(),
           consommable: art.nom,
           type: 'entree',
           quantite: qty,
@@ -480,6 +480,7 @@ const Consommables = {
         if (delta !== 0) {
           if (!App.data.mouvementsStock) App.data.mouvementsStock = [];
           App.data.mouvementsStock.push({
+            id: crypto.randomUUID(),
             date: new Date().toISOString(),
             consommable: data.nom,
             type: delta > 0 ? 'entree' : 'sortie',
@@ -539,7 +540,7 @@ const Consommables = {
     if (c) {
       c.stock += qty;
       if (!App.data.mouvementsStock) App.data.mouvementsStock = [];
-      App.data.mouvementsStock.unshift({ date: new Date().toISOString(), consommable: c.nom, type: 'entree', quantite: qty, motif });
+      App.data.mouvementsStock.unshift({ id: crypto.randomUUID(), date: new Date().toISOString(), consommable: c.nom, type: 'entree', quantite: qty, motif });
       App.saveData();
       App.closeModal();
       this.render();
@@ -606,7 +607,7 @@ Notes: Sois précis sur les noms des articles (ex: SACHET 25x35).`;
     c.stock -= qty;
     if (!App.data.mouvementsStock) App.data.mouvementsStock = [];
     App.data.mouvementsStock.unshift({
-      id: Date.now(),
+      id: crypto.randomUUID(),
       date: new Date().toISOString(),
       consommable: c.nom,
       type: 'sortie',
@@ -729,7 +730,7 @@ Notes: Sois précis sur les noms des articles (ex: SACHET 25x35).`;
         if (!App.data.mouvementsStock) App.data.mouvementsStock = [];
         const mDate = date.includes('T') ? date : (date + 'T' + new Date().toISOString().split('T')[1]);
         App.data.mouvementsStock.unshift({
-          date: mDate, consommable: c.nom, type: 'sortie', quantite: l.qty, motif: 'Sortie via ' + blNum
+          id: crypto.randomUUID(), date: mDate, consommable: c.nom, type: 'sortie', quantite: l.qty, motif: 'Sortie via ' + blNum
         });
         bl.lignes.push({ nom: c.nom, qty: l.qty, unite: c.unite });
       }

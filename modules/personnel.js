@@ -125,19 +125,35 @@ const Personnel = {
     ptg.totalHeuresAdmin = hAdmin;
     ptg.totalMontantOcc = hOcc * ptg.tauxHoraireOcc;
     
+    // Helper inline ou appel à une méthode
+    const isActive = (p) => this.isPersonnelActiveInMonth(p, monthStr);
+
     // Salaires fixes — SALAIRE FIXE MENSUEL, PAS de calcul par heures
     // Les ouvriers fixes travaillent 191h/mois, salaire identique même si > 191h
-    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
-    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
-    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
+    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
+    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
+    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
     
     // Heures contractuelles fixes = 191h/mois par ouvrier fixe
-    ptg.heuresContractuellesFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).length * 191;
+    ptg.heuresContractuellesFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && isActive(p)).length * 191;
     
     // Cloud Sync: Flat pointage table
     this.syncFlatPointage(monthStr);
     
     App.saveData();
+  },
+
+  isPersonnelActiveInMonth(p, monthStr) {
+    if (p.dateEmbauche && p.dateEmbauche.substring(0, 7) > monthStr) {
+      return false; // Hired after this month
+    }
+    if (p.dateDepart) {
+      if (p.dateDepart.substring(0, 7) < monthStr) return false; // Left before this month
+    } else if (!p.actif) {
+      // Legacy behavior: if no departure date is set but they are inactive, assume inactive always
+      return false;
+    }
+    return true;
   },
 
   async syncFlatPointage(monthStr) {
@@ -1051,6 +1067,7 @@ const Personnel = {
             </select>
           </div>
           <div class="form-group"><label class="form-label">Date d'embauche</label><input type="date" class="form-input" id="pDateEmb" value="${entry?.dateEmbauche||''}"></div>
+          <div class="form-group"><label class="form-label">Date de départ</label><input type="date" class="form-input" id="pDateDepart" value="${entry?.dateDepart||''}"></div>
           <div class="form-group">
             <label class="form-label">Statut Actif</label>
             <select class="form-select" id="pActif">
@@ -1101,6 +1118,7 @@ const Personnel = {
     const poste = document.getElementById('pPoste').value;
     const dept = document.getElementById('pDept').value;
     const dateEmbauche = document.getElementById('pDateEmb').value;
+    const dateDepart = document.getElementById('pDateDepart').value;
     const actif = document.getElementById('pActif').value === 'true';
     
     const salaire = type === 'occasionnel' ? null : (parseFloat(document.getElementById('pSalaire').value) || 0);
@@ -1109,7 +1127,7 @@ const Personnel = {
 
     if (!nom) { App.toast('Le nom est requis pour la fiche', 'error'); return; }
 
-    const data = { nom, prenom, cin, telephone, type, poste, dept, dateEmbauche, actif, salaire, cnss, observations };
+    const data = { nom, prenom, cin, telephone, type, poste, dept, dateEmbauche, dateDepart, actif, salaire, cnss, observations };
 
     if (editId) {
       const idx = App.data.personnel.findIndex(p => p.id === editId);

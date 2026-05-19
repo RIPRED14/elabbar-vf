@@ -307,7 +307,7 @@ const AchatsVentes = {
     const c = App.data.consommables.find(c => c.id === id);
     if (c) {
       c.stock += qty;
-      App.data.mouvementsStock.push({ date: new Date().toISOString(), consommable: c.nom, type: 'entree', quantite: qty, motif });
+      App.data.mouvementsStock.push({ id: crypto.randomUUID(), date: new Date().toISOString(), consommable: c.nom, type: 'entree', quantite: qty, motif });
       App.saveData();
       App.closeModal();
       this.render();

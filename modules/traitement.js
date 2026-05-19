@@ -430,7 +430,7 @@ const Traitement = {
     const c = App.data.consommables.find(c => c.nom === nom);
     if (c && qty > 0) {
       c.stock = Math.max(0, c.stock - qty);
-      App.data.mouvementsStock.push({ date: new Date().toISOString(), consommable: nom, type: 'sortie', quantite: qty, motif: 'Production' });
+      App.data.mouvementsStock.push({ id: crypto.randomUUID(), date: new Date().toISOString(), consommable: nom, type: 'sortie', quantite: qty, motif: 'Production' });
     }
   },
 
