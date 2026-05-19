@@ -105,7 +105,7 @@ const Personnel = {
 
   recalcPointageMensuel(monthStr) {
     const ptg = this.getPointageData(monthStr);
-    let hOcc = 0, hFixe = 0;
+    let hOcc = 0, hFixe = 0, hAdmin = 0;
     
     // Recalculer les heures par jour
     Object.values(ptg.jours).forEach(jour => {
@@ -115,18 +115,24 @@ const Personnel = {
         if (emp) {
           if (emp.type === 'occasionnel') hOcc += p.heures;
           else if (emp.type === 'ouvrier_fixe') hFixe += p.heures;
+          else if (emp.type === 'fixe_admin' || emp.type === 'fixe_autre') hAdmin += p.heures;
         }
       });
     });
 
     ptg.totalHeuresOcc = hOcc;
     ptg.totalHeuresOuvriersFixe = hFixe;
+    ptg.totalHeuresAdmin = hAdmin;
     ptg.totalMontantOcc = hOcc * ptg.tauxHoraireOcc;
     
-    // Salaires fixes (on prend les actifs du mois, ici simplifié par les actifs actuels)
-    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && p.actif).reduce((s, p) => s + p.salaire, 0);
-    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).reduce((s, p) => s + p.salaire, 0);
-    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).reduce((s, p) => s + p.salaire, 0);
+    // Salaires fixes — SALAIRE FIXE MENSUEL, PAS de calcul par heures
+    // Les ouvriers fixes travaillent 191h/mois, salaire identique même si > 191h
+    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
+    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
+    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
+    
+    // Heures contractuelles fixes = 191h/mois par ouvrier fixe
+    ptg.heuresContractuellesFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).length * 191;
     
     // Cloud Sync: Flat pointage table
     this.syncFlatPointage(monthStr);
@@ -309,9 +315,9 @@ const Personnel = {
       case 'resume': return this.renderResume();
       case 'pointage': return this.renderPointage();
       case 'daily': return this.renderDaily();
-      case 'admin': return this.renderListe('fixe_admin', 'Charges Fixes Administratives', 'personnes payées au mois (non pointées)');
-      case 'ouvriers': return this.renderListe('ouvrier_fixe', 'Ouvriers Fixes (Production)', 'personnes payées au mois avec suivi horaire');
-      case 'occasionnels': return this.renderListe('occasionnel', 'Ouvriers Occasionnels', 'personnes payées au taux horaire');
+      case 'admin': return this.renderListe('fixe_admin', '🏢 Charges Fixes Administratives', 'Salaire fixe mensuel — pointage de suivi');
+      case 'ouvriers': return this.renderListe('ouvrier_fixe', '👷 Ouvriers Fixes (Production)', 'Salaire fixe mensuel — base 191h/mois, pas d\'heures sup');
+      case 'occasionnels': return this.renderListe('occasionnel', '👥 Ouvriers Occasionnels', 'Payés au taux horaire × heures travaillées');
       default: return '';
     }
   },
@@ -319,11 +325,11 @@ const Personnel = {
   renderResume() {
     const isDay = this.viewType === 'day';
     const ptg = this.getPointageData(this.selectedPeriod);
+    const HEURES_BASE_FIXE = 191;
     
     let nbAdmin, nbAutre, nbFixe, nbOcc, totalFixe, totalMOProd, totalHeures;
 
     if (isDay) {
-      // Calcul journalier
       const dayData = ptg.jours[this.selectedDayISO] || { fiches: [] };
       const presences = this.getDayPresences(dayData);
       
@@ -333,7 +339,6 @@ const Personnel = {
         const e = App.data.personnel.find(emp => emp.id === p.personnelId);
         return e && e.type === 'ouvrier_fixe';
       }).map(p => p.personnelId)).size;
-      
       nbOcc = new Set(presences.filter(p => {
         const e = App.data.personnel.find(emp => emp.id === p.personnelId);
         return e && e.type === 'occasionnel';
@@ -343,17 +348,17 @@ const Personnel = {
         const e = App.data.personnel.find(emp => emp.id === p.personnelId);
         return (e && e.type === 'occasionnel') ? s + p.heures : s;
       }, 0);
-      
       const hFixe = presences.reduce((s, p) => {
         const e = App.data.personnel.find(emp => emp.id === p.personnelId);
         return (e && e.type === 'ouvrier_fixe') ? s + p.heures : s;
       }, 0);
 
-      totalFixe = (ptg.totalSalairesFixeAdmin + ptg.totalSalairesFixeAutre) / 30; // Estimation journalière
-      totalMOProd = (hOcc * ptg.tauxHoraireOcc) + (hFixe * (ptg.totalSalairesOuvriersFixe / 200)); // Estimation simplifiée
+      // Estimation journalière : salaires fixes / 26 jours ouvrés
+      totalFixe = (ptg.totalSalairesFixeAdmin + ptg.totalSalairesFixeAutre) / 26;
+      // Coût M.O. prod jour : salaires ouvriers fixes / 26 + occasionnels réels
+      totalMOProd = (ptg.totalSalairesOuvriersFixe / 26) + (hOcc * ptg.tauxHoraireOcc);
       totalHeures = hOcc + hFixe;
     } else {
-      // Calcul mensuel (existant)
       nbAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && p.actif).length;
       nbAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && p.actif).length;
       nbFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && p.actif).length;
@@ -369,12 +374,14 @@ const Personnel = {
       nbOcc = occIds.size;
 
       totalFixe = ptg.totalSalairesFixeAdmin + ptg.totalSalairesFixeAutre;
+      // Coût M.O. Prod = Salaires Ouvriers Fixes (FIXE!) + Montant Occasionnels (heures × taux)
       totalMOProd = ptg.totalSalairesOuvriersFixe + ptg.totalMontantOcc;
       totalHeures = ptg.totalHeuresOcc + ptg.totalHeuresOuvriersFixe;
     }
     
     const labelSuffix = isDay ? "Jour" : "Mois";
-    const tauxHoraireReelFixe = ptg.totalHeuresOuvriersFixe > 0 ? (ptg.totalSalairesOuvriersFixe / ptg.totalHeuresOuvriersFixe) : 0;
+    // Taux horaire réel des fixes = salaire / 191h (constant, base contractuelle)
+    const tauxHoraireReelFixe = nbFixe > 0 ? (ptg.totalSalairesOuvriersFixe / (nbFixe * HEURES_BASE_FIXE)) : 0;
 
     return `
       <div class="kpi-grid" style="margin-bottom:24px;">
@@ -427,14 +434,14 @@ const Personnel = {
             <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid var(--border-color);">
               <div>
                 <div style="color:var(--text-secondary)">Ouvriers Fixes (${nbFixe} pers.)</div>
-                <div style="font-size:0.8rem; color:var(--text-muted)">${ptg.totalHeuresOuvriersFixe} h (Taux réel: ${tauxHoraireReelFixe.toFixed(2)} DH/h)</div>
+                <div style="font-size:0.8rem; color:var(--text-muted)">Base ${HEURES_BASE_FIXE}h/mois • Taux: ${tauxHoraireReelFixe.toFixed(2)} DH/h • Pointé: ${ptg.totalHeuresOuvriersFixe}h</div>
               </div>
               <span style="font-weight:bold">${App.formatNumber(ptg.totalSalairesOuvriersFixe, 0)} DH</span>
             </div>
             <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid var(--border-color);">
               <div>
                 <div style="color:var(--text-secondary)">Occasionnels (${nbOcc} pers.)</div>
-                <div style="font-size:0.8rem; color:var(--text-muted)">${ptg.totalHeuresOcc} h à ${ptg.tauxHoraireOcc} DH/h</div>
+                <div style="font-size:0.8rem; color:var(--text-muted)">${ptg.totalHeuresOcc}h à ${ptg.tauxHoraireOcc} DH/h</div>
               </div>
               <span style="font-weight:bold">${App.formatNumber(ptg.totalMontantOcc, 0)} DH</span>
             </div>
@@ -731,16 +738,39 @@ const Personnel = {
 
   renderListe(type, title, subtitle) {
     let list = App.data.personnel.filter(p => p.type === type || (type === 'fixe_admin' && p.type === 'fixe_autre'));
+    const ptg = this.getPointageData(this.selectedPeriod);
+    const HEURES_BASE_FIXE = 191;
+    const isFixe = type === 'ouvrier_fixe';
+    const isOcc = type === 'occasionnel';
+    const isAdmin = type === 'fixe_admin';
     
-    // Calculate total
-    const totalSalaire = list.reduce((s, p) => s + (p.salaire || 0), 0);
+    // Calculate hours per employee this month
+    const empHoursMap = {};
+    Object.values(ptg.jours).forEach(jour => {
+      const presences = this.getDayPresences(jour);
+      presences.forEach(p => {
+        empHoursMap[p.personnelId] = (empHoursMap[p.personnelId] || 0) + (p.heures || 0);
+      });
+    });
+
+    // Totals
+    const totalSalaire = list.filter(p => p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
+    const totalHeures = list.reduce((s, p) => s + (empHoursMap[p.id] || 0), 0);
+    const totalMontantOcc = isOcc ? totalHeures * ptg.tauxHoraireOcc : 0;
 
     return `
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
           <div>
             <span class="card-title">${title}</span>
             <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">${subtitle}</div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn btn-outline btn-sm" onclick="Personnel.showScanDailyModal()" style="display:flex; align-items:center; gap:6px;">
+              📸 <span>Scan Feuille</span>
+            </button>
+            ${isFixe ? `<span class="badge badge-info" style="font-size:0.75rem;">Base ${HEURES_BASE_FIXE}h/mois</span>` : ''}
+            ${isOcc ? `<span class="badge badge-purple" style="font-size:0.75rem;">Taux: ${ptg.tauxHoraireOcc} DH/h</span>` : ''}
           </div>
         </div>
         <div class="card-body">
@@ -752,18 +782,34 @@ const Personnel = {
                     <th>#</th>
                     <th>Nom & Prénom</th>
                     <th>Poste</th>
-                    <th>Département</th>
+                    ${isFixe ? `<th class="td-right">Heures Pointées</th><th class="td-center">vs ${HEURES_BASE_FIXE}h</th>` : ''}
+                    ${isOcc ? '<th class="td-right">Heures Mois</th><th class="td-right">Montant (DH)</th>' : ''}
+                    ${isAdmin ? '<th class="td-right">Heures Pointées</th>' : ''}
                     <th class="td-right">Salaire (DH)</th>
                     <th class="td-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${list.map((p, i) => `
+                  ${list.map((p, i) => {
+                    const h = empHoursMap[p.id] || 0;
+                    const diff = isFixe ? h - HEURES_BASE_FIXE : 0;
+                    const montantOcc = isOcc ? h * ptg.tauxHoraireOcc : 0;
+                    return `
                     <tr style="${!p.actif ? 'opacity:0.5' : ''}">
                       <td>${i + 1}</td>
                       <td class="td-bold">${p.nom} ${p.prenom || ''} ${!p.actif ? '<span class="badge">Inactif</span>' : ''}</td>
                       <td><span class="badge badge-purple">${p.poste || '-'}</span></td>
-                      <td>${p.dept || '-'}</td>
+                      ${isFixe ? `
+                        <td class="td-right" style="font-family:var(--font-mono);">${h > 0 ? h + 'h' : '-'}</td>
+                        <td class="td-center">
+                          ${h > 0 ? `<span class="badge ${diff >= 0 ? 'badge-success' : 'badge-warning'}" style="font-size:0.7rem;">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}h</span>` : '-'}
+                        </td>
+                      ` : ''}
+                      ${isOcc ? `
+                        <td class="td-right" style="font-family:var(--font-mono);">${h > 0 ? h + 'h' : '-'}</td>
+                        <td class="td-right td-bold" style="color:var(--accent-blue);">${h > 0 ? App.formatNumber(montantOcc, 0) : '-'}</td>
+                      ` : ''}
+                      ${isAdmin ? `<td class="td-right" style="font-family:var(--font-mono);">${h > 0 ? h + 'h' : '-'}</td>` : ''}
                       <td class="td-right td-bold">${p.salaire ? App.formatNumber(p.salaire, 0) : '-'}</td>
                       <td class="td-center">
                         <button class="btn-icon" onclick="Personnel.editModal(${p.id})" title="Modifier">
@@ -771,14 +817,19 @@ const Personnel = {
                         </button>
                       </td>
                     </tr>
-                  `).join('')}
+                  `;}).join('')}
                 </tbody>
               </table>
             `}
           </div>
         </div>
-        <div class="card-footer" style="display:flex; justify-content:flex-end;">
-          <strong>Total Salaires (Actifs) : ${App.formatNumber(list.filter(p=>p.actif).reduce((s,p)=>s+(p.salaire||0),0), 0)} DH/mois</strong>
+        <div class="card-footer" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; gap:16px; font-size:0.85rem; color:var(--text-muted);">
+            ${isFixe ? `<span>📊 Total pointé: <b>${totalHeures}h</b> / ${list.filter(p=>p.actif).length * HEURES_BASE_FIXE}h contractuelles</span>` : ''}
+            ${isOcc ? `<span>📊 Total heures: <b>${totalHeures}h</b> → <b style="color:var(--accent-blue)">${App.formatNumber(totalMontantOcc, 0)} DH</b></span>` : ''}
+            ${isAdmin ? `<span>📊 Total pointé: <b>${totalHeures}h</b></span>` : ''}
+          </div>
+          <strong>${isOcc ? `Total à payer : ${App.formatNumber(totalMontantOcc, 0)} DH` : `Total Salaires (Actifs) : ${App.formatNumber(totalSalaire, 0)} DH/mois`}</strong>
         </div>
       </div>
     `;
@@ -823,7 +874,8 @@ const Personnel = {
                 <th style="position:sticky; left:0; background:var(--bg-card); z-index:10; width:200px; border-right:2px solid var(--border-color);">Employé</th>
                 <th style="position:sticky; left:200px; background:var(--bg-card); z-index:10; width:80px; border-right:2px solid var(--border-color);">Type</th>
                 ${days.map(d => `<th style="text-align:center; min-width:50px;">${parseInt(d.split('-')[2])}</th>`).join('')}
-                <th class="td-right" style="position:sticky; right:0; background:var(--bg-card); z-index:10; border-left:2px solid var(--border-color);">Total Heures</th>
+                <th class="td-right" style="position:sticky; right:0; background:var(--bg-card); z-index:10; border-left:2px solid var(--border-color);">Total</th>
+                <th class="td-right" style="position:sticky; right:80px; background:var(--bg-card); z-index:10;">Salaire</th>
               </tr>
             </thead>
             <tbody>
@@ -850,13 +902,16 @@ const Personnel = {
 
                 const badgeClass = emp.type === 'ouvrier_fixe' ? 'badge-success' : 'badge-info';
                 const badgeLabel = emp.type === 'ouvrier_fixe' ? 'Fixe' : 'Occas';
+                const salaire = emp.type === 'ouvrier_fixe' ? (emp.salaire || 0) : (totalHeuresEmp * ptg.tauxHoraireOcc);
+                const contractInfo = emp.type === 'ouvrier_fixe' ? `<div style="font-size:0.65rem; color:var(--text-muted);">/ 191h</div>` : '';
 
                 return `
                   <tr>
                     <td style="position:sticky; left:0; background:var(--bg-card); z-index:5; font-weight:600; border-right:2px solid var(--border-color);">${emp.nom} ${emp.prenom||''}</td>
                     <td style="position:sticky; left:200px; background:var(--bg-card); z-index:5; border-right:2px solid var(--border-color);"><span class="badge ${badgeClass}" style="font-size:0.7rem;">${badgeLabel}</span></td>
                     ${rowCells}
-                    <td class="td-right td-bold" style="position:sticky; right:0; background:var(--bg-card); z-index:5; border-left:2px solid var(--border-color); color:var(--accent-blue);">${totalHeuresEmp > 0 ? totalHeuresEmp : ''}</td>
+                    <td class="td-right td-bold" style="position:sticky; right:0; background:var(--bg-card); z-index:5; border-left:2px solid var(--border-color); color:var(--accent-blue);">${totalHeuresEmp > 0 ? totalHeuresEmp : ''}${contractInfo}</td>
+                    <td class="td-right" style="position:sticky; right:80px; background:var(--bg-card); z-index:5; font-size:0.8rem; font-weight:600; color:${emp.type === 'ouvrier_fixe' ? 'var(--text-primary)' : 'var(--accent-blue)'};">${App.formatNumber(salaire, 0)}</td>
                   </tr>
                 `;
               }).join('')}
