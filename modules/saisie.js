@@ -390,13 +390,14 @@ const Saisie = {
                 <span>🔹 Phases de Reconditionnement</span>
                 <button class="btn btn-sm btn-outline" onclick="Saisie.addPhaseRecond('fPhasesPF')" ${isSent ? 'disabled' : ''}>+ Phase</button>
               </div>
-              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th style="width:30px"></th></tr></thead>
-              <tbody id="fPhasesPF">${phasesPF.map((ph,i)=>`<tr>
-                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom" ${isSent ? 'disabled' : ''}>${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
+              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th>Rend. final</th><th style="width:30px"></th></tr></thead>
+              <tbody id="fPhasesPF">${phasesPF.map((ph,i)=>`<tr draggable="true" ondragstart="Saisie.onPhaseDragStart(event, this)" ondragover="Saisie.onPhaseDragOver(event)" ondrop="Saisie.onPhaseDrop(event, this, 'fPhasesPF')">
+                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom" ${isSent ? 'disabled' : ''}>${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
                 <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
                 <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
                 <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
                 <td class="td-right td-bold" id="fRendPhPF${i}">0%</td>
+                <td class="td-right" id="fRendCumPF${i}">0%</td>
                 <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removePhaseRecond(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
               </tr>`).join('')}</tbody></table>
             </div>
@@ -630,25 +631,41 @@ const Saisie = {
 
     let poidsPF = v('fPoidsPF');
     
-    // Automation: Link Phase qteFinale to Poids Net PF
+    // Automation: Cascade phases and PF
     const tbodyPF = document.getElementById('fPhasesPF');
     if (tbodyPF) {
-      tbodyPF.querySelectorAll('tr').forEach((row, i) => {
-        const qI = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value)||0;
-        const qF = parseFloat(row.querySelector('[data-ph="qteFinale"]')?.value)||0;
-        const rend = qI > 0 ? (qF/qI*100) : 0;
+      const poidsPI = v('fPoidsPI');
+      let prevQF = poidsPI;
+      const pfRows = tbodyPF.querySelectorAll('tr');
+      pfRows.forEach((row, i) => {
+        const qiInput = row.querySelector('[data-ph="qteInit"]');
+        if (qiInput) {
+          if (i === 0 && !qiInput.value && poidsPI > 0) qiInput.value = poidsPI;
+          else if (i > 0) qiInput.value = prevQF;
+        }
+        
+        const qi = parseFloat(qiInput?.value)||0;
+        const qf = parseFloat(row.querySelector('[data-ph="qteFinale"]')?.value)||0;
+        prevQF = qf || qi;
+
+        const rend = qi > 0 ? (qf/qi*100) : 0;
         const rendEl = document.getElementById('fRendPhPF'+i);
         if(rendEl) rendEl.textContent = App.formatNumber(rend,2)+'%';
-        
-        // Auto-fill Poids Net PF from the phase finale (assuming one phase for Reconditionnement)
-        if (qF > 0) {
-          const fPoidsPFEl = document.getElementById('fPoidsPF');
-          if (fPoidsPFEl && fPoidsPFEl.value !== qF.toString()) {
-            fPoidsPFEl.value = qF;
-            poidsPF = qF;
-          }
-        }
+
+        const rendCum = poidsPI > 0 ? (prevQF/poidsPI*100) : 0;
+        const rendCumEl = document.getElementById('fRendCumPF'+i);
+        if(rendCumEl) rendCumEl.textContent = App.formatNumber(rendCum,2)+'%';
       });
+
+      const lastRow = pfRows[pfRows.length-1];
+      const lastQF = lastRow ? (parseFloat(lastRow.querySelector('[data-ph="qteFinale"]')?.value)||0) : 0;
+      if (lastQF > 0) {
+        const fPoidsPFEl = document.getElementById('fPoidsPF');
+        if (fPoidsPFEl) {
+          fPoidsPFEl.value = lastQF;
+          poidsPF = lastQF;
+        }
+      }
     }
 
     // Dynamic Labor Cost Allocation
@@ -1243,12 +1260,12 @@ const Saisie = {
 
             <div class="form-section">
               <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;"><span>🔹 Phases matière première</span><button class="btn btn-sm btn-outline" onclick="Saisie.addPhase('tPhasesMP')" ${isSent ? 'disabled' : ''}>+ Phase</button></div>
-              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th>Rend. cumulé</th><th style="width:30px"></th></tr></thead>
-              <tbody id="tPhasesMP">${phases.map((ph,i)=>`<tr>
-                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
-                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calcT()"></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calcT()"></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calcT()"></td>
+              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th>Rend. final</th><th style="width:30px"></th></tr></thead>
+              <tbody id="tPhasesMP">${phases.map((ph,i)=>`<tr draggable="true" ondragstart="Saisie.onPhaseDragStart(event, this)" ondragover="Saisie.onPhaseDragOver(event)" ondrop="Saisie.onPhaseDrop(event, this, 'tPhasesMP')">
+                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom" ${isSent ? 'disabled' : ''}>${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
+                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calcT()" ${isSent ? 'disabled' : ''}></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calcT()" ${isSent ? 'disabled' : ''}></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calcT()" ${isSent ? 'disabled' : ''}></td>
                 <td class="td-right td-bold" id="rendPhMP${i}">0%</td>
                 <td class="td-right" id="rendCumMP${i}">0%</td>
                 <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removePhase(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
@@ -1506,8 +1523,11 @@ const Saisie = {
       prevQF_PF = qf || qi;
       
       const rp = qi>0 ? (qf/qi*100) : 0;
+      const rc = poidsMP>0 ? (qf/poidsMP*100) : 0;
       const elPh = document.getElementById('rendPhPF'+i);
+      const elCum = document.getElementById('rendCumPF'+i);
       if(elPh) elPh.textContent = App.formatNumber(rp,2)+'%';
+      if(elCum) elCum.textContent = App.formatNumber(rc,2)+'%';
     });
 
     // Update Poids PF automatically from last PF phase's qteFinale
@@ -1729,8 +1749,12 @@ const Saisie = {
     const tbody = document.getElementById(tbodyId);
     const idx = tbody.children.length;
     const tr = document.createElement('tr');
+    tr.setAttribute('draggable', 'true');
+    tr.setAttribute('ondragstart', 'Saisie.onPhaseDragStart(event, this)');
+    tr.setAttribute('ondragover', 'Saisie.onPhaseDragOver(event)');
+    tr.setAttribute('ondrop', `Saisie.onPhaseDrop(event, this, '${tbodyId}')`);
     tr.innerHTML = `
-      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
+      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
       <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="100" data-ph="seuil" data-idx="${idx}" onchange="Saisie.calcT()"></td>
       <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteInit" data-idx="${idx}" onchange="Saisie.calcT()"></td>
       <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteFinale" data-idx="${idx}" onchange="Saisie.calcT()"></td>
@@ -1752,12 +1776,17 @@ const Saisie = {
     const tbody = document.getElementById(tbodyId);
     const idx = tbody.children.length;
     const tr = document.createElement('tr');
+    tr.setAttribute('draggable', 'true');
+    tr.setAttribute('ondragstart', 'Saisie.onPhaseDragStart(event, this)');
+    tr.setAttribute('ondragover', 'Saisie.onPhaseDragOver(event)');
+    tr.setAttribute('ondrop', `Saisie.onPhaseDrop(event, this, '${tbodyId}')`);
     tr.innerHTML = `
-      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
+      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
       <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="100" data-ph="seuil" data-idx="${idx}" onchange="Saisie.calc()"></td>
       <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteInit" data-idx="${idx}" onchange="Saisie.calc()"></td>
       <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteFinale" data-idx="${idx}" onchange="Saisie.calc()"></td>
       <td class="td-right td-bold" id="fRendPhPF${idx}">0%</td>
+      <td class="td-right" id="fRendCumPF${idx}">0%</td>
       <td><button class="btn-icon danger" onclick="Saisie.removePhaseRecond(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>`;
     tbody.appendChild(tr);
   },
@@ -1768,6 +1797,77 @@ const Saisie = {
     if (tbody.children.length <= 1) { App.toast('Il faut au moins une phase', 'error'); return; }
     tr.remove();
     this.calc();
+  },
+
+  draggedRow: null,
+
+  onPhaseDragStart(e, row) {
+    this.draggedRow = row;
+    e.dataTransfer.effectAllowed = 'move';
+    setTimeout(() => {
+      row.style.opacity = '0.4';
+    }, 0);
+  },
+
+  onPhaseDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  },
+
+  onPhaseDrop(e, targetRow, tbodyId) {
+    e.preventDefault();
+    if (!this.draggedRow || this.draggedRow === targetRow) {
+      if (this.draggedRow) this.draggedRow.style.opacity = '1';
+      this.draggedRow = null;
+      return;
+    }
+    
+    const tbody = document.getElementById(tbodyId);
+    if (this.draggedRow.parentElement !== tbody) {
+      this.draggedRow.style.opacity = '1';
+      this.draggedRow = null;
+      return;
+    }
+
+    const children = Array.from(tbody.children);
+    const draggedIdx = children.indexOf(this.draggedRow);
+    const targetIdx = children.indexOf(targetRow);
+
+    if (draggedIdx < targetIdx) {
+      targetRow.after(this.draggedRow);
+    } else {
+      targetRow.before(this.draggedRow);
+    }
+    
+    this.draggedRow.style.opacity = '1';
+    this.draggedRow = null;
+
+    this.reindexPhases(tbodyId);
+  },
+
+  reindexPhases(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    
+    const prefixPh = tbodyId === 'fPhasesPF' ? 'fRendPhPF' : (tbodyId === 'tPhasesMP' ? 'rendPhMP' : 'rendPhPF');
+    const prefixCum = tbodyId === 'fPhasesPF' ? 'fRendCumPF' : (tbodyId === 'tPhasesMP' ? 'rendCumMP' : 'rendCumPF');
+    
+    Array.from(tbody.children).forEach((row, idx) => {
+      const inputs = row.querySelectorAll('input');
+      inputs.forEach(inp => inp.setAttribute('data-idx', idx));
+      
+      const tdPh = row.querySelector(`[id^="${prefixPh}"]`);
+      if (tdPh) tdPh.id = prefixPh + idx;
+      
+      const tdCum = row.querySelector(`[id^="${prefixCum}"]`);
+      if (tdCum) tdCum.id = prefixCum + idx;
+    });
+
+    if (tbodyId === 'fPhasesPF') {
+      this.calc();
+    } else {
+      this.calcT();
+    }
   },
 
   renderIntrantRow(it, i, isSent = false) {
