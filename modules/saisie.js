@@ -48,64 +48,54 @@ const Saisie = {
     'S1000IMP': { article: 'SACHET 1KG IMPRIMÉ', prix: 27.76 / 140 },
   },
 
-  intrantsMaster: [
-    // ── SACHET (tailles réelles inventaire) ──
-    { ref: 'S2338', article: 'SACHET 23x38', famille: 'SACHET', prix: 24.00 },
-    { ref: 'S2535', article: 'SACHET 25x35', famille: 'SACHET', prix: 25.28 },
-    { ref: 'S4040', article: 'SACHET 40x40 (1.5KG)', famille: 'SACHET', prix: 24.00 },
-    { ref: 'S4050', article: 'SACHET 40x50 (2KG)', famille: 'SACHET', prix: 24.00 },
-    { ref: 'S7780', article: 'SACHET 77x80', famille: 'SACHET', prix: 25.20 },
-    { ref: 'S4060', article: 'SACHET 40x60', famille: 'SACHET', prix: 24.00 },
-    { ref: 'S1230', article: 'SACHET 12x30', famille: 'SACHET', prix: 27.60 },
-    { ref: 'S1440', article: 'SACHET 14x40', famille: 'SACHET', prix: 27.60 },
-    { ref: 'S1450', article: 'SACHET 14x50', famille: 'SACHET', prix: 27.60 },
-    { ref: 'S4065', article: 'SACHET 40x65', famille: 'SACHET', prix: 27.60 },
-    { ref: 'S645120', article: 'SACHET 6/45x120x80', famille: 'SACHET', prix: 25.12 },
-    { ref: 'S6016', article: 'SACHET 60*5(16)x80', famille: 'SACHET', prix: 25.20 },
-    { ref: 'S4353', article: 'SACHET 43x53', famille: 'SACHET', prix: 24.00 },
-    { ref: 'S5885', article: 'SACHET 58x85', famille: 'SACHET', prix: 24.00 },
-    // ── SAC / PLASTIQUE ──
-    { ref: '11201', article: 'SAC 30/40', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11202', article: 'SAC 25/35', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11203', article: 'SAC 30*40*70', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11204', article: 'SAC 40*40*55', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11205', article: 'FEUILLE 40*60*40', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11206', article: 'SAC 12*30', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11207', article: 'SAC 14*40', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11208', article: 'SAC 14*50', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11209', article: 'SAC 60 (s16)*80', famille: 'PLASTIQUE', prix: 0 },
-    { ref: '11210', article: 'SAC 43*53', famille: 'PLASTIQUE', prix: 0 },
-    // ── CARTON ──
-    { ref: 'C12', article: 'CARTON 12KG', famille: 'CARTON', prix: 11.64 },
-    { ref: 'C13', article: 'CARTON 13KG', famille: 'CARTON', prix: 12.50 },
-    { ref: 'C15', article: 'CARTON 15KG', famille: 'CARTON', prix: 14.00 },
-    { ref: 'C17', article: 'CARTON 17KG', famille: 'CARTON', prix: 15.00 },
-    { ref: 'C19', article: 'CARTON 19KG', famille: 'CARTON', prix: 16.50 },
-    { ref: 'C20', article: 'CARTON 20KG', famille: 'CARTON', prix: 18.00 },
-    // ── ETIQUETTE ──
-    { ref: 'ETQ50', article: 'ETIQUETTE 50*75', famille: 'ETIQUETTE', prix: 45.00 },
-    { ref: 'ETQN', article: 'ETIQUETTE NOIR', famille: 'ETIQUETTE', prix: 78.00 },
-    // ── EMBALLAGE ──
-    { ref: 'FILM', article: 'FILM ETIRABLE', famille: 'EMBALLAGE', prix: 39.60 },
-    { ref: 'SCOTCH', article: 'SCOTCH', famille: 'EMBALLAGE', prix: 10.80 },
-    { ref: 'PALETTE', article: 'PALETTE', famille: 'EMBALLAGE', prix: 0 },
-    // ── INTRANT ──
-    { ref: 'SEL', article: 'SEL', famille: 'INTRANT', prix: 0.60 },
-    // ── EQUIPEMENT ──
-    { ref: '11211', article: 'PISTOLET ARROSEUR', famille: 'EQUIPEMENT', prix: 0 },
-    { ref: '11212', article: 'MT TUYAU', famille: 'EQUIPEMENT', prix: 0 },
-    { ref: '04001269', article: 'MACHINE SOUDEUSE MANUELLE', famille: 'EQUIPEMENT', prix: 0 },
-    { ref: '04001274', article: 'PELLE A NEIGE DETECTABLE GM', famille: 'EQUIPEMENT', prix: 0 },
-    // ── FOURNITURES ──
-    { ref: '04001259', article: 'ARRACHE AGRAFES', famille: 'FOURNITURES', prix: 0 },
-    { ref: '04001263', article: 'MARQUEUR NOIR', famille: 'FOURNITURES', prix: 0 },
-    { ref: '04001264', article: 'MARQUEUR PERMANENTE NOIR', famille: 'FOURNITURES', prix: 0 },
-    // ── SERVICE ──
-    { ref: '04001275', article: 'PACK ANALYSE MICROBIOLOGIQUES', famille: 'SERVICE', prix: 0 },
-    // ── DIVERS ──
-    { ref: '00001', article: 'ELECTRICITE', famille: 'EAU-ELEC', prix: 0 },
-    { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 },
-  ],
+  get intrantsMaster() {
+    const list = [];
+    if (App.data && App.data.consommables) {
+      App.data.consommables.forEach(c => {
+        let famille = 'DIVERS';
+        const cat = (c.categorie || '').toUpperCase();
+        const nom = (c.nom || '').toUpperCase();
+        
+        if (cat === 'SACHETS' || nom.includes('SACHET')) famille = 'SACHET';
+        else if (cat === 'CONDITIONNEMENT' || cat === 'EMBALLAGE') {
+          if (nom.includes('CARTON')) famille = 'CARTON';
+          else if (nom.includes('ETIQUETTE')) famille = 'ETIQUETTE';
+          else if (nom.includes('FILM') || nom.includes('SCOTCH') || nom.includes('PALETTE') || cat === 'EMBALLAGE') famille = 'EMBALLAGE';
+          else famille = 'PLASTIQUE';
+        }
+        else if (cat === 'INTRANT' || cat === 'INTRANTS') famille = 'INTRANT';
+        else if (cat === 'AUTRES' || cat === 'DIVERS') {
+          if (nom.includes('SAC') || nom.includes('FEUILLE')) famille = 'PLASTIQUE';
+          else famille = 'DIVERS';
+        }
+        else if (cat === 'FOURNITURES') famille = 'FOURNITURES';
+        else if (cat === 'EQUIPEMENT' || cat === 'EQUIPEMENTS') famille = 'EQUIPEMENT';
+        else if (cat === 'SERVICE' || cat === 'SERVICES') famille = 'SERVICE';
+        else famille = cat; // Fallback
+        
+        list.push({
+          ref: c.id ? c.id.toString() : c.nom,
+          article: c.nom,
+          famille: famille,
+          prix: c.prixUnitaire || 0
+        });
+      });
+    }
+
+    // Add required systemic services if they don't exist
+    const systemics = [
+      { ref: '00001', article: 'ELECTRICITE', famille: 'EAU-ELEC', prix: 0 },
+      { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 }
+    ];
+
+    systemics.forEach(sys => {
+      if (!list.find(i => i.ref === sys.ref || i.article === sys.article)) {
+        list.push(sys);
+      }
+    });
+
+    return list;
+  },
   render() {
     let prod = this.viewType === 'day' 
       ? App.getDayProduction(this.selectedDay)
