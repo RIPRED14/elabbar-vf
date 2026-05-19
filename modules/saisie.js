@@ -63,7 +63,7 @@ const Saisie = {
           else if (nom.includes('FILM') || nom.includes('SCOTCH') || nom.includes('PALETTE') || cat === 'EMBALLAGE') famille = 'EMBALLAGE';
           else famille = 'PLASTIQUE';
         }
-        else if (cat === 'INTRANT' || cat === 'INTRANTS') famille = 'INTRANT';
+        else if (cat === 'INTRANT' || cat === 'INTRANTS' || cat === 'ADDITIF' || cat === 'ADDITIFS' || nom.includes('AGRAFISH') || nom.includes('HYDROMAR') || nom.includes('SEL')) famille = 'INTRANT';
         else if (cat === 'AUTRES' || cat === 'DIVERS') {
           if (nom.includes('SAC') || nom.includes('FEUILLE')) famille = 'PLASTIQUE';
           else famille = 'DIVERS';
@@ -740,7 +740,15 @@ const Saisie = {
     let coutEnergie = 0;
     const infoEnergieEl = document.getElementById('fAllocationEnergieInfo');
     if (infoEnergieEl) {
-      if (!energieAlloc.fallback && energieAlloc.totalEnergyCost > 0) {
+      if (energieAlloc.fallback || energieAlloc.totalEnergyCost === 0) {
+        infoEnergieEl.style.display = 'block';
+        infoEnergieEl.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
+            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Énergie Activé</div>
+            <div style="color:var(--text-secondary);">Aucune donnée d'énergie ou de tonnage pour la période <strong>${energieAlloc.targetMonths.join(', ')}</strong>.</div>
+          </div>
+        `;
+      } else {
         infoEnergieEl.style.display = 'block';
         infoEnergieEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
@@ -756,8 +764,6 @@ const Saisie = {
           </div>
         `;
         coutEnergie = energieAlloc.allocatedCost;
-      } else {
-        infoEnergieEl.style.display = 'none';
       }
     }
 
