@@ -2143,7 +2143,12 @@ const App = {
       if (this.data.pointage) {
         try {
           const pointages = [];
+          const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
           for (const date in this.data.pointage) {
+            if (!dateRegex.test(date)) {
+              console.warn(`⚠️ Clé de pointage ignorée (format de date invalide) : '${date}'`);
+              continue;
+            }
             for (const empId in this.data.pointage[date]) {
               pointages.push({
                 date: date,
@@ -2163,7 +2168,7 @@ const App = {
                 const { error: simpleError } = await this.supabase.from('pointage').upsert(chunk);
                 if (simpleError) {
                   // Si l'erreur est 404 (table absente), on ne considère pas cela comme critique
-                  if (simpleError.code === 'PGRST116' || simpleError.message.includes('404') || (simpleError.message.toLowerCase().includes('relation') && simpleError.message.toLowerCase().includes('does not exist'))) {
+                  if (simpleError.code === 'PGRST116' || simpleError.message.includes('404') || simpleError.message.includes('Could not find the table') || (simpleError.message.toLowerCase().includes('relation') && simpleError.message.toLowerCase().includes('does not exist'))) {
                     console.warn("💡 Table 'pointage' absente sur Supabase. Poursuite transparente de la synchronisation.");
                   } else {
                     console.error("❌ Échec de la tentative d'upsert simple de repli pour pointage:", simpleError.message);
@@ -2186,6 +2191,12 @@ const App = {
             if (table === 'factures') {
               payload = this.data[table].map(f => this.cleanAndSerializeFacture(f));
             }
+            if (table === 'clients') {
+              payload = this.data.clients.map((c, index) => ({
+                ...c,
+                id: c.id || (index + 1)
+              }));
+            }
             
             let attempts = 0;
             const maxAttempts = 5;
@@ -2200,7 +2211,7 @@ const App = {
                 console.warn(`⚠️ Tentative ${attempts} échouée pour la table '${table}':`, error.message);
                 
                 // Si la table elle-même n'existe pas (erreur 404 / Relation manquante), on arrête et on ne marque pas d'erreur critique
-                if (error.code === 'PGRST116' || error.message.includes('404') || (error.message.toLowerCase().includes('relation') && error.message.toLowerCase().includes('does not exist'))) {
+                if (error.code === 'PGRST116' || error.message.includes('404') || error.message.includes('Could not find the table') || (error.message.toLowerCase().includes('relation') && error.message.toLowerCase().includes('does not exist'))) {
                   console.warn(`💡 Table '${table}' absente sur Supabase (404/Relation manquante). La synchronisation locale reste prioritaire et continue de manière transparente.`);
                   success = true; // On marque comme success pour ne pas bloquer l'état visuel de synchronisation
                   break;
