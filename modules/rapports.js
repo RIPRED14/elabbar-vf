@@ -31,13 +31,32 @@ const Rapports = {
           </div>
           
           <div class="dashboard-controls-glass">
-            <div class="view-switcher">
-              <button class="btn-switch ${this.view === 'monthly' ? 'active' : ''}" onclick="Rapports.switchView('monthly')">Mensuel</button>
-              <button class="btn-switch ${this.view === 'daily' ? 'active' : ''}" onclick="Rapports.switchView('daily')">Quotidien</button>
+            <div class="view-switcher" style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; display: flex; align-items: center; padding: 0 8px;">
+              <select class="input-premium" style="border: none; background: transparent; padding: 8px 16px; font-weight: 600; cursor: pointer; outline: none; width: 100%;" onchange="Rapports.switchView(this.value)">
+                 <option value="daily" ${this.view === 'daily' ? 'selected' : ''}>Journalier</option>
+                 <option value="monthly" ${this.view === 'monthly' ? 'selected' : ''}>Mensuel</option>
+                 <option value="quarterly" ${this.view === 'quarterly' ? 'selected' : ''}>Trimestriel</option>
+                 <option value="semiannual" ${this.view === 'semiannual' ? 'selected' : ''}>Semestriel</option>
+                 <option value="annual" ${this.view === 'annual' ? 'selected' : ''}>Annuel</option>
+              </select>
             </div>
             
             <div class="date-picker-wrapper">
-              ${this.view === 'quarterly' ? `
+              ${this.view === 'annual' ? `
+                <select class="input-premium" id="rapportAnnee" onchange="Rapports.render()">
+                  ${[2024,2025,2026].map(y => `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`).join('')}
+                </select>
+              ` : this.view === 'semiannual' ? `
+                <div style="display:flex; gap:8px;">
+                  <select class="input-premium" id="rapportAnnee" onchange="Rapports.render()">
+                    ${[2024,2025,2026].map(y => `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`).join('')}
+                  </select>
+                  <select class="input-premium" id="rapportSem" onchange="Rapports.render()">
+                    <option value="1">Semestre 1</option>
+                    <option value="2">Semestre 2</option>
+                  </select>
+                </div>
+              ` : this.view === 'quarterly' ? `
                 <div style="display:flex; gap:8px;">
                   <select class="input-premium" id="rapportAnnee" onchange="Rapports.render()">
                     ${[2024,2025,2026].map(y => `<option value="${y}" ${y===now.getFullYear()?'selected':''}>${y}</option>`).join('')}
@@ -92,7 +111,16 @@ const Rapports = {
     let prod = [];
     let label = "";
     
-    if (this.view === 'quarterly') {
+    if (this.view === 'annual') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      prod = App.getAnnualProduction(year);
+      label = App.formatAnnual(year);
+    } else if (this.view === 'semiannual') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      const sem = parseInt(document.getElementById('rapportSem').value);
+      prod = App.getSemesterProduction(year, sem);
+      label = App.formatSemester(year, sem);
+    } else if (this.view === 'quarterly') {
       const year = parseInt(document.getElementById('rapportAnnee').value);
       const trim = parseInt(document.getElementById('rapportTrim').value);
       prod = App.getQuarterProduction(year, trim);
@@ -150,12 +178,26 @@ const Rapports = {
 
   calcTrends(currentStats, currentCost) {
     let prevProd = [];
-    if (this.view === 'monthly') {
+    if (this.view === 'annual') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      prevProd = App.getAnnualProduction(year - 1);
+    } else if (this.view === 'semiannual') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      const sem = parseInt(document.getElementById('rapportSem').value);
+      if (sem === 1) prevProd = App.getSemesterProduction(year - 1, 2);
+      else prevProd = App.getSemesterProduction(year, 1);
+    } else if (this.view === 'quarterly') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      const trim = parseInt(document.getElementById('rapportTrim').value);
+      if (trim === 1) prevProd = App.getQuarterProduction(year - 1, 4);
+      else prevProd = App.getQuarterProduction(year, trim - 1);
+    } else if (this.view === 'monthly') {
       const monthVal = document.getElementById('rapportMois').value.split('-');
       const d = new Date(parseInt(monthVal[0]), parseInt(monthVal[1]) - 2, 1);
       prevProd = App.getMonthProduction(d.getFullYear(), d.getMonth());
     } else {
-      const d = new Date(this.selectedDate);
+      const dateVal = document.getElementById('rapportJour').value || this.selectedDate;
+      const d = new Date(dateVal);
       d.setDate(d.getDate() - 1);
       const prevDate = d.toISOString().split('T')[0];
       prevProd = App.data.production.filter(p => p.date === prevDate);
@@ -551,11 +593,23 @@ const Rapports = {
 
     // Re-fetch production data for the Raw Data sheet
     let rawProd = [];
-    if (this.view === 'monthly') {
+    if (this.view === 'annual') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      rawProd = App.getAnnualProduction(year);
+    } else if (this.view === 'semiannual') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      const sem = parseInt(document.getElementById('rapportSem').value);
+      rawProd = App.getSemesterProduction(year, sem);
+    } else if (this.view === 'quarterly') {
+      const year = parseInt(document.getElementById('rapportAnnee').value);
+      const trim = parseInt(document.getElementById('rapportTrim').value);
+      rawProd = App.getQuarterProduction(year, trim);
+    } else if (this.view === 'monthly') {
       const monthVal = document.getElementById('rapportMois').value.split('-');
       rawProd = App.getMonthProduction(parseInt(monthVal[0]), parseInt(monthVal[1]) - 1);
     } else {
-      rawProd = App.data.production.filter(p => p.date === this.selectedDate);
+      const dateVal = document.getElementById('rapportJour').value;
+      rawProd = App.data.production.filter(p => p.date === dateVal);
     }
 
     const wb = XLSX.utils.book_new();

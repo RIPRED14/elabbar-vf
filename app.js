@@ -2695,6 +2695,53 @@ const App = {
     return this.getQuarterData('production', year, quarter);
   },
 
+  getSemesterData(collection, year, semester, dateField = 'date') {
+    const s = parseInt(semester);
+    const y = parseInt(year);
+    return (this.data[collection] || []).filter(item => {
+      const dStr = item[dateField];
+      if (!dStr) return false;
+      const parts = dStr.split('-');
+      if (parts.length < 2) return false;
+      const itemY = parseInt(parts[0]);
+      const itemM = parseInt(parts[1]) - 1; // 0-11
+      
+      if (itemY !== y) return false;
+      if (s === 1) return itemM >= 0 && itemM <= 5;
+      if (s === 2) return itemM >= 6 && itemM <= 11;
+      return false;
+    });
+  },
+
+  getSemesterProduction(year, semester) {
+    return this.getSemesterData('production', year, semester);
+  },
+
+  formatSemester(year, semester) {
+    return `Semestre ${semester} ${year}`;
+  },
+
+  getAnnualData(collection, year, dateField = 'date') {
+    const y = parseInt(year);
+    return (this.data[collection] || []).filter(item => {
+      const dStr = item[dateField];
+      if (!dStr) return false;
+      const parts = dStr.split('-');
+      if (parts.length < 1) return false;
+      const itemY = parseInt(parts[0]);
+      
+      return itemY === y;
+    });
+  },
+
+  getAnnualProduction(year) {
+    return this.getAnnualData('production', year);
+  },
+
+  formatAnnual(year) {
+    return `Année ${year}`;
+  },
+
   formatQuarter(year, quarter) {
     return `Trimestre ${quarter} ${year}`;
   },

@@ -82,10 +82,13 @@ const Saisie = {
       });
     }
 
-    // Add required systemic services if they don't exist
+    // Add required systemic services and default intrants if they don't exist
     const systemics = [
       { ref: '00001', article: 'ELECTRICITE', famille: 'EAU-ELEC', prix: 0 },
-      { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 }
+      { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 },
+      { ref: 'INT-01', article: 'AGRAFISH', famille: 'INTRANT', prix: 45 },
+      { ref: 'INT-02', article: 'HYDROMAR', famille: 'INTRANT', prix: 35 },
+      { ref: 'INT-03', article: 'SEL', famille: 'INTRANT', prix: 2 }
     ];
 
     systemics.forEach(sys => {
@@ -583,8 +586,20 @@ const Saisie = {
       pfRows.forEach((row, i) => {
         const qiInput = row.querySelector('[data-ph="qteInit"]');
         if (qiInput) {
-          if (i === 0 && poidsPI > 0) qiInput.value = poidsPI;
-          else if (i > 0) qiInput.value = prevQF;
+          if (i === 0) {
+            if (document.activeElement === qiInput) {
+               const val = parseFloat(qiInput.value) || 0;
+               const fPoidsPIEl = document.getElementById('fPoidsPI');
+               if (fPoidsPIEl && fPoidsPIEl.value != val) {
+                  fPoidsPIEl.value = val;
+               }
+               poidsPI = val;
+            } else {
+               if (poidsPI > 0) qiInput.value = poidsPI;
+            }
+          } else if (i > 0) {
+            qiInput.value = prevQF;
+          }
         }
         
         const qi = parseFloat(qiInput?.value)||0;
@@ -744,22 +759,22 @@ const Saisie = {
         infoEnergieEl.style.display = 'block';
         infoEnergieEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
-            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Énergie Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée d'énergie ou de tonnage pour la période <strong>${energieAlloc.targetMonths.join(', ')}</strong>.</div>
+            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Eau & Élec Activé</div>
+            <div style="color:var(--text-secondary);">Aucune donnée d'énergie (Eau/Élec) ou de tonnage pour la période <strong>${energieAlloc.targetMonths.join(', ')}</strong>.</div>
           </div>
         `;
       } else {
         infoEnergieEl.style.display = 'block';
         infoEnergieEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
-            <div style="font-weight:700; color:#eab308; display:flex; align-items:center; gap:4px;">⚡ Ventilation Énergie (${labelPeriode})</div>
+            <div style="font-weight:700; color:#eab308; display:flex; align-items:center; gap:4px;">⚡ Ventilation Eau et Électricité (${labelPeriode})</div>
             <div style="color:var(--text-secondary); line-height:1.4;">
-              Facture Globale Énergie : <strong>${App.formatNumber(energieAlloc.totalEnergyCost, 2)} DH</strong><br>
+              Factures Eau & Élec de la période : <strong>${App.formatNumber(energieAlloc.totalEnergyCost, 2)} DH</strong><br>
               Tonnage Total Période : <strong>${App.formatNumber(energieAlloc.totalTonnage, 1)} kg</strong><br>
-              Ratio Alloué : <strong>${App.formatNumber(energieAlloc.ratio, 4)} DH/kg</strong>
+              Ratio Alloué (DH/kg) : <strong>${App.formatNumber(energieAlloc.ratio, 4)} DH/kg</strong>
             </div>
             <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(234,179,8,0.1); color:var(--text-primary); font-weight:600;">
-              Coût Énergie Alloué : ${App.formatNumber(energieAlloc.allocatedCost, 2)} DH
+              Coût Eau & Élec Alloué pour cette saisie : ${App.formatNumber(energieAlloc.allocatedCost, 2)} DH
             </div>
           </div>
         `;

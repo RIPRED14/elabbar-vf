@@ -209,8 +209,8 @@ const Personnel = {
     if (App.data && App.data.personnel) {
       const initialLength = App.data.personnel.length;
       App.data.personnel = App.data.personnel.filter(p => {
-        const n = (p.nom || '').toUpperCase();
-        return n !== 'NOM ET PRENOM' && n !== 'NOMS ET PRENOMS' && n !== 'TOTAL' && n !== 'POINTAGE';
+        const n = (p.nom || '').toUpperCase().trim();
+        return !n.includes('NOM ET PRENOM') && !n.includes('NOM & PRENOM') && n !== 'TOTAL' && !n.includes('POINTAGE');
       });
       if (App.data.personnel.length < initialLength) {
         App.saveData(); // Sauvegarder la suppression
@@ -621,6 +621,24 @@ const Personnel = {
         return a.nom.localeCompare(b.nom);
       });
 
+    const currentSum = fiche.presences.reduce((s,p) => s + (p.heures || 0), 0);
+    let warningBox = '';
+    if (fiche.totalAttendu !== undefined && fiche.totalAttendu !== null && Math.abs(currentSum - fiche.totalAttendu) > 0.01) {
+      warningBox = `
+        <div style="padding:12px 16px; background:rgba(239, 68, 68, 0.1); border-left:4px solid var(--status-danger); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:12px;">
+          <strong style="color:var(--status-danger);">⚠️ Écart Détecté :</strong>
+          <span style="font-size:0.9rem;">La somme calculée (<b>${currentSum}h</b>) ne correspond pas au total attendu (<b>${fiche.totalAttendu}h</b>). Veuillez revérifier la saisie.</span>
+        </div>
+      `;
+    } else if (fiche.totalAttendu !== undefined && fiche.totalAttendu !== null && Math.abs(currentSum - fiche.totalAttendu) <= 0.01) {
+      warningBox = `
+        <div style="padding:12px 16px; background:rgba(16, 185, 129, 0.1); border-left:4px solid var(--status-success); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:12px;">
+          <strong style="color:var(--status-success);">✅ Total Correct :</strong>
+          <span style="font-size:0.9rem;">La somme calculée correspond parfaitement au total du fichier (${fiche.totalAttendu}h).</span>
+        </div>
+      `;
+    }
+
     return `
       <div class="card slide-up" style="border: 2px solid var(--accent-blue);">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
@@ -631,9 +649,14 @@ const Personnel = {
               <option value="Reconditionnement" ${fiche.activite === 'Reconditionnement' ? 'selected' : ''}>♻️ Reconditionnement</option>
             </select>
             <input type="text" class="form-input" style="width:250px; font-weight:700;" value="${fiche.titre}" placeholder="Nom de l'équipe / feuille" onchange="Personnel.updateFicheTitre(${fiche.id}, this.value)">
+            <div style="display:flex; align-items:center; gap:8px; margin-left:16px;">
+              <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Total Attendu (Fichier) :</span>
+              <input type="number" step="0.5" class="form-input" style="width:90px; text-align:center; font-weight:bold; background:var(--bg-app);" placeholder="Ex: 150" value="${fiche.totalAttendu || ''}" onchange="Personnel.updateFicheTotalAttendu(${fiche.id}, this.value)">
+            </div>
           </div>
           <button class="btn btn-outline" onclick="Personnel.selectFiche(null)">Fermer l'édition</button>
         </div>
+        ${warningBox}
         <div class="card-body" style="padding:0; overflow-x:auto;">
           <table class="table pointage-detail-table" style="min-width:1000px;">
             <thead>
@@ -741,6 +764,15 @@ const Personnel = {
     const fiche = this.getFiche(id);
     if (fiche) {
       fiche.titre = val;
+      App.saveData('fiches_pointage', fiche);
+      this.render();
+    }
+  },
+
+  updateFicheTotalAttendu(id, val) {
+    const fiche = this.getFiche(id);
+    if (fiche) {
+      fiche.totalAttendu = val ? parseFloat(val) : null;
       App.saveData('fiches_pointage', fiche);
       this.render();
     }
@@ -1531,7 +1563,7 @@ RÈGLES CRUCIALES :
     if (!day.fiches) day.fiches = [];
 
     const newId = day.fiches.length > 0 ? Math.max(...day.fiches.map(f => f.id)) + 1 : 1;
-    const fiche = { id: newId, activite: targetActivite, titre, presences: [] };
+    const fiche = { id: newId, activite: targetActivite, titre, presences: [], totalAttendu: data.totalHeuresFeuille ? parseFloat(data.totalHeuresFeuille) : null };
 
     let matchedCount = 0;
     data.presences.forEach(pScan => {
