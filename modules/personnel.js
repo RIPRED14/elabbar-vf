@@ -125,17 +125,17 @@ const Personnel = {
     ptg.totalHeuresAdmin = hAdmin;
     ptg.totalMontantOcc = hOcc * ptg.tauxHoraireOcc;
     
-    // Helper inline ou appel à une méthode
-    const isActive = (p) => this.isPersonnelActiveInMonth(p, monthStr);
+    // Helper inline pour obtenir le ratio d'activité du mois (0 à 1)
+    const getRatio = (p) => this.getPersonnelActiveRatio(p, monthStr);
 
-    // Salaires fixes — SALAIRE FIXE MENSUEL, PAS de calcul par heures
-    // Les ouvriers fixes travaillent 191h/mois, salaire identique même si > 191h
-    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
-    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
-    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
+    // Salaires fixes — SALAIRE FIXE MENSUEL, calculé au prorata des jours de présence dans le mois
+    // Les ouvriers fixes travaillent 191h/mois, salaire proportionnel au mois
+    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin').reduce((s, p) => s + (p.salaire || 0) * getRatio(p), 0);
+    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre').reduce((s, p) => s + (p.salaire || 0) * getRatio(p), 0);
+    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe').reduce((s, p) => s + (p.salaire || 0) * getRatio(p), 0);
     
-    // Heures contractuelles fixes = 191h/mois par ouvrier fixe
-    ptg.heuresContractuellesFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && isActive(p)).length * 191;
+    // Heures contractuelles fixes = 191h/mois par ouvrier fixe (au prorata aussi)
+    ptg.heuresContractuellesFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe').reduce((s, p) => s + 191 * getRatio(p), 0);
     
     // Cloud Sync: Flat pointage table
     this.syncFlatPointage(monthStr);
@@ -143,17 +143,33 @@ const Personnel = {
     App.saveData();
   },
 
-  isPersonnelActiveInMonth(p, monthStr) {
-    if (p.dateEmbauche && p.dateEmbauche.substring(0, 7) > monthStr) {
-      return false; // Hired after this month
+  getPersonnelActiveRatio(p, monthStr) {
+    if (!monthStr || monthStr.length < 7) return 0;
+    
+    const parts = monthStr.split('-');
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    
+    let startDay = 1;
+    let endDay = daysInMonth;
+
+    if (p.dateEmbauche && p.dateEmbauche.startsWith(monthStr)) {
+      startDay = parseInt(p.dateEmbauche.split('-')[2]);
+    } else if (p.dateEmbauche && p.dateEmbauche.substring(0, 7) > monthStr) {
+      return 0; // Hired after this month
     }
-    if (p.dateDepart) {
-      if (p.dateDepart.substring(0, 7) < monthStr) return false; // Left before this month
-    } else if (!p.actif) {
+
+    if (p.dateDepart && p.dateDepart.startsWith(monthStr)) {
+      endDay = parseInt(p.dateDepart.split('-')[2]);
+    } else if (p.dateDepart && p.dateDepart.substring(0, 7) < monthStr) {
+      return 0; // Left before this month
+    } else if (!p.actif && !p.dateDepart) {
       // Legacy behavior: if no departure date is set but they are inactive, assume inactive always
-      return false;
+      return 0;
     }
-    return true;
+    
+    return Math.max(0, (endDay - startDay + 1) / daysInMonth);
   },
 
   async syncFlatPointage(monthStr) {

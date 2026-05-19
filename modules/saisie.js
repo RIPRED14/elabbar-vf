@@ -9,7 +9,7 @@ const Saisie = {
   selectedMonth: new Date().getMonth(),
   selectedYear: new Date().getFullYear(),
   selectedQuarter: Math.floor(new Date().getMonth() / 3) + 1,
-  phasesList: ['Triage-Lavage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Mélançage','Trempage','Congélation','DECONGELATION'],
+  phasesList: ['Triage-Lavage','Lavage','Triage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Evisceration','Decorticage','Mélançage','Trempage','Congélation','Congelation','DECONGELATION','Décongélation'],
 
   emballagesList: [
     { code: 'Cs', designation: 'N (Caisse)' },
@@ -109,6 +109,8 @@ const Saisie = {
   render() {
     let prod = this.viewType === 'day' 
       ? App.getDayProduction(this.selectedDay)
+      : this.viewType === 'quarter'
+      ? App.getQuarterProduction(this.selectedYear, this.selectedQuarter)
       : App.getMonthProduction(this.selectedYear, this.selectedMonth);
 
     prod = prod.filter(p => (p.activite||'reconditionnement') === this.currentActivite);
@@ -390,15 +392,18 @@ const Saisie = {
             </div>
 
             <div class="form-section">
-              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;"><span>🔹 Phase (Glaçage)</span></div>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>🔹 Phases de Reconditionnement</span>
+                <button class="btn btn-sm btn-outline" onclick="Saisie.addPhaseRecond('fPhasesPF')" ${isSent ? 'disabled' : ''}>+ Phase</button>
+              </div>
               <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th style="width:30px"></th></tr></thead>
               <tbody id="fPhasesPF">${phasesPF.map((ph,i)=>`<tr>
-                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom"><option value="${ph.nom}">${ph.nom}</option></select></td>
-                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calc()"></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calc()"></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calc()"></td>
+                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom" ${isSent ? 'disabled' : ''}>${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
+                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
                 <td class="td-right td-bold" id="fRendPhPF${i}">0%</td>
-                <td></td>
+                <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removePhaseRecond(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
               </tr>`).join('')}</tbody></table>
             </div>
 
@@ -1722,6 +1727,28 @@ const Saisie = {
     this.calcT();
   },
 
+  addPhaseRecond(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    const idx = tbody.children.length;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
+      <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="100" data-ph="seuil" data-idx="${idx}" onchange="Saisie.calc()"></td>
+      <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteInit" data-idx="${idx}" onchange="Saisie.calc()"></td>
+      <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteFinale" data-idx="${idx}" onchange="Saisie.calc()"></td>
+      <td class="td-right td-bold" id="fRendPhPF${idx}">0%</td>
+      <td><button class="btn-icon danger" onclick="Saisie.removePhaseRecond(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>`;
+    tbody.appendChild(tr);
+  },
+
+  removePhaseRecond(btn) {
+    const tr = btn.closest('tr');
+    const tbody = tr.parentElement;
+    if (tbody.children.length <= 1) { App.toast('Il faut au moins une phase', 'error'); return; }
+    tr.remove();
+    this.calc();
+  },
+
   renderIntrantRow(it, i, isSent = false) {
     return `<tr>
       <td><input type="text" class="form-input" style="width:180px;padding:5px;font-weight:600" value="${it.article}" data-int="article" data-idx="${i}" ${isSent ? 'disabled' : ''}></td>
@@ -2887,8 +2914,13 @@ Notes:
           else if (h.includes('MODE') && h.includes('TRAITEMENT')) colMap.modeTraitement = c;
           else if (h.includes('EVISCERATION') || h.includes('ÉVISCÉR')) colMap.poidsEvisceration = c;
           else if (h.includes('TREMPAGE')) colMap.poidsTrempage = c;
+          else if (h.includes('LAVAGE')) colMap.poidsLavage = c;
+          else if (h.includes('TRIAGE')) colMap.poidsTriage = c;
+          else if (h.includes('CUISSON')) colMap.poidsCuisson = c;
+          else if (h.includes('DECORTICAGE') || h.includes('DÉCORTICAGE')) colMap.poidsDecorticage = c;
+          else if (h.includes('CONGELATION') || h.includes('CONGÉLATION')) colMap.poidsCongelation = c;
           else if (h.match(/RENDEMENT/) && !h.includes('FINAL')) colMap.rendement = c;
-          else if (h.includes('GLAZURAGE') || h.includes('GLACAGE') || h.includes('CONGÉLATION') || h.includes('CONGELATION')) colMap.poidsGlazurage = c;
+          else if (h.includes('GLAZURAGE') || h.includes('GLACAGE')) colMap.poidsGlazurage = c;
           else if (h.includes('TAUX') && h.includes('GLAZURAGE')) colMap.tauxGlazurage = c;
           else if (h.includes('EMBALLÉ') || h.includes('EMBALLE')) colMap.poidsEmballe = c;
           else if (h.includes('RENDEMENT') && h.includes('FINAL')) colMap.rendementFinal = c;
@@ -2931,6 +2963,11 @@ Notes:
       const modeTraitement = String(rows[r][colMap.modeTraitement] || '').trim();
       const poidsEvisceration = parseFloat(rows[r][colMap.poidsEvisceration]) || 0;
       const poidsTrempage = parseFloat(rows[r][colMap.poidsTrempage]) || 0;
+      const poidsLavage = parseFloat(rows[r][colMap.poidsLavage]) || 0;
+      const poidsTriage = parseFloat(rows[r][colMap.poidsTriage]) || 0;
+      const poidsCuisson = parseFloat(rows[r][colMap.poidsCuisson]) || 0;
+      const poidsDecorticage = parseFloat(rows[r][colMap.poidsDecorticage]) || 0;
+      const poidsCongelation = parseFloat(rows[r][colMap.poidsCongelation]) || 0;
       const poidsGlazurage = parseFloat(rows[r][colMap.poidsGlazurage]) || 0;
       const poidsEmballe = parseFloat(rows[r][colMap.poidsEmballe]) || 0;
       const rendementFinal = parseFloat(rows[r][colMap.rendementFinal]) || 0;
@@ -2987,6 +3024,11 @@ Notes:
         activite,
         poidsEvisceration,
         poidsTrempage,
+        poidsLavage,
+        poidsTriage,
+        poidsCuisson,
+        poidsDecorticage,
+        poidsCongelation,
         poidsGlazurage,
         poidsEmballe,
         poidsPF,
@@ -3154,23 +3196,52 @@ Notes:
       // Build phases
       const phases = [];
       const phasesPF = [];
-      
+      // Build phases (Matière Première / Traitement)
+      let currentQteMP = e.poidsPI;
+
+      if (e.poidsLavage > 0) {
+        phases.push({ nom: 'Lavage', seuil: 100, qteInit: currentQteMP, qteFinale: e.poidsLavage });
+        currentQteMP = e.poidsLavage;
+      }
+      if (e.poidsTriage > 0) {
+        phases.push({ nom: 'Triage', seuil: 100, qteInit: currentQteMP, qteFinale: e.poidsTriage });
+        currentQteMP = e.poidsTriage;
+      }
       if (e.poidsEvisceration > 0) {
-        phases.push({ nom: 'EVISCERATION ET ETETAGE', seuil: 77, qteInit: e.poidsPI, qteFinale: e.poidsEvisceration });
+        phases.push({ nom: 'Evisceration', seuil: 77, qteInit: currentQteMP, qteFinale: e.poidsEvisceration });
+        currentQteMP = e.poidsEvisceration;
       }
-      if (e.poidsTrempage > 0) {
-        phasesPF.push({ nom: 'Trempage', seuil: 110, qteInit: e.poidsEvisceration || e.poidsPI, qteFinale: e.poidsTrempage });
+      if (e.poidsCuisson > 0) {
+        phases.push({ nom: 'Cuisson', seuil: 80, qteInit: currentQteMP, qteFinale: e.poidsCuisson });
+        currentQteMP = e.poidsCuisson;
       }
-      if (e.poidsGlazurage > 0) {
-        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: e.poidsTrempage || e.poidsEvisceration || e.poidsPI, qteFinale: e.poidsGlazurage });
-      }
-      if (e.poidsEmballe > 0) {
-        phasesPF.push({ nom: 'Emballage', seuil: 100, qteInit: e.poidsGlazurage || e.poidsTrempage || e.poidsPI, qteFinale: e.poidsEmballe });
+      if (e.poidsDecorticage > 0) {
+        phases.push({ nom: 'Decorticage', seuil: 70, qteInit: currentQteMP, qteFinale: e.poidsDecorticage });
+        currentQteMP = e.poidsDecorticage;
       }
 
-      // If no phases were built, add a default Glasurage
+      // Build phasesPF (Produit Fini / Reconditionnement)
+      let currentQtePF = currentQteMP; // starts where MP left off
+
+      if (e.poidsTrempage > 0) {
+        phasesPF.push({ nom: 'Trempage', seuil: 110, qteInit: currentQtePF, qteFinale: e.poidsTrempage });
+        currentQtePF = e.poidsTrempage;
+      }
+      if (e.poidsCongelation > 0) {
+        phasesPF.push({ nom: 'Congelation', seuil: 95, qteInit: currentQtePF, qteFinale: e.poidsCongelation });
+        currentQtePF = e.poidsCongelation;
+      }
+      if (e.poidsGlazurage > 0) {
+        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: currentQtePF, qteFinale: e.poidsGlazurage });
+        currentQtePF = e.poidsGlazurage;
+      }
+      if (e.poidsEmballe > 0) {
+        phasesPF.push({ nom: 'Emballage', seuil: 100, qteInit: currentQtePF, qteFinale: e.poidsEmballe });
+      }
+
+      // If no phasesPF were built, add a default Glasurage if we have a PF weight
       if (phasesPF.length === 0 && e.poidsPF > 0) {
-        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: e.poidsPI, qteFinale: e.poidsPF });
+        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: currentQtePF, qteFinale: e.poidsPF });
       }
 
       // Build MO
