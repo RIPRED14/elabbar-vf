@@ -190,6 +190,10 @@ const Saisie = {
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
               <span class="card-title">📋 Historique des opérations</span>
               <div style="display:flex; gap:12px; align-items:center;">
+                <button class="btn" style="background-color: #ef4444; color: white; border: none; padding:8px 12px; font-size:0.85rem; display:flex; align-items:center; gap:6px; cursor:pointer; border-radius:4px;" onclick="Saisie.confirmBatchDelete()">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  Supprimer
+                </button>
                 <button class="btn btn-success" onclick="Saisie.confirmBatchSend()" style="padding:8px 12px; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
                   Valider la sélection
@@ -1063,6 +1067,33 @@ const Saisie = {
     const isChecked = e.target.checked;
     const cbs = document.querySelectorAll('.batch-select-cb:not([disabled])');
     cbs.forEach(cb => cb.checked = isChecked);
+  },
+
+  async confirmBatchDelete() {
+    const cbs = document.querySelectorAll('.batch-select-cb:checked');
+    if (cbs.length === 0) {
+      App.toast("Veuillez sélectionner au moins une saisie à supprimer.", "error");
+      return;
+    }
+    
+    if (!confirm(`Voulez-vous vraiment supprimer ces ${cbs.length} saisies ? Cette action est irréversible.`)) return;
+    
+    let deleteCount = 0;
+    
+    for (const cb of cbs) {
+      const id = cb.value;
+      const entry = App.data.production.find(p => p.id == id);
+      if (entry) {
+        this.restoreConsumption(this.getReconditionnementConsumption(entry), `Annulation saisie #${id}`);
+      }
+      App.data.production = App.data.production.filter(p => p.id != id);
+      await App.deleteFromCloud('production', id);
+      deleteCount++;
+    }
+    
+    App.saveData();
+    this.render();
+    App.toast(`${deleteCount} saisie(s) supprimée(s) avec succès.`, 'success');
   },
 
   confirmBatchSend() {
