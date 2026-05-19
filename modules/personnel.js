@@ -555,7 +555,27 @@ const Personnel = {
     const fiche = ptg.jours[dateStr].fiches.find(f => f.id === this.currentFicheId);
     if (!fiche) return '';
 
-    const ouvriers = App.data.personnel.filter(p => (p.type === 'ouvrier_fixe' || p.type === 'occasionnel') && p.actif);
+    const categoryIcons = {
+      'ouvrier_fixe': '👷 [Fixe]',
+      'fixe_admin': '💼 [Admin]',
+      'fixe_autre': '🚨 [Support]',
+      'occasionnel': '⏱️ [Occas]'
+    };
+    const categoryOrder = {
+      'ouvrier_fixe': 1,
+      'fixe_admin': 2,
+      'fixe_autre': 3,
+      'occasionnel': 4
+    };
+
+    const ouvriers = App.data.personnel
+      .filter(p => (p.type === 'ouvrier_fixe' || p.type === 'occasionnel' || p.type === 'fixe_admin' || p.type === 'fixe_autre') && p.actif)
+      .sort((a, b) => {
+        const orderA = categoryOrder[a.type] || 99;
+        const orderB = categoryOrder[b.type] || 99;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.nom.localeCompare(b.nom);
+      });
 
     return `
       <div class="card slide-up" style="border: 2px solid var(--accent-blue);">
@@ -591,9 +611,13 @@ const Personnel = {
             <tbody>
               ${ouvriers.map(emp => {
                 const pres = fiche.presences.find(p => p.personnelId === emp.id) || {};
+                const icon = categoryIcons[emp.type] || '';
                 return `
                   <tr>
-                    <td style="font-weight:600;">${emp.nom} ${emp.prenom||''}</td>
+                    <td style="font-weight:600;">
+                      <span style="font-size: 0.85em; opacity: 0.7; margin-right: 6px;">${icon}</span>
+                      ${emp.nom} ${emp.prenom||''}
+                    </td>
                     <td><input type="text" class="ptg-mini-input" value="${pres.matinEntree || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'matinEntree', this.value)"></td>
                     <td><input type="text" class="ptg-mini-input" value="${pres.matinSortie || ''}" onchange="Personnel.updateFicheField(${emp.id}, 'matinSortie', this.value)"></td>
                     <td style="background:rgba(37,99,235,0.05);"><input type="number" step="0.5" class="ptg-mini-input" value="${pres.matinHeures ?? 0}" onchange="Personnel.updateFicheField(${emp.id}, 'matinHeures', this.value)"></td>
@@ -847,11 +871,19 @@ const Personnel = {
       days.push(`${year}-${month}-${String(i).padStart(2, '0')}`);
     }
 
-    // Récupérer les employés concernés par le pointage (ouvrier_fixe et occasionnel)
-    const empList = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' || p.type === 'occasionnel');
-    // Trier : Fixes d'abord, puis Occasionnels, puis par nom
+    // Récupérer les employés concernés par le pointage (ouvrier_fixe, occasionnel, fixe_admin et fixe_autre)
+    const empList = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' || p.type === 'occasionnel' || p.type === 'fixe_admin' || p.type === 'fixe_autre');
+    // Trier : Ouvriers Fixes d'abord, puis Admin, puis Support, puis Occasionnels, puis par nom
+    const typeOrder = {
+      'ouvrier_fixe': 1,
+      'fixe_admin': 2,
+      'fixe_autre': 3,
+      'occasionnel': 4
+    };
     empList.sort((a, b) => {
-      if (a.type !== b.type) return a.type === 'ouvrier_fixe' ? -1 : 1;
+      const oa = typeOrder[a.type] || 99;
+      const ob = typeOrder[b.type] || 99;
+      if (oa !== ob) return oa - ob;
       return a.nom.localeCompare(b.nom);
     });
 
@@ -864,7 +896,7 @@ const Personnel = {
               Taux Occasionnel: 
               <input type="number" step="0.01" class="form-input" style="width:70px; display:inline-block; padding:4px;" value="${ptg.tauxHoraireOcc}" onchange="Personnel.updateTaux(this.value)"> DH/h
             </div>
-            <button class="btn btn-outline btn-sm" onclick="Personnel.showScanPresenceModal()">📸 Scan Feuille</button>
+            <button class="btn btn-outline btn-sm" onclick="Personnel.showScanDailyModal()">📸 Scan Feuille</button>
           </div>
         </div>
         <div class="card-body" style="padding:0; overflow-x:auto;">
@@ -900,10 +932,22 @@ const Personnel = {
                   </td>`;
                 }).join('');
 
-                const badgeClass = emp.type === 'ouvrier_fixe' ? 'badge-success' : 'badge-info';
-                const badgeLabel = emp.type === 'ouvrier_fixe' ? 'Fixe' : 'Occas';
-                const salaire = emp.type === 'ouvrier_fixe' ? (emp.salaire || 0) : (totalHeuresEmp * ptg.tauxHoraireOcc);
-                const contractInfo = emp.type === 'ouvrier_fixe' ? `<div style="font-size:0.65rem; color:var(--text-muted);">/ 191h</div>` : '';
+                let badgeClass = 'badge-info';
+                let badgeLabel = 'Occas';
+                if (emp.type === 'ouvrier_fixe') {
+                  badgeClass = 'badge-success';
+                  badgeLabel = 'Ouv. Fixe';
+                } else if (emp.type === 'fixe_admin') {
+                  badgeClass = 'badge-warning';
+                  badgeLabel = 'Admin';
+                } else if (emp.type === 'fixe_autre') {
+                  badgeClass = 'badge-secondary';
+                  badgeLabel = 'Support';
+                }
+
+                const isHourly = emp.type === 'occasionnel';
+                const salaire = isHourly ? (totalHeuresEmp * ptg.tauxHoraireOcc) : (emp.salaire || 0);
+                const contractInfo = isHourly ? '' : `<div style="font-size:0.65rem; color:var(--text-muted);">/ 191h</div>`;
 
                 return `
                   <tr>
@@ -911,7 +955,7 @@ const Personnel = {
                     <td style="position:sticky; left:200px; background:var(--bg-card); z-index:5; border-right:2px solid var(--border-color);"><span class="badge ${badgeClass}" style="font-size:0.7rem;">${badgeLabel}</span></td>
                     ${rowCells}
                     <td class="td-right td-bold" style="position:sticky; right:0; background:var(--bg-card); z-index:5; border-left:2px solid var(--border-color); color:var(--accent-blue);">${totalHeuresEmp > 0 ? totalHeuresEmp : ''}${contractInfo}</td>
-                    <td class="td-right" style="position:sticky; right:80px; background:var(--bg-card); z-index:5; font-size:0.8rem; font-weight:600; color:${emp.type === 'ouvrier_fixe' ? 'var(--text-primary)' : 'var(--accent-blue)'};">${App.formatNumber(salaire, 0)}</td>
+                    <td class="td-right" style="position:sticky; right:80px; background:var(--bg-card); z-index:5; font-size:0.8rem; font-weight:600; color:${isHourly ? 'var(--accent-blue)' : 'var(--text-primary)'};">${App.formatNumber(salaire, 0)}</td>
                   </tr>
                 `;
               }).join('')}
