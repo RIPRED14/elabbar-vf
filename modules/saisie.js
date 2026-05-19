@@ -571,70 +571,12 @@ const Saisie = {
     const coutPF = v('fHeuresMOF') * v('fSalaireHF');
     const localCost = coutMOO + coutPF;
 
-    // Automation: Calculate Intrants from Nb Caisses PF
-    const caissesPF = v('fCaissesPF');
-    const condCode = document.getElementById('fConditionnement')?.value || '';
-    const condMatch = condCode.match(/^C(\d+)S(\d+)$/);
-    
-    let nbCartons = caissesPF;
-    let nbSachetsTotal = 0;
-    let nbRouleaux = 0;
-    let nbToners = 0;
-
-    if (condMatch && caissesPF > 0) {
-      const cartonKg = parseFloat(condMatch[1]);
-      const sachetG = parseFloat(condMatch[2]);
-      const sachetKg = sachetG / 1000;
-      const sachetsParCarton = cartonKg / sachetKg;
-      
-      nbSachetsTotal = nbCartons * sachetsParCarton;
-      const etiqParCarton = sachetsParCarton + 1;
-      const totalEtiquettes = nbCartons * etiqParCarton;
-      nbRouleaux = totalEtiquettes / 1000;
-      nbToners = nbRouleaux / 4;
-    }
-
-    let totalEmb = 0;
-    document.querySelectorAll('#fIntrants tr:not(:last-child)').forEach((row, i) => {
-      const artInput = row.querySelector('[data-int="article"]');
-      const qteInput = row.querySelector('[data-int="qte"]');
-      const prixInput = row.querySelector('[data-int="prix"]');
-      if (!artInput || !qteInput) return;
-      
-      const art = artInput.value.toUpperCase();
-      if (condMatch && caissesPF > 0) {
-        const currentQte = parseFloat(qteInput.value) || 0;
-        if (art.includes('CARTON')) {
-          if (!currentQte) qteInput.value = nbCartons;
-        } else if (art.includes('SACHET')) {
-          if (!currentQte) qteInput.value = nbSachetsTotal;
-        } else if (art.includes('50') && art.includes('75') || art.includes('ETIQUETTE') && !art.includes('NOIR')) {
-          if (!currentQte) {
-            qteInput.value = nbRouleaux.toFixed(3);
-            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 45;
-          }
-        } else if (art.includes('NOIR') || art.includes('TONER')) {
-          if (!currentQte) {
-            qteInput.value = nbToners.toFixed(3);
-            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 78;
-          }
-        }
-      }
-
-      const q = parseFloat(qteInput.value) || 0;
-      const p = parseFloat(prixInput?.value) || 0;
-      const val = q * p;
-      const valEl = document.getElementById('intValRec' + i);
-      if (valEl) valEl.textContent = App.formatNumber(val);
-      totalEmb += val;
-    });
-
     let poidsPF = v('fPoidsPF');
+    const poidsPI = v('fPoidsPI');
     
     // Automation: Cascade phases and PF
     const tbodyPF = document.getElementById('fPhasesPF');
     if (tbodyPF) {
-      const poidsPI = v('fPoidsPI');
       let prevQF = poidsPI;
       const pfRows = tbodyPF.querySelectorAll('tr');
       pfRows.forEach((row, i) => {
@@ -667,6 +609,83 @@ const Saisie = {
         }
       }
     }
+
+    // Find initial weight for TREMPAGE
+    let refWeight = poidsPI;
+    if (tbodyPF) {
+      tbodyPF.querySelectorAll('tr').forEach(row => {
+        const nomInput = row.querySelector('[data-ph="nom"]');
+        if (nomInput && nomInput.value.toUpperCase().includes('TREMPAGE')) {
+          const qi = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value);
+          if (qi > 0) refWeight = qi;
+        }
+      });
+    }
+
+    // Automation: Calculate Intrants from Nb Caisses PF
+    const caissesPF = v('fCaissesPF');
+    const condCode = document.getElementById('fConditionnement')?.value || '';
+    const condMatch = condCode.match(/^C(\d+)S(\d+)$/);
+    
+    let nbCartons = caissesPF;
+    let nbSachetsTotal = 0;
+    let nbRouleaux = 0;
+    let nbToners = 0;
+
+    if (condMatch && caissesPF > 0) {
+      const cartonKg = parseFloat(condMatch[1]);
+      const sachetG = parseFloat(condMatch[2]);
+      const sachetKg = sachetG / 1000;
+      const sachetsParCarton = cartonKg / sachetKg;
+      
+      nbSachetsTotal = nbCartons * sachetsParCarton;
+      const etiqParCarton = sachetsParCarton + 1;
+      const totalEtiquettes = nbCartons * etiqParCarton;
+      nbRouleaux = totalEtiquettes / 1000;
+      nbToners = nbRouleaux / 4;
+    }
+
+    let totalEmb = 0;
+    document.querySelectorAll('#fIntrants tr:not(:last-child)').forEach((row, i) => {
+      const artInput = row.querySelector('[data-int="article"]');
+      const qteInput = row.querySelector('[data-int="qte"]');
+      const prixInput = row.querySelector('[data-int="prix"]');
+      if (!artInput || !qteInput) return;
+      
+      const art = artInput.value.toUpperCase();
+      
+      if (refWeight > 0 && art.includes('AGRAFISH')) {
+        qteInput.value = (refWeight / 100 * 1).toFixed(3);
+      } else if (refWeight > 0 && art.includes('HYDROMAR')) {
+        qteInput.value = (refWeight / 100 * 1).toFixed(3);
+      } else if (refWeight > 0 && (art === 'SEL' || art.includes('SEL ') || art.startsWith('SEL'))) {
+        qteInput.value = (refWeight / 100 * 0.5).toFixed(3);
+      } else if (condMatch && caissesPF > 0) {
+        const currentQte = parseFloat(qteInput.value) || 0;
+        if (art.includes('CARTON')) {
+          if (!currentQte) qteInput.value = nbCartons;
+        } else if (art.includes('SACHET')) {
+          if (!currentQte) qteInput.value = nbSachetsTotal;
+        } else if (art.includes('50') && art.includes('75') || art.includes('ETIQUETTE') && !art.includes('NOIR')) {
+          if (!currentQte) {
+            qteInput.value = nbRouleaux.toFixed(3);
+            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 45;
+          }
+        } else if (art.includes('NOIR') || art.includes('TONER')) {
+          if (!currentQte) {
+            qteInput.value = nbToners.toFixed(3);
+            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 78;
+          }
+        }
+      }
+
+      const q = parseFloat(qteInput.value) || 0;
+      const p = parseFloat(prixInput?.value) || 0;
+      const val = q * p;
+      const valEl = document.getElementById('intValRec' + i);
+      if (valEl) valEl.textContent = App.formatNumber(val);
+      totalEmb += val;
+    });
 
     // Dynamic Labor Cost Allocation
     const dateStr = document.getElementById('fDate')?.value || '';
@@ -1594,6 +1613,16 @@ const Saisie = {
       }
     }
 
+    // Find initial weight for TREMPAGE
+    let refWeight = poidsMP;
+    document.querySelectorAll('#tPhasesMP tr, #tPhasesPF tr').forEach(row => {
+      const nomInput = row.querySelector('[data-ph="nom"]');
+      if (nomInput && nomInput.value.toUpperCase().includes('TREMPAGE')) {
+        const qi = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value);
+        if (qi > 0) refWeight = qi;
+      }
+    });
+
     let totalInt = 0;
     document.querySelectorAll('#tIntrants tr').forEach((row,i) => {
       const artInput = row.querySelector('[data-int="article"]');
@@ -1604,7 +1633,13 @@ const Saisie = {
       const art = artInput.value.toUpperCase();
       
       // Auto-fill quantities based on article type
-      if (condMatch && currentPoidsPF > 0) {
+      if (refWeight > 0 && art.includes('AGRAFISH')) {
+        qteInput.value = (refWeight / 100 * 1).toFixed(3);
+      } else if (refWeight > 0 && art.includes('HYDROMAR')) {
+        qteInput.value = (refWeight / 100 * 1).toFixed(3);
+      } else if (refWeight > 0 && (art === 'SEL' || art.includes('SEL ') || art.startsWith('SEL'))) {
+        qteInput.value = (refWeight / 100 * 0.5).toFixed(3);
+      } else if (condMatch && currentPoidsPF > 0) {
         if (art.includes('CARTON')) {
           qteInput.value = nbCartons;
         } else if (art.includes('SACHET')) {
