@@ -911,9 +911,12 @@ const Personnel = {
                       ` : ''}
                       ${isAdmin ? `<td class="td-right" style="font-family:var(--font-mono);">${h > 0 ? h + 'h' : '-'}</td>` : ''}
                       <td class="td-right td-bold">${p.salaire ? App.formatNumber(p.salaire, 0) : '-'}</td>
-                      <td class="td-center">
+                      <td class="td-center" style="display:flex; justify-content:center; gap:4px;">
                         <button class="btn-icon" onclick="Personnel.editModal(${p.id})" title="Modifier">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        </button>
+                        <button class="btn-icon danger" onclick="Personnel.deletePersonnel(${p.id})" title="Supprimer">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                         </button>
                       </td>
                     </tr>
@@ -1166,6 +1169,26 @@ const Personnel = {
   editModal(id) {
     const entry = App.data.personnel.find(p => p.id === id);
     if (entry) this.showAddModal(entry);
+  },
+
+  async deletePersonnel(id) {
+    if (!confirm("Voulez-vous vraiment supprimer cet employé ? Cette action est irréversible.")) return;
+    
+    // Suppression dans le cloud si configuré
+    if (typeof App.deleteFromCloud === 'function') {
+      try {
+        await App.deleteFromCloud('personnel', id);
+      } catch (e) {
+        console.warn("Could not delete from cloud:", e);
+      }
+    }
+    
+    // Suppression locale
+    App.data.personnel = App.data.personnel.filter(p => p.id !== id);
+    App.saveData();
+    this.recalcPointageMensuel(this.selectedPeriod);
+    this.render();
+    App.toast("Employé supprimé avec succès.", "info");
   },
 
   savePersonnel(editId) {

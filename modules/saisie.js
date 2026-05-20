@@ -282,11 +282,11 @@ const Saisie = {
                     <button class="btn-icon" onclick="Saisie.printBon('${p.id}')" title="Bon de production">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
                     </button>
-                    ${hasPF && !isSent ? `
-                      <button class="btn-icon" onclick="Saisie.showSendToStorageModal('${p.id}')" title="Transférer au Stockage" style="color:var(--status-success); background:rgba(34,197,94,0.1);">
+                    ${!isSent ? `
+                      <button class="btn-icon" onclick="Saisie.showSendToStorageModal('${p.id}')" title="Affecter au Stockage" style="color:var(--status-success); background:rgba(34,197,94,0.1);">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3m18 0v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8m18 0-9-5-9 5m9 11V8"/></svg>
                       </button>
-                    ` : ''}
+                    ` : '<span style="font-size:0.7rem;color:var(--text-muted);">✅</span>'}
                     <button class="btn-icon danger" onclick="Saisie.deleteEntry('${p.id}')" title="Supprimer" ${isSent ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
@@ -416,9 +416,8 @@ const Saisie = {
             </div>
 
             <div class="form-section">
-              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>🔹 Main-d'œuvre</span>
-                <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO()" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
+              <div class="form-section-title">
+                <span>🔹 Main-d'œuvre (Calcul Automatisé)</span>
               </div>
 
               <div style="margin-bottom:15px; display:flex; gap:12px; align-items:center;">
@@ -430,28 +429,17 @@ const Saisie = {
                   <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>🏆 Annuelle (Année)</option>
                 </select>
               </div>
-              
-              <div style="margin-bottom:15px;">
-                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
-                <div class="form-grid">
-                  <div class="form-group"><label class="form-label">Heures M.O. Fixe</label><input type="number" step="0.5" class="form-input" id="fHeuresMOF" value="${entry?entry.heuresMOF||totalFixeH*8:totalFixeH*8}" onchange="Saisie.calc()"></div>
-                  <div class="form-group"><label class="form-label">Salaire H/F (DH)</label><input type="number" step="0.01" class="form-input" id="fSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calc()"></div>
-                  <div class="form-group"><label class="form-label">Coût Personnel Fixe</label><div class="form-computed" id="fCoutPF">0.00 DH</div></div>
+
+              <div class="form-grid" style="margin-bottom: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                  <label class="form-label" style="font-weight:600;">M.O. Fixe Réelle (DH)</label>
+                  <input type="number" step="0.01" class="form-input" id="fCoutMOF" value="${entry?.coutMOF || 0}" onchange="Saisie.calc()" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-weight:600;">M.O. Occasionnelle Réelle (DH)</label>
+                  <input type="number" step="0.01" class="form-input" id="fCoutMOO" value="${entry?.coutMOO || 0}" onchange="Saisie.calc()" placeholder="0.00">
                 </div>
               </div>
-
-              <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Équipes Occasionnelles</div>
-              <table><thead><tr><th>Profil</th><th>Nb personnes</th><th>Heures/pers.</th><th>Taux Hor. (DH)</th><th>Coût Total</th><th style="width:30px"></th></tr></thead>
-              <tbody id="fEquipesMO">${(entry?.equipesMO || [{profil: 'Ouvrière', nb: 1, heures: 8, taux: p.salaireHoraireOcc}]).map((eq,i)=>`<tr>
-                <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="${eq.profil}" data-mo="profil"></td>
-                <td><input type="number" class="form-input" style="width:70px;padding:5px" value="${eq.nb}" data-mo="nb" onchange="Saisie.calc()"></td>
-                <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="${eq.heures}" data-mo="heures" onchange="Saisie.calc()"></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || p.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calc()"></td>
-                <td class="td-right td-bold" id="fCoutEq${i}">0.00</td>
-                <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
-              </tr>`).join('')}
-              <tr style="background:rgba(99,102,241,0.05)"><td colspan="4" class="td-bold">Total M.O. Occasionnelle</td><td class="td-right td-bold" id="fCoutMOO">0.00 DH</td><td></td></tr>
-              </tbody></table>
 
               <div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
@@ -521,59 +509,15 @@ const Saisie = {
   hideForm() { document.getElementById('saisieFormContainer').innerHTML = ''; this.editingId = null; },
 
   onDateChange() {
-    const d = document.getElementById('fDate');
-    if(!d) return;
-    
-    // Mapper l'activité de saisie vers l'activité de pointage
-    const activiteMap = {
-      'traitement': 'Traitement',
-      'reconditionnement': 'Reconditionnement',
-      'divers': 'Traitement'
-    };
-    const targetAct = activiteMap[this.currentActivite] || 'Traitement';
-    const hp = App.getHeuresJour(d.value, targetAct);
-    
-    const fMOF = document.getElementById('fHeuresMOF');
-    if(fMOF) fMOF.value = hp.hFixe;
-    
-    const fEquipesMO = document.getElementById('fEquipesMO');
-    if(fEquipesMO) {
-       const taux = App.data.parametres.salaireHoraireOcc || 16.8;
-       const trs = fEquipesMO.querySelectorAll('tr:not(:last-child)');
-       if (trs.length > 0) {
-           const row = trs[0];
-           const nbInput = row.querySelector('[data-mo="nb"]');
-           const hInput = row.querySelector('[data-mo="heures"]');
-           const tInput = row.querySelector('[data-mo="taux"]');
-           if (nbInput) nbInput.value = hp.occCount || 1;
-           if (hInput) hInput.value = hp.occCount ? (hp.hOcc / hp.occCount).toFixed(1) : 0;
-           if (tInput) tInput.value = taux;
-           
-           for (let i = 1; i < trs.length; i++) {
-               trs[i].remove();
-           }
-       }
-    }
-    
     this.calc();
+  },
+
+  onDateChangeT() {
+    this.calcT();
   },
 
   calc() {
     const v = (id) => parseFloat(document.getElementById(id)?.value) || 0;
-    
-    let coutMOO = 0;
-    document.querySelectorAll('#fEquipesMO tr:not(:last-child)').forEach((row, i) => {
-      const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
-      const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
-      const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0;
-      const val = nb * heures * taux;
-      const valEl = document.getElementById('fCoutEq' + i);
-      if (valEl) valEl.textContent = App.formatNumber(val);
-      coutMOO += val;
-    });
-
-    const coutPF = v('fHeuresMOF') * v('fSalaireHF');
-    const localCost = coutMOO + coutPF;
 
     let poidsPF = v('fPoidsPF');
     const poidsPI = v('fPoidsPI');
@@ -706,10 +650,13 @@ const Saisie = {
     // Dynamic Labor Cost Allocation
     const dateStr = document.getElementById('fDate')?.value || '';
     const allocationPeriod = document.getElementById('fAllocationPeriod')?.value || 'quarter';
-    const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
+    const coutMOF = parseFloat(document.getElementById('fCoutMOF')?.value) || 0;
+    const coutMOO = parseFloat(document.getElementById('fCoutMOO')?.value) || 0;
+    const currentEntryRawLabor = coutMOF + coutMOO;
+    const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod, currentEntryRawLabor);
     const energieAlloc = App.getPeriodEnergyCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
     
-    let coutMOJ = localCost;
+    let coutMOJ = 0;
     const infoEl = document.getElementById('fAllocationMOInfo');
     
     let labelPeriode = 'Mensuelle';
@@ -719,11 +666,16 @@ const Saisie = {
 
     if (infoEl) {
       if (pesos.fallback) {
+        const defaultRate = 1.25; // 1.25 DH/kg fallback rate
+        coutMOJ = poidsPF * defaultRate;
         infoEl.style.display = 'block';
         infoEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
             <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
+            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul estimé basé sur un taux standard de <strong>${defaultRate} DH/kg</strong>.</div>
+            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(220,38,38,0.1); color:var(--text-primary); font-weight:600;">
+              Coût M.O. Estimé : ${App.formatNumber(coutMOJ, 2)} DH
+            </div>
           </div>
         `;
       } else {
@@ -789,8 +741,6 @@ const Saisie = {
     const poidsNetEngage = Math.max(0, poidsPI - poidsReliquat);
     const rendement = poidsNetEngage > 0 ? (poidsPF / poidsNetEngage * 100) : 0;
 
-    const elMOO = document.getElementById('fCoutMOO'); if(elMOO) elMOO.textContent = App.formatNumber(coutMOO) + ' DH';
-    const elPF = document.getElementById('fCoutPF'); if(elPF) elPF.textContent = App.formatNumber(coutPF) + ' DH';
     const elMOJ = document.getElementById('fCoutMOJ'); if(elMOJ) elMOJ.textContent = App.formatNumber(coutMOJ) + ' DH';
     const elSumMO = document.getElementById('sumMO'); if(elSumMO) elSumMO.textContent = App.formatNumber(coutMOJ, 0) + ' DH';
     
@@ -851,39 +801,6 @@ const Saisie = {
     }
   },
 
-  addEquipeMO(tbodyId = 'fEquipesMO') {
-    const tbody = document.getElementById(tbodyId);
-    const idx = tbody.querySelectorAll('tr:not(:last-child)').length;
-    const lastRow = tbody.querySelector('tr:last-child');
-    const tr = document.createElement('tr');
-    const defaultTaux = App.data.parametres.salaireHoraireOcc || 17.92;
-    const callback = tbodyId === 'tEquipesMO' ? 'Saisie.calcT()' : 'Saisie.calc()';
-    const prefix = tbodyId === 'tEquipesMO' ? 't' : 'f';
-
-    tr.innerHTML = `
-      <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="Ouvrière" data-mo="profil"></td>
-      <td><input type="number" class="form-input" style="width:70px;padding:5px" value="1" data-mo="nb" onchange="${callback}"></td>
-      <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="8" data-mo="heures" onchange="${callback}"></td>
-      <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${defaultTaux}" data-mo="taux" onchange="${callback}"></td>
-      <td class="td-right td-bold" id="${prefix}CoutEq${idx}">0.00</td>
-      <td><button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
-    `;
-    tbody.insertBefore(tr, lastRow);
-    if (tbodyId === 'tEquipesMO') this.calcT(); else this.calc();
-  },
-
-  removeEquipeMO(btn) {
-    const tr = btn.closest('tr');
-    const tbody = tr.parentElement;
-    const rows = tbody.querySelectorAll('tr:not(:last-child)');
-    if (rows.length <= 1) { App.toast("Il faut au moins une ligne d'équipe", 'error'); return; }
-    tr.remove();
-    tbody.querySelectorAll('tr:not(:last-child)').forEach((row, i) => {
-      const valEl = row.querySelector('td:nth-child(5)');
-      if (valEl) valEl.id = 'fCoutEq' + i;
-    });
-    this.calc();
-  },
 
   renderIntrantRowRec(it, i, isSent = false) {
     return `<tr>
@@ -951,20 +868,6 @@ const Saisie = {
     const espece = document.getElementById('fEspece').value;
     if (!date || !espece) { App.toast('Veuillez remplir la date et l\'espèce', 'error'); return; }
 
-    const coutPF = v('fHeuresMOF') * v('fSalaireHF');
-    
-    let coutMOO = 0;
-    const equipesMO = [];
-    document.querySelectorAll('#fEquipesMO tr:not(:last-child)').forEach(row => {
-      const profil = row.querySelector('[data-mo="profil"]')?.value || 'Ouvrière';
-      const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
-      const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
-      const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0;
-      const coutEq = nb * heures * taux;
-      equipesMO.push({ profil, nb, heures, taux, coutEq });
-      coutMOO += coutEq;
-    });
-
     const phasesPF = [];
     document.querySelectorAll('#fPhasesPF tr').forEach(row => {
       phasesPF.push({
@@ -1004,10 +907,10 @@ const Saisie = {
       reliquatNom: document.getElementById('fReliquatNom')?.value || '',
       reliquatPoids: v('fReliquatPoids'),
       allocationPeriod: document.getElementById('fAllocationPeriod')?.value || 'quarter',
-      equipesMO,
-      coutMOO,
-      heuresMOF: v('fHeuresMOF'), salaireHF: v('fSalaireHF'), coutPersonnelF: coutPF,
-      coutMOJ: parseFloat(document.getElementById('fCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||(coutMOO + coutPF),
+      coutMOO: v('fCoutMOO'),
+      coutMOF: v('fCoutMOF'),
+      heuresMOF: 0, salaireHF: 0, coutPersonnelF: 0,
+      coutMOJ: parseFloat(document.getElementById('fCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0,
       phasesPF,
       intrants,
       totalIntrants,
@@ -1183,8 +1086,9 @@ const Saisie = {
 
     cbs.forEach(cb => {
       const id = cb.value;
-      const p = App.data.production.find(x => x.id === id);
-      if (p && !p.sentToStorage && (p.poidsBrutPF > 0)) {
+      // eslint-disable-next-line eqeqeq
+      const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
+      if (p && !p.sentToStorage) {
         const chambre = 'chambre1'; // Default to chambre 1 for batch
         const activiteLabel = (p.activite === 'traitement') ? 'Traitement' : (p.activite === 'reconditionnement' ? 'Reconditionnement' : p.activite);
         
@@ -1391,44 +1295,30 @@ const Saisie = {
             </div>
 
             <div class="form-section">
-              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>🔹 Main-d'œuvre</span>
-                <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO('tEquipesMO')" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
-              </div>
-              <div style="margin-bottom: 12px; padding: 10px; background: rgba(99,102,241,0.05); border-radius: 8px; border: 1px solid rgba(99,102,241,0.2);">
-                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Période d'Allocation des Coûts MO</label>
-                <select id="tAllocationPeriod" class="form-select" style="max-width: 300px; border-color: var(--accent-blue);" onchange="Saisie.calcT()">
-                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>Journalière (Présence du jour)</option>
-                  <option value="month" ${(entry?.allocationPeriod === 'month' || !entry?.allocationPeriod) ? 'selected' : ''}>Mensuelle (Mois en cours)</option>
-                  <option value="quarter" ${entry?.allocationPeriod === 'quarter' ? 'selected' : ''}>Trimestrielle (3 mois fixes)</option>
-                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>Annuelle (12 mois fixes)</option>
-                </select>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
-                  Sert à diviser la masse salariale totale de la période choisie sur le tonnage total de cette même période.
-                </div>
-              </div>
-              
-              <div style="margin-bottom:15px;">
-                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
-                <div class="form-grid">
-                  <div class="form-group"><label class="form-label">Heures M.O. Fixe</label><input type="number" step="0.5" class="form-input" id="tHeuresMOF" value="${entry?entry.heuresMOF||8:8}" onchange="Saisie.calcT()"></div>
-                  <div class="form-group"><label class="form-label">Salaire H/F (Base 191h)</label><input type="number" step="0.01" class="form-input" id="tSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calcT()"></div>
-                  <div class="form-group"><label class="form-label">Coût Personnel Fixe</label><div class="form-computed" id="tCoutPF">0.00 DH</div></div>
-                </div>
+              <div class="form-section-title">
+                <span>🔹 Main-d'œuvre (Calcul Automatisé)</span>
               </div>
 
-              <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Équipes Occasionnelles</div>
-              <table><thead><tr><th>Profil</th><th>Nb personnes</th><th>Heures/pers.</th><th>Taux Hor. (DH)</th><th>Coût Total</th><th style="width:30px"></th></tr></thead>
-              <tbody id="tEquipesMO">${(entry?.equipesMO || [{profil: 'Ouvrière', nb: 1, heures: 8, taux: App.data.parametres.salaireHoraireOcc}]).map((eq,i)=>`<tr>
-                <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="${eq.profil}" data-mo="profil"></td>
-                <td><input type="number" class="form-input" style="width:70px;padding:5px" value="${eq.nb}" data-mo="nb" onchange="Saisie.calcT()"></td>
-                <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="${eq.heures}" data-mo="heures" onchange="Saisie.calcT()"></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || App.data.parametres.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calcT()"></td>
-                <td class="td-right td-bold" id="tCoutEq${i}">0.00</td>
-                <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
-              </tr>`).join('')}
-              <tr style="background:rgba(99,102,241,0.05)"><td colspan="4" class="td-bold">Total M.O. Occasionnelle</td><td class="td-right td-bold" id="tCoutMOO">0.00 DH</td><td></td></tr>
-              </tbody></table>
+              <div style="margin-bottom:15px; display:flex; gap:12px; align-items:center;">
+                <label class="form-label" style="margin:0; font-weight:600;">Période d'allocation :</label>
+                <select class="form-select" id="tAllocationPeriod" onchange="Saisie.calcT()" style="width:200px; padding:6px; font-size:0.85rem;">
+                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>📅 Journalière (Jour)</option>
+                  <option value="month" ${entry?.allocationPeriod === 'month' ? 'selected' : ''}>📊 Mensuelle (Mois)</option>
+                  <option value="quarter" ${!entry || entry.allocationPeriod === 'quarter' || !entry.allocationPeriod ? 'selected' : ''}>📈 Trimestrielle (Trimestre)</option>
+                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>🏆 Annuelle (Année)</option>
+                </select>
+              </div>
+
+              <div class="form-grid" style="margin-bottom: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                  <label class="form-label" style="font-weight:600;">M.O. Fixe Réelle (DH)</label>
+                  <input type="number" step="0.01" class="form-input" id="tCoutMOF" value="${entry?.coutMOF || 0}" onchange="Saisie.calcT()" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-weight:600;">M.O. Occasionnelle Réelle (DH)</label>
+                  <input type="number" step="0.01" class="form-input" id="tCoutMOO" value="${entry?.coutMOO || 0}" onchange="Saisie.calcT()" placeholder="0.00">
+                </div>
+              </div>
 
               <div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
@@ -1744,32 +1634,27 @@ const Saisie = {
     // ---------------------------------
 
     // MAIN D'OEUVRE
-    let coutMOO = 0;
-    document.querySelectorAll('#tEquipesMO tr:not(:last-child)').forEach((row, i) => {
-      const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
-      const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
-      const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0;
-      const val = nb * heures * taux;
-      const valEl = document.getElementById('tCoutEq' + i);
-      if (valEl) valEl.textContent = App.formatNumber(val);
-      coutMOO += val;
-    });
-    const coutPF = v('tHeuresMOF') * v('tSalaireHF');
-    const localCost = coutMOO + coutPF;
-
     // Dynamic Labor Cost Allocation (Traitement)
     const allocationPeriod = document.getElementById('tAllocationPeriod')?.value || 'month';
-    const pesos = App.getPeriodLaborCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod);
+    const coutMOF = parseFloat(document.getElementById('tCoutMOF')?.value) || 0;
+    const coutMOO = parseFloat(document.getElementById('tCoutMOO')?.value) || 0;
+    const currentEntryRawLabor = coutMOF + coutMOO;
+    const pesos = App.getPeriodLaborCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod, currentEntryRawLabor);
     
-    let coutMOJ = localCost;
+    let coutMOJ = 0;
     const infoEl = document.getElementById('tAllocationMOInfo');
     if (infoEl) {
       if (pesos.fallback) {
+        const defaultRate = 1.25; // 1.25 DH/kg fallback rate
+        coutMOJ = currentPoidsPF * defaultRate;
         infoEl.style.display = 'block';
         infoEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
             <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
+            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul estimé basé sur un taux standard de <strong>${defaultRate} DH/kg</strong>.</div>
+            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(220,38,38,0.1); color:var(--text-primary); font-weight:600;">
+              Coût M.O. Estimé : ${App.formatNumber(coutMOJ, 2)} DH
+            </div>
           </div>
         `;
       } else {
@@ -1837,7 +1722,6 @@ const Saisie = {
         `;
         // Add to facture costs
         if (coutFactureParKg === App.data.parametres.coutStructureEstime) {
-           // If it was estimated, overwrite with this specific ratio if we prefer, but for now just add.
            coutFactureParKg += energieAlloc.ratio;
         } else {
            coutFactureParKg += energieAlloc.ratio;
@@ -1845,9 +1729,8 @@ const Saisie = {
       }
     }
 
-    document.getElementById('tCoutPF').textContent = App.formatNumber(coutPF) + ' DH';
-    document.getElementById('tCoutMOO').textContent = App.formatNumber(coutMOO) + ' DH';
-    document.getElementById('tCoutMOJ').textContent = App.formatNumber(coutMOJ) + ' DH';
+    const tMOJEl = document.getElementById('tCoutMOJ');
+    if (tMOJEl) tMOJEl.textContent = App.formatNumber(coutMOJ, 2) + ' DH';
 
     const baseCout = currentPoidsPF>0 ? (valeurMP+totalInt+coutMOJ)/currentPoidsPF : 0;
     const prixRevient = baseCout + coutFactureParKg;
@@ -2139,16 +2022,11 @@ const Saisie = {
       prixRevient: prixRevientBase + (poidsPF > 0 ? (parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0)/poidsPF : 0) + coutFactureParKg,
       // Main-d'œuvre
       allocationPeriod: document.getElementById('tAllocationPeriod')?.value || 'month',
-      heuresMOF: v('tHeuresMOF'),
-      salaireHF: v('tSalaireHF'),
-      coutPersonnelF: v('tHeuresMOF') * v('tSalaireHF'),
-      equipesMO: Array.from(document.querySelectorAll('#tEquipesMO tr:not(:last-child)')).map(row => ({
-        profil: row.querySelector('[data-mo="profil"]')?.value || '',
-        nb: parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0,
-        heures: parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0,
-        taux: parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0
-      })),
-      coutMOO: parseFloat(document.getElementById('tCoutMOO')?.textContent.replace(/[^0-9.]/g,''))||0,
+      heuresMOF: 0,
+      salaireHF: 0,
+      coutPersonnelF: 0,
+      coutMOO: v('tCoutMOO'),
+      coutMOF: v('tCoutMOF'),
       coutMOJ: parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0,
       // compat fields
       poidsBrutPI: poidsMP, caissesPI:0,
@@ -2256,8 +2134,9 @@ const Saisie = {
 
   printBon(id) {
     try {
-      const p = App.data.production.find(x => x.id === id);
-      if (!p) return;
+      // eslint-disable-next-line eqeqeq
+      const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
+      if (!p) { App.toast('Saisie introuvable (ID: ' + id + ')', 'error'); return; }
       const isTraitement = (p.activite === 'traitement' || p.activite === 'divers');
       // Calculate intrants total dynamically
       const intrantsArr = (p.intrants || []);
@@ -2650,10 +2529,11 @@ const Saisie = {
      ENVOI VERS STOCKAGE — Post-Traitement
      ============================================ */
   showSendToStorageModal(id) {
-    const p = App.data.production.find(x => x.id === id);
-    if (!p) return;
+    // eslint-disable-next-line eqeqeq
+    const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
+    if (!p) { App.toast('Saisie introuvable (ID: ' + id + ')', 'error'); return; }
     if (p.sentToStorage) { App.toast('Cette saisie a déjà été envoyée vers le stockage', 'warning'); return; }
-    if (!(p.poidsBrutPF > 0)) { App.toast('Le traitement n\'est pas encore terminé (Poids PF = 0)', 'error'); return; }
+    // Note: on autorise l'envoi même si PF = 0 (pas d'obligation de stock d'entrée)
 
     const activiteLabel = (p.activite === 'traitement') ? 'Traitement' : (p.activite === 'reconditionnement' ? 'Reconditionnement' : p.activite);
 
@@ -2705,8 +2585,9 @@ const Saisie = {
   },
 
   confirmSendToStorage(id) {
-    const p = App.data.production.find(x => x.id === id);
-    if (!p) return;
+    // eslint-disable-next-line eqeqeq
+    const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
+    if (!p) { App.toast('Saisie introuvable (ID: ' + id + ')', 'error'); App.closeModal(); return; }
     if (p.sentToStorage) { App.toast('Déjà envoyé', 'warning'); App.closeModal(); return; }
 
     const chambre = document.getElementById('sendToChambre')?.value || 'chambre1';
@@ -3491,24 +3372,8 @@ Notes:
       }
 
       // Build MO
-      const heuresMOF = totalFixeH * 8;
-      const coutPF = heuresMOF * salaireHF;
-      const equipesMO = [];
-      let coutMOO = 0;
-
-      if (e.effectifs > 0 && e.heures > 0) {
-        const heuresParPersonne = e.heures / e.effectifs;
-        const taux = p.salaireHoraireOcc || 17;
-        const coutEq = e.effectifs * heuresParPersonne * taux;
-        equipesMO.push({
-          profil: 'Ouvrière',
-          nb: e.effectifs,
-          heures: parseFloat(heuresParPersonne.toFixed(1)),
-          taux: taux,
-          coutEq: coutEq
-        });
-        coutMOO = coutEq;
-      }
+      const pesos = App.getPeriodLaborCostAllocation(e.date, e.poidsPF, 0, 'month');
+      const coutMOJ = pesos.fallback ? (e.poidsPF * 1.25) : pesos.allocatedCost;
 
       // Build intrants (empty - will be filled manually)
       const intrants = [];
@@ -3535,12 +3400,12 @@ Notes:
         modeEmballage: e.modeEmballage,
         reliquatNom: '',
         reliquatPoids: 0,
-        equipesMO,
-        coutMOO,
-        heuresMOF,
-        salaireHF,
-        coutPersonnelF: coutPF,
-        coutMOJ: coutMOO + coutPF,
+        equipesMO: [],
+        coutMOO: 0,
+        heuresMOF: 0,
+        salaireHF: 0,
+        coutPersonnelF: 0,
+        coutMOJ,
         phases: e.activite === 'traitement' ? phases : undefined,
         phasesPF,
         intrants,
