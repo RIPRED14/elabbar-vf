@@ -3,12 +3,42 @@
    ============================================ */
 const Saisie = {
   editingId: null,
-  currentActivite: 'reconditionnement',
-  viewType: 'month',
-  selectedDay: new Date().toISOString().split('T')[0],
-  selectedMonth: new Date().getMonth(),
-  selectedYear: new Date().getFullYear(),
-  selectedQuarter: Math.floor(new Date().getMonth() / 3) + 1,
+  get currentActivite() {
+    return localStorage.getItem('saisie_currentActivite') || 'reconditionnement';
+  },
+  set currentActivite(val) {
+    localStorage.setItem('saisie_currentActivite', val);
+  },
+  get viewType() {
+    return localStorage.getItem('saisie_viewType') || 'month';
+  },
+  set viewType(val) {
+    localStorage.setItem('saisie_viewType', val);
+  },
+  get selectedDay() {
+    return localStorage.getItem('saisie_selectedDay') || new Date().toISOString().split('T')[0];
+  },
+  set selectedDay(val) {
+    localStorage.setItem('saisie_selectedDay', val);
+  },
+  get selectedMonth() {
+    return localStorage.getItem('saisie_selectedMonth') !== null ? parseInt(localStorage.getItem('saisie_selectedMonth')) : new Date().getMonth();
+  },
+  set selectedMonth(val) {
+    localStorage.setItem('saisie_selectedMonth', val);
+  },
+  get selectedYear() {
+    return localStorage.getItem('saisie_selectedYear') !== null ? parseInt(localStorage.getItem('saisie_selectedYear')) : new Date().getFullYear();
+  },
+  set selectedYear(val) {
+    localStorage.setItem('saisie_selectedYear', val);
+  },
+  get selectedQuarter() {
+    return localStorage.getItem('saisie_selectedQuarter') !== null ? parseInt(localStorage.getItem('saisie_selectedQuarter')) : Math.floor(new Date().getMonth() / 3) + 1;
+  },
+  set selectedQuarter(val) {
+    localStorage.setItem('saisie_selectedQuarter', val);
+  },
   phasesList: ['Triage-Lavage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Mélançage','Trempage','Congélation','DECONGELATION'],
 
   emballagesList: [
@@ -91,8 +121,8 @@ const Saisie = {
     { ref: 'PALETTE', article: 'PALETTE', famille: 'EMBALLAGE', prix: 0 },
     // ── INTRANT ──
     { ref: 'SEL', article: 'SEL', famille: 'INTRANT', prix: 0.60 },
-    { ref: 'HYDROMAR', article: 'HYDROMAR', famille: 'INTRANT', prix: 1.00 },
-    { ref: 'AGRAFISH', article: 'AGRAFISH', famille: 'INTRANT', prix: 1.00 },
+    { ref: 'HYDROMAR', article: 'HYDROMAR', famille: 'INTRANT', prix: 25.00 },
+    { ref: 'AGRAFISH', article: 'AGRAFISH', famille: 'INTRANT', prix: 25.00 },
     // ── EQUIPEMENT ──
     { ref: '11211', article: 'PISTOLET ARROSEUR', famille: 'EQUIPEMENT', prix: 0 },
     { ref: '11212', article: 'MT TUYAU', famille: 'EQUIPEMENT', prix: 0 },
@@ -457,6 +487,25 @@ const Saisie = {
                 <span class="form-computed" id="fCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
               <div id="fAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
+              
+              <!-- Premium Labor & Productivity Live Analytics -->
+              <div class="mo-premium-analytics" style="margin-top:12px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">M.O. Fixe Journalière (Admin + Ouvriers)</div>
+                  <div id="fMOFixeJournaliere" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin-top:4px;">0.00 DH</div>
+                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Masse salariale / 26j (Base 191h/mois)</div>
+                </div>
+                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Coût M.O. Directe / Tonnage</div>
+                  <div id="fMOParTonnage" style="font-size:1.15rem; font-weight:700; color:var(--accent-blue); margin-top:4px;">0.00 DH/kg</div>
+                  <div id="fMOParTonnageTonne" style="font-size:0.7rem; color:var(--text-secondary); margin-top:2px;">(0.00 DH/Tonne)</div>
+                </div>
+                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Productivité Horaire</div>
+                  <div id="fProductiviteKgH" style="font-size:1.15rem; font-weight:700; color:var(--status-success); margin-top:4px;">0.00 kg/h</div>
+                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Tonnage / heures de travail ouvrières</div>
+                </div>
+              </div>
             </div>
 
             <div class="form-section">
@@ -629,11 +678,11 @@ const Saisie = {
           if (!currentQte) qteInput.value = (poidsPI * 0.02).toFixed(2);
           if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 0.60;
         } else if (art === 'HYDROMAR') {
-          if (!currentQte) qteInput.value = (poidsPI * 0.005).toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
+          if (!currentQte) qteInput.value = (poidsPI * 0.01).toFixed(3);
+          if (prixInput && (!parseFloat(prixInput.value) || parseFloat(prixInput.value) === 1.00)) prixInput.value = 25.00;
         } else if (art === 'AGRAFISH') {
-          if (!currentQte) qteInput.value = (poidsPI * 0.001).toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
+          if (!currentQte) qteInput.value = (poidsPI * 0.01).toFixed(3);
+          if (prixInput && (!parseFloat(prixInput.value) || parseFloat(prixInput.value) === 1.00)) prixInput.value = 25.00;
         }
       }
 
@@ -686,28 +735,16 @@ const Saisie = {
         `;
       } else {
         infoEl.style.display = 'block';
-        let labelPeriode = 'Mensuelle';
-        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
-        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
-        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
-
-        let labelMasse = 'Masse Salariale Période';
-        let labelTonnage = 'Tonnage Total Période';
-        if (allocationPeriod === 'day') {
-          labelMasse = 'Masse Salariale du Jour';
-          labelTonnage = 'Tonnage Total du Jour';
-        }
-
         infoEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
-            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (${labelPeriode})</div>
+            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (Double Niveau)</div>
             <div style="color:var(--text-secondary); line-height:1.4;">
-              ${labelMasse} : <strong>${App.formatNumber(pesos.totalLaborCost, 0)} DH</strong><br>
-              ${labelTonnage} : <strong>${App.formatNumber(pesos.totalTonnage, 1)} kg</strong><br>
-              Ratio Alloué : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
+              • M.O. Fixe Mensuelle : <strong>${App.formatNumber(pesos.monthlyFixed, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageMonth, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioFixed, 4)} DH/kg</strong>)<br>
+              • M.O. Occasionnelle Jour : <strong>${App.formatNumber(pesos.dayOccCost, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageDay, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioOcc, 4)} DH/kg</strong>)<br>
+              • Ratio Total : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
             </div>
             <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
-              Coût M.O. Alloué Journalier : ${App.formatNumber(pesos.allocatedCost, 2)} DH
+              Coût M.O. Alloué Total : ${App.formatNumber(pesos.allocatedCost, 2)} DH
             </div>
           </div>
         `;
@@ -772,6 +809,69 @@ const Saisie = {
     }
 
     const rendEl = document.getElementById('sumRendementRec'); if (rendEl) rendEl.textContent = App.formatNumber(rendement, 2) + '%';
+
+    // === NEW CALCULATIONS & PREMIUM DISPLAYS (Reconditionnement) ===
+    try {
+      const personnelList = App.data.personnel || [];
+      const fixedAdminSalaries = personnelList.filter(p => p.type === 'fixe_admin' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const fixedOuvrierSalaries = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const fixedAutreSalaries = personnelList.filter(p => p.type === 'fixe_autre' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const totalFixedSalaries = fixedAdminSalaries + fixedOuvrierSalaries + fixedAutreSalaries;
+      const moFixeJournaliere = totalFixedSalaries / 26;
+
+      const otherDayEntries = (App.data.production || []).filter(p => p.date === dateStr && p.id != Saisie.editingId);
+      const totalTonnageDay = otherDayEntries.reduce((s, p) => s + (p.poidsBrutPF || p.poidsPF || 0), 0) + poidsPF;
+      
+      const dailyWorkerFixed = fixedOuvrierSalaries / 26;
+      
+      // Sum all occasional costs for this day
+      const otherDayOccCost = otherDayEntries.reduce((s, p) => s + (p.coutMOO || 0), 0);
+      const totalOccCostDay = otherDayOccCost + coutMOO;
+      const moParTonnage = totalTonnageDay > 0 ? (dailyWorkerFixed + totalOccCostDay) / totalTonnageDay : 0;
+
+      // Occasional hours of other entries on the same day
+      const otherDayOccHours = otherDayEntries.reduce((s, p) => {
+        let occ = 0;
+        if (p.equipesMO && Array.isArray(p.equipesMO)) {
+          p.equipesMO.forEach(eq => {
+            occ += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0);
+          });
+        }
+        return s + occ;
+      }, 0);
+
+      // Occasional hours of current entry
+      let totalOccHours = 0;
+      document.querySelectorAll('#fEquipesMO tr:not(:last-child)').forEach(row => {
+        const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+        const h = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+        totalOccHours += nb * h;
+      });
+
+      const totalOccHoursDay = otherDayOccHours + totalOccHours;
+
+      // Fixed hours (Base 191h/mois per active worker, which is 191/26 = 7.346h/day per worker)
+      const activeOuvriersFixeCount = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).length;
+      const totalFixedHours = activeOuvriersFixeCount * (191 / 26);
+      const totalLaborHours = totalOccHoursDay + totalFixedHours;
+      const productiviteKgH = totalLaborHours > 0 ? totalTonnageDay / totalLaborHours : 0;
+
+      // Live update DOM elements
+      const elMOFixeJ = document.getElementById('fMOFixeJournaliere');
+      if (elMOFixeJ) elMOFixeJ.textContent = App.formatNumber(moFixeJournaliere, 2) + ' DH';
+
+      const elMOParT = document.getElementById('fMOParTonnage');
+      if (elMOParT) elMOParT.textContent = App.formatNumber(moParTonnage, 4) + ' DH/kg';
+
+      const elMOParTT = document.getElementById('fMOParTonnageTonne');
+      if (elMOParTT) elMOParTT.textContent = '(' + App.formatNumber(moParTonnage * 1000, 0) + ' DH/Tonne)';
+
+      const elProd = document.getElementById('fProductiviteKgH');
+      if (elProd) elProd.textContent = App.formatNumber(productiviteKgH, 2) + ' kg/h';
+
+    } catch(err) {
+      console.error("Error in premium calculations (Reconditionnement): ", err);
+    }
   },
 
   autoFillProduitFini() {
@@ -942,6 +1042,10 @@ const Saisie = {
       coutMOO,
       heuresMOF: v('fHeuresMOF'), salaireHF: v('fSalaireHF'), coutPersonnelF: coutPF,
       coutMOJ: parseFloat(document.getElementById('fCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||(coutMOO + coutPF),
+      // Premium fields
+      moFixeJournaliere: parseFloat(document.getElementById('fMOFixeJournaliere')?.textContent.replace(/[^0-9.]/g,''))||0,
+      moParTonnage: parseFloat(document.getElementById('fMOParTonnage')?.textContent.replace(/[^0-9.]/g,''))||0,
+      productiviteKgH: parseFloat(document.getElementById('fProductiviteKgH')?.textContent.replace(/[^0-9.]/g,''))||0,
       phasesPF,
       intrants,
       totalIntrants,
@@ -1194,7 +1298,7 @@ const Saisie = {
       { nom: 'Emballage', seuil: 100, qteInit: 0, qteFinale: 0 }
     ];
     const conditionnement = entry?.conditionnement || 'C12S1000';
-    const intrants = entry?.intrants || [];
+    const intrants = entry?.intrants || this.getDefaultIntrants(conditionnement);
     const isSent = entry?.sentToStorage === true;
     const initialPrixMP = entry?.prixMP !== undefined
       ? entry.prixMP
@@ -1342,6 +1446,25 @@ const Saisie = {
                 <span class="form-computed" id="tCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
               <div id="tAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
+              
+              <!-- Premium Labor & Productivity Live Analytics -->
+              <div class="mo-premium-analytics" style="margin-top:12px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
+                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">M.O. Fixe Journalière (Admin + Ouvriers)</div>
+                  <div id="tMOFixeJournaliere" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin-top:4px;">0.00 DH</div>
+                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Masse salariale / 26j (Base 191h/mois)</div>
+                </div>
+                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Coût M.O. Directe / Tonnage</div>
+                  <div id="tMOParTonnage" style="font-size:1.15rem; font-weight:700; color:var(--accent-blue); margin-top:4px;">0.00 DH/kg</div>
+                  <div id="tMOParTonnageTonne" style="font-size:0.7rem; color:var(--text-secondary); margin-top:2px;">(0.00 DH/Tonne)</div>
+                </div>
+                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Productivité Horaire</div>
+                  <div id="tProductiviteKgH" style="font-size:1.15rem; font-weight:700; color:var(--status-success); margin-top:4px;">0.00 kg/h</div>
+                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Tonnage / heures de travail ouvrières</div>
+                </div>
+              </div>
             </div>
 
             <div class="form-section">
@@ -1595,16 +1718,17 @@ const Saisie = {
         }
       }
 
-      if (poidsMP > 0) {
+      const refWeight = prevQF_MP > 0 ? prevQF_MP : poidsMP;
+      if (refWeight > 0) {
         if (art === 'SEL') {
-          if (!currentQte) qteInput.value = (poidsMP * 0.02).toFixed(2);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 0.60;
+          if (!currentQte) qteInput.value = (refWeight * 0.02).toFixed(2);
+          if (prixInput && (!parseFloat(prixInput.value) || parseFloat(prixInput.value) === 1.00)) prixInput.value = 0.60;
         } else if (art === 'HYDROMAR') {
-          if (!currentQte) qteInput.value = (poidsMP * 0.005).toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
+          if (!currentQte) qteInput.value = (refWeight * 0.01).toFixed(3);
+          if (prixInput && (!parseFloat(prixInput.value) || parseFloat(prixInput.value) === 1.00 || parseFloat(prixInput.value) === 0)) prixInput.value = 25.00;
         } else if (art === 'AGRAFISH') {
-          if (!currentQte) qteInput.value = (poidsMP * 0.001).toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
+          if (!currentQte) qteInput.value = (refWeight * 0.01).toFixed(3);
+          if (prixInput && (!parseFloat(prixInput.value) || parseFloat(prixInput.value) === 1.00 || parseFloat(prixInput.value) === 0)) prixInput.value = 25.00;
         }
       }
       
@@ -1679,28 +1803,16 @@ const Saisie = {
         `;
       } else {
         infoEl.style.display = 'block';
-        let labelPeriode = 'Mensuelle';
-        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
-        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
-        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
-
-        let labelMasse = 'Masse Salariale Période';
-        let labelTonnage = 'Tonnage Total Période';
-        if (allocationPeriod === 'day') {
-          labelMasse = 'Masse Salariale du Jour';
-          labelTonnage = 'Tonnage Total du Jour';
-        }
-
         infoEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
-            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (${labelPeriode})</div>
+            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (Double Niveau)</div>
             <div style="color:var(--text-secondary); line-height:1.4;">
-              ${labelMasse} : <strong>${App.formatNumber(pesos.totalLaborCost, 0)} DH</strong><br>
-              ${labelTonnage} : <strong>${App.formatNumber(pesos.totalTonnage, 1)} kg</strong><br>
-              Ratio Alloué : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
+              • M.O. Fixe Mensuelle : <strong>${App.formatNumber(pesos.monthlyFixed, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageMonth, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioFixed, 4)} DH/kg</strong>)<br>
+              • M.O. Occasionnelle Jour : <strong>${App.formatNumber(pesos.dayOccCost, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageDay, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioOcc, 4)} DH/kg</strong>)<br>
+              • Ratio Total : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
             </div>
             <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
-              Coût M.O. Alloué Journalier : ${App.formatNumber(pesos.allocatedCost, 2)} DH
+              Coût M.O. Alloué Total : ${App.formatNumber(pesos.allocatedCost, 2)} DH
             </div>
           </div>
         `;
@@ -1730,6 +1842,69 @@ const Saisie = {
       const qi=parseFloat(last.querySelector('[data-ph="qteInit"]')?.value)||0;
       const qf=parseFloat(last.querySelector('[data-ph="qteFinale"]')?.value)||0;
       document.getElementById('sumRendFinal').textContent = qi>0?App.formatNumber(qf/qi*100,2)+'%':'0%';
+    }
+
+    // === NEW CALCULATIONS & PREMIUM DISPLAYS (Traitement) ===
+    try {
+      const personnelList = App.data.personnel || [];
+      const fixedAdminSalaries = personnelList.filter(p => p.type === 'fixe_admin' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const fixedOuvrierSalaries = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const fixedAutreSalaries = personnelList.filter(p => p.type === 'fixe_autre' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const totalFixedSalaries = fixedAdminSalaries + fixedOuvrierSalaries + fixedAutreSalaries;
+      const moFixeJournaliere = totalFixedSalaries / 26;
+
+      const otherDayEntries = (App.data.production || []).filter(p => p.date === dateStr && p.id != Saisie.editingId);
+      const totalTonnageDay = otherDayEntries.reduce((s, p) => s + (p.poidsBrutPF || p.poidsPF || 0), 0) + currentPoidsPF;
+      
+      const dailyWorkerFixed = fixedOuvrierSalaries / 26;
+
+      // Sum all occasional costs for this day
+      const otherDayOccCost = otherDayEntries.reduce((s, p) => s + (p.coutMOO || 0), 0);
+      const totalOccCostDay = otherDayOccCost + coutMOO;
+      const moParTonnage = totalTonnageDay > 0 ? (dailyWorkerFixed + totalOccCostDay) / totalTonnageDay : 0;
+
+      // Occasional hours of other entries on the same day
+      const otherDayOccHours = otherDayEntries.reduce((s, p) => {
+        let occ = 0;
+        if (p.equipesMO && Array.isArray(p.equipesMO)) {
+          p.equipesMO.forEach(eq => {
+            occ += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0);
+          });
+        }
+        return s + occ;
+      }, 0);
+
+      // Occasional hours of current entry
+      let totalOccHours = 0;
+      document.querySelectorAll('#tEquipesMO tr:not(:last-child)').forEach(row => {
+        const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+        const h = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+        totalOccHours += nb * h;
+      });
+
+      const totalOccHoursDay = otherDayOccHours + totalOccHours;
+
+      // Fixed hours (Base 191h/mois per active worker, which is 191/26 = 7.346h/day per worker)
+      const activeOuvriersFixeCount = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).length;
+      const totalFixedHours = activeOuvriersFixeCount * (191 / 26);
+      const totalLaborHours = totalOccHoursDay + totalFixedHours;
+      const productiviteKgH = totalLaborHours > 0 ? totalTonnageDay / totalLaborHours : 0;
+
+      // Live update DOM elements
+      const elMOFixeJ = document.getElementById('tMOFixeJournaliere');
+      if (elMOFixeJ) elMOFixeJ.textContent = App.formatNumber(moFixeJournaliere, 2) + ' DH';
+
+      const elMOParT = document.getElementById('tMOParTonnage');
+      if (elMOParT) elMOParT.textContent = App.formatNumber(moParTonnage, 4) + ' DH/kg';
+
+      const elMOParTT = document.getElementById('tMOParTonnageTonne');
+      if (elMOParTT) elMOParTT.textContent = '(' + App.formatNumber(moParTonnage * 1000, 0) + ' DH/Tonne)';
+
+      const elProd = document.getElementById('tProductiviteKgH');
+      if (elProd) elProd.textContent = App.formatNumber(productiviteKgH, 2) + ' kg/h';
+
+    } catch(err) {
+      console.error("Error in premium calculations (Traitement): ", err);
     }
   },
 
@@ -1780,8 +1955,8 @@ const Saisie = {
     intrants.push({ article: 'ETIQUETTE 50*75', qte: 0, prix: 45.00 });
     intrants.push({ article: 'ETIQUETTE NOIR', qte: 0, prix: 78.00 });
     intrants.push({ article: 'SEL', qte: 0, prix: 0.60 });
-    intrants.push({ article: 'HYDROMAR', qte: 0, prix: 1.00 });
-    intrants.push({ article: 'AGRAFISH', qte: 0, prix: 1.00 });
+    intrants.push({ article: 'HYDROMAR', qte: 0, prix: 25.00 });
+    intrants.push({ article: 'AGRAFISH', qte: 0, prix: 25.00 });
     return intrants;
   },
 
@@ -1874,10 +2049,10 @@ const Saisie = {
     const intrants=collectIntrants();
     const totalInt=intrants.reduce((s,it)=>s+it.qte*it.prix,0);
 
-    const previous = this.editingId ? App.data.production.find(p => p.id === this.editingId) : null;
+    const previous = this.editingId ? App.data.production.find(p => String(p.id) === String(this.editingId)) : null;
     const monthStr = date ? date.substring(0, 7) : new Date().toISOString().substring(0, 7);
-    const totalFacturesMois = (App.data.factures || []).filter(f => f.date.startsWith(monthStr)).reduce((s, f) => s + f.montant, 0);
-    const totalKgMois = (App.data.production || []).filter(p => p.date.startsWith(monthStr) && p.id !== this.editingId).reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + poidsPF;
+    const totalFacturesMois = (App.data.factures || []).filter(f => f.date && f.date.startsWith(monthStr)).reduce((s, f) => s + (f.montant || 0), 0);
+    const totalKgMois = (App.data.production || []).filter(p => p.date && p.date.startsWith(monthStr) && String(p.id) !== String(this.editingId)).reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + poidsPF;
     const coutFactureParKg = totalKgMois > 0 ? totalFacturesMois / totalKgMois : 0;
     const prixRevientBase = poidsPF>0?(valeurMP+totalInt)/poidsPF:0;
 
@@ -1914,18 +2089,22 @@ const Saisie = {
       })),
       coutMOO: parseFloat(document.getElementById('tCoutMOO')?.textContent.replace(/[^0-9.]/g,''))||0,
       coutMOJ: parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0,
+      // Premium fields
+      moFixeJournaliere: parseFloat(document.getElementById('tMOFixeJournaliere')?.textContent.replace(/[^0-9.]/g,''))||0,
+      moParTonnage: parseFloat(document.getElementById('tMOParTonnage')?.textContent.replace(/[^0-9.]/g,''))||0,
+      productiviteKgH: parseFloat(document.getElementById('tProductiviteKgH')?.textContent.replace(/[^0-9.]/g,''))||0,
       // compat fields
       poidsBrutPI: poidsMP, caissesPI:0,
       coutCarton:0,coutSachet:0,coutEtiquetteNoir:0,coutEtiquette5075:0,coutScotch:0
     };
 
     if(this.editingId){
-      const idx=App.data.production.findIndex(p=>p.id===this.editingId);
+      const idx=App.data.production.findIndex(p=>String(p.id)===String(this.editingId));
       if(idx!==-1) App.data.production[idx]=entry;
     } else {
       App.data.production.push(entry);
     }
-    App.saveData();
+    App.saveData('production', entry);
     this.hideForm();
     this.render();
     App.toast(this.editingId?'Saisie mise à jour':'Saisie enregistrée','success');

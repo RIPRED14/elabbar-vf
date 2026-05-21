@@ -267,6 +267,96 @@ const Rapports = {
     const trend = this.calcTrends(stats, costPerKg);
     const execComment = this.generateExecutiveComment(stats, { totalCA, margeNette, margeParKg, tauxMarge, totalPerte, tauxPerte });
 
+    // === SPECIES LEVEL LABOR & PRODUCTIVITY ANALYSIS ===
+    const speciesLaborAnalysis = {};
+    try {
+      const personnelList = App.data.personnel || [];
+      const fixedAdminSalaries = personnelList.filter(p => p.type === 'fixe_admin' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const fixedOuvrierSalaries = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const fixedAutreSalaries = personnelList.filter(p => p.type === 'fixe_autre' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
+      const totalFixedSalaries = fixedAdminSalaries + fixedOuvrierSalaries + fixedAutreSalaries;
+      const moFixeJournaliere = totalFixedSalaries / 26;
+
+      const prodByDate = {};
+      prod.forEach(p => {
+        if (!prodByDate[p.date]) {
+          prodByDate[p.date] = { totalTonnage: 0, items: [] };
+        }
+        const tonnage = p.poidsBrutPF || p.poidsPF || 0;
+        prodByDate[p.date].totalTonnage += tonnage;
+        prodByDate[p.date].items.push(p);
+      });
+
+      const allProdByDate = {};
+      (App.data.production || []).forEach(p => {
+        if (!allProdByDate[p.date]) {
+          allProdByDate[p.date] = { totalTonnage: 0, items: [] };
+        }
+        const tonnage = p.poidsBrutPF || p.poidsPF || 0;
+        allProdByDate[p.date].totalTonnage += tonnage;
+        allProdByDate[p.date].items.push(p);
+      });
+
+      const uniqueSpecies = [...new Set(prod.map(p => p.espece))];
+      uniqueSpecies.forEach(sp => {
+        speciesLaborAnalysis[sp] = {
+          espece: sp,
+          tonnagePF: 0,
+          occasionalHours: 0,
+          occasionalCost: 0,
+          allocatedFixedHours: 0,
+          allocatedFixedWorkerCost: 0,
+          allocatedFixedGlobalCost: 0,
+          workingDaysActive: new Set()
+        };
+      });
+
+      Object.keys(prodByDate).forEach(dateStr => {
+        const dayData = prodByDate[dateStr];
+        const allDayData = allProdByDate[dateStr] || dayData;
+        const totalTonnageDay = allDayData.totalTonnage || 0;
+
+        const activeOuvriersFixeCount = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).length;
+        const dailyFixedHours = activeOuvriersFixeCount * (191 / 26);
+        const dailyWorkerFixedSalary = fixedOuvrierSalaries / 26;
+        const dailyGlobalFixedSalary = moFixeJournaliere;
+
+        dayData.items.forEach(p => {
+          const sp = p.espece;
+          const tonnage = p.poidsBrutPF || p.poidsPF || 0;
+          speciesLaborAnalysis[sp].tonnagePF += tonnage;
+          speciesLaborAnalysis[sp].workingDaysActive.add(dateStr);
+
+          let occHours = 0;
+          if (p.equipesMO && Array.isArray(p.equipesMO)) {
+            p.equipesMO.forEach(eq => {
+              occHours += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0);
+            });
+          }
+          speciesLaborAnalysis[sp].occasionalHours += occHours;
+          speciesLaborAnalysis[sp].occasionalCost += (p.coutMOO || 0);
+
+          const dayShare = totalTonnageDay > 0 ? tonnage / totalTonnageDay : 0;
+          speciesLaborAnalysis[sp].allocatedFixedHours += dailyFixedHours * dayShare;
+          speciesLaborAnalysis[sp].allocatedFixedWorkerCost += dailyWorkerFixedSalary * dayShare;
+          speciesLaborAnalysis[sp].allocatedFixedGlobalCost += dailyGlobalFixedSalary * dayShare;
+        });
+      });
+
+      Object.keys(speciesLaborAnalysis).forEach(sp => {
+        const data = speciesLaborAnalysis[sp];
+        data.totalHours = data.occasionalHours + data.allocatedFixedHours;
+        data.productiviteKgH = data.totalHours > 0 ? data.tonnagePF / data.totalHours : 0;
+        data.totalWorkerCost = data.occasionalCost + data.allocatedFixedWorkerCost;
+        data.moParTonnage = data.tonnagePF > 0 ? data.totalWorkerCost / data.tonnagePF : 0;
+        data.moParTonnageTonne = data.moParTonnage * 1000;
+        const activeDaysCount = data.workingDaysActive.size || 1;
+        data.moFixeJournaliereAlloc = data.allocatedFixedGlobalCost / activeDaysCount;
+      });
+    } catch (err) {
+      console.error("Error computing species labor analysis:", err);
+    }
+
     this.lastGeneratedData = {
       prod,
       stats,
@@ -295,7 +385,8 @@ const Rapports = {
         unitTransCost,
         unitPurchaseCost,
         pruPoissonBrut,
-        avgSellingPrice
+        avgSellingPrice,
+        speciesLaborAnalysis
       }
     };
 
@@ -789,6 +880,43 @@ const Rapports = {
           </div>
 
           <div class="report-section">
+            <h3 class="section-title">IV.b RENDEMENTS ET ANALYSE DE LA MAIN-D'ŒUVRE PAR ESPÈCE</h3>
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Espèce de Poisson</th>
+                  <th class="td-right">Tonnage PF (kg)</th>
+                  <th class="td-right">Heures Ouvriers (h)</th>
+                  <th class="td-right">Productivité (kg/h)</th>
+                  <th class="td-right">Coût Ouvriers (DH)</th>
+                  <th class="td-right">Coût M.O. (DH/kg)</th>
+                  <th class="td-right">Coût M.O. (DH/Tonne)</th>
+                  <th class="td-right">M.O. Fixe Jour. Alloc.</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${Object.entries(extra.speciesLaborAnalysis || {}).sort((a,b) => b[1].tonnagePF - a[1].tonnagePF).map(([sp, data]) => {
+                  return `
+                  <tr>
+                    <td style="font-weight: 600; color: var(--primary-color);">${sp}</td>
+                    <td class="td-right">${App.formatNumber(data.tonnagePF, 1)}</td>
+                    <td class="td-right">${App.formatNumber(data.totalHours, 1)} h</td>
+                    <td class="td-right" style="font-weight: 700; color: ${data.productiviteKgH >= 20 ? 'var(--status-success)' : 'var(--status-warning)'};">
+                      ${App.formatNumber(data.productiviteKgH, 2)} kg/h
+                    </td>
+                    <td class="td-right">${App.formatNumber(data.totalWorkerCost, 0)} DH</td>
+                    <td class="td-right">${App.formatNumber(data.moParTonnage, 4)} DH/kg</td>
+                    <td class="td-right" style="font-weight: 600;">${App.formatNumber(data.moParTonnageTonne, 0)} DH/T</td>
+                    <td class="td-right" style="color: var(--text-muted); font-size: 0.8rem;">
+                      ${App.formatNumber(data.moFixeJournaliereAlloc, 2)} DH/j
+                    </td>
+                  </tr>
+                `}).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="report-section">
             <h3 class="section-title">V. RECOMMANDATIONS TECHNIQUES & DIAGNOSTICS D'AUDIT</h3>
             <div style="display: flex; flex-direction: column; gap: 8px;">
               ${recsHtml}
@@ -1242,18 +1370,59 @@ const Rapports = {
       margin: { left: margin, right: margin }
     });
 
-    y = doc.lastAutoTable.finalY + 12;
+    y = doc.lastAutoTable.finalY + 8;
+    doc.setTextColor(11, 45, 107);
+    doc.setFontSize(10.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VI.b PERFORMANCE MAIN-D\'ŒUVRE & PRODUCTIVITÉ HORAIRE PAR ESPÈCE', margin, y);
+    
+    y += 3;
+
+    const laborRows = Object.entries(extra.speciesLaborAnalysis || {}).sort((a,b) => b[1].tonnagePF - a[1].tonnagePF).map(([sp, d]) => {
+      return [
+        sp,
+        App.formatNumber(d.tonnagePF, 0) + ' kg',
+        App.formatNumber(d.totalHours, 1) + ' h',
+        App.formatNumber(d.productiviteKgH, 2) + ' kg/h',
+        App.formatNumber(d.totalWorkerCost, 0) + ' DH',
+        App.formatNumber(d.moParTonnage, 4) + ' DH/kg',
+        App.formatNumber(d.moParTonnageTonne, 0) + ' DH/T',
+        App.formatNumber(d.moFixeJournaliereAlloc, 1) + ' DH/j'
+      ];
+    });
+
+    doc.autoTable({
+      startY: y,
+      head: [['Espèce Poisson', 'Poids PF', 'Heures MO', 'Productivité', 'Coût MO Ouv.', 'Coût MO DH/kg', 'Coût MO DH/Tonne', 'MO Fixe J. Alloc.']],
+      body: laborRows,
+      theme: 'grid',
+      headStyles: { fillColor: [11, 45, 107], fontSize: 7.5 },
+      styles: { fontSize: 7, cellPadding: 2 },
+      columnStyles: {
+        0: { fontStyle: 'bold', width: 32 },
+        1: { halign: 'right', width: 20 },
+        2: { halign: 'right', width: 20 },
+        3: { halign: 'right', fontStyle: 'bold', width: 24, textColor: [37, 99, 255] },
+        4: { halign: 'right', width: 22 },
+        5: { halign: 'right', width: 22 },
+        6: { halign: 'right', fontStyle: 'bold', width: 26, textColor: [21, 128, 61] },
+        7: { halign: 'right', width: 24 }
+      },
+      margin: { left: margin, right: margin }
+    });
+
+    y = doc.lastAutoTable.finalY + 6;
 
     // Mix Species Bar Chart image integration
     const canvasMix = document.getElementById('chartSpeciesMix');
-    if (canvasMix && y < 220) {
+    if (canvasMix && y < 240) {
       try {
         const chartMixDataUrl = canvasMix.toDataURL('image/png');
-        doc.setFontSize(9.5);
+        doc.setFontSize(9);
         doc.setTextColor(11, 45, 107);
         doc.setFont('helvetica', 'bold');
         doc.text('MIX DE PRODUCTION (EN KG PF HAUTE RÉSOLUTION)', docWidth / 2, y + 4, { align: 'center' });
-        doc.addImage(chartMixDataUrl, 'PNG', (docWidth - 110) / 2, y + 8, 110, 52);
+        doc.addImage(chartMixDataUrl, 'PNG', (docWidth - 95) / 2, y + 6, 95, 42);
       } catch (err) {
         console.error("Erreur lors de l'intégration du bar chart", err);
       }
@@ -1527,7 +1696,7 @@ const Rapports = {
       ['Période d\'Analyse :', label],
       [],
       ['================================================================================================================================'],
-      ['ESPÈCE TRAITÉE', 'POIDS NET PF (KG)', 'POIDS BRUT MP (KG)', 'RENDEMENT INDUSTRIEL (%)', 'MIX DE PRODUCTION (%)', 'PRIX MOYEN VENTE (DH/KG)', 'CHIFFRE D\'AFFAIRES ESTIMÉ (DH)'],
+      ['ESPÈCE TRAITÉE', 'POIDS NET PF (KG)', 'POIDS BRUT MP (KG)', 'RENDEMENT INDUSTRIEL (%)', 'MIX DE PRODUCTION (%)', 'PRIX MOYEN VENTE (DH/KG)', 'CHIFFRE D\'AFFAIRES ESTIMÉ (DH)', 'HEURES DIRECTES OUVRIERS (H)', 'PRODUCTIVITÉ DIRECTE (KG/H)', 'COÛT MO DIRECT (DH)', 'COÛT MO PAR TONNAGE (DH/KG)', 'COÛT MO PAR TONNAGE (DH/T)', 'QUOTE-PART M.O. FIXE J. (DH/JOUR)'],
       ['================================================================================================================================'],
     ];
 
@@ -1538,6 +1707,8 @@ const Rapports = {
       const spObj = App.data.especes?.find(e => e.nom === sp);
       const price = spObj?.prixMoyenVente || 65;
       const ca = qty * price;
+      
+      const d = extra.speciesLaborAnalysis?.[sp] || { totalHours: 0, productiviteKgH: 0, totalWorkerCost: 0, moParTonnage: 0, moParTonnageTonne: 0, moFixeJournaliereAlloc: 0 };
 
       specRows.push([
         sp,
@@ -1546,12 +1717,18 @@ const Rapports = {
         pct(spRend),
         pct(qty / stats.totalPoidsPF),
         dhkg(price),
-        dh(ca)
+        dh(ca),
+        hrs(d.totalHours),
+        kgh(d.productiviteKgH),
+        dh(d.totalWorkerCost),
+        dhkg(d.moParTonnage),
+        dh(d.moParTonnageTonne),
+        dh(d.moFixeJournaliereAlloc)
       ]);
     });
 
     const wsSpecies = XLSX.utils.aoa_to_sheet(specRows);
-    wsSpecies['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 28 }, { wch: 32 }];
+    wsSpecies['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 20 }, { wch: 25 }, { wch: 25 }, { wch: 28 }, { wch: 32 }, { wch: 30 }, { wch: 30 }, { wch: 25 }, { wch: 30 }, { wch: 30 }, { wch: 32 }];
     XLSX.utils.book_append_sheet(wb, wsSpecies, "Performance Espèces");
 
     // ==========================================

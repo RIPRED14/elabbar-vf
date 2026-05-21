@@ -132,8 +132,8 @@ const App = {
       { id: 25, nom: 'PALETTE', unite: 'pièce', stock: 50, seuilCritique: 5, seuilAlerte: 10, prixUnitaire: 0 },
       // ── INTRANT ──
       { id: 26, nom: 'SEL', unite: 'kg', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 0.60 },
-      { id: 27, nom: 'HYDROMAR', unite: 'kg', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 1.00 },
-      { id: 28, nom: 'AGRAFISH', unite: 'kg', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 1.00 },
+      { id: 27, nom: 'HYDROMAR', unite: 'L', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 25.00 },
+      { id: 28, nom: 'AGRAFISH', unite: 'kg', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 25.00 },
     ],
     chambresSpecs: {
       chambre1: { nom: 'CS 01', surfaceToit: 202.98, surfaceSol: 67.2, tempSol: 8, epaisseur: 150, isolation: 0.28, moteurs: 35, dureeMoteurs: 12, projecteur: 165, dureeProj: 1, degivrage: 3, echangeAir: 540.36, tonnage: 400 },
@@ -1823,108 +1823,125 @@ const App = {
       return { allocatedCost: 0, ratio: 0, totalLaborCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
     }
 
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth(); // 0-11
+    const mStr = dateStr.substring(0, 7);
 
-    if (periodType === 'day') {
-      const mStr = dateStr.substring(0, 7);
-      if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
-        try {
-          Personnel.recalcPointageMensuel(mStr);
-        } catch(e) {
-          console.error("Error recalcing pointage for " + mStr, e);
-        }
+    // Ensure pointage is calculated for the month
+    if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
+      try {
+        Personnel.recalcPointageMensuel(mStr);
+      } catch(e) {
+        console.error("Error recalcing pointage for " + mStr, e);
       }
-      const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
-      let totalLaborCost = 0;
-      if (ptg) {
-        let dayOccHours = 0;
-        const jour = ptg.jours && ptg.jours[dateStr];
-        if (jour && typeof Personnel !== 'undefined') {
-          const presences = Personnel.getDayPresences(jour);
-          presences.forEach(p => {
-            const emp = this.data.personnel.find(e => e.id === p.personnelId);
-            if (emp && emp.type === 'occasionnel') {
-              dayOccHours += p.heures || 0;
-            }
+    }
+
+    const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
+
+    // 1. Calculate Monthly Fixed Labor Cost (with smart database fallback)
+    let monthlyFixed = ptg
+      ? ((ptg.totalSalairesFixeAdmin || 0) + (ptg.totalSalairesFixeAutre || 0) + (ptg.totalSalairesOuvriersFixe || 0))
+      : 0;
+
+    if (monthlyFixed === 0) {
+      monthlyFixed = (this.data.personnel || [])
+        .filter(p => (p.type === 'fixe_admin' || p.type === 'fixe_autre' || p.type === 'ouvrier_fixe') && p.actif !== false)
+        .reduce((sum, p) => sum + (p.salaire || 0), 0);
+    }
+
+    // Calculate total finished tonnage of that month
+    const otherMonthEntries = (this.data.production || []).filter(p => {
+      return p.date && p.date.substring(0, 7) === mStr && p.id != editingId;
+    });
+    const totalTonnageMonth = otherMonthEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + currentPoidsPF;
+
+    // Monthly Fixed Ratio
+    const ratioFixed = totalTonnageMonth > 0 ? monthlyFixed / totalTonnageMonth : 0;
+
+    // 2. Calculate Occasional Labor Cost for that specific day
+    let dayOccHours = 0;
+    if (ptg) {
+      const jour = ptg.jours && ptg.jours[dateStr];
+      if (jour && typeof Personnel !== 'undefined') {
+        const presences = Personnel.getDayPresences(jour);
+        presences.forEach(p => {
+          const emp = this.data.personnel.find(e => e.id === p.personnelId);
+          if (emp && emp.type === 'occasionnel') {
+            dayOccHours += p.heures || 0;
+          }
+        });
+      }
+    }
+
+    // Calculate total finished tonnage of that day
+    const otherDayEntries = (this.data.production || []).filter(p => {
+      return p.date === dateStr && p.id != editingId;
+    });
+    const totalTonnageDay = otherDayEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0) + currentPoidsPF;
+
+    let dayOccCost = 0;
+    if (dayOccHours > 0) {
+      dayOccCost = dayOccHours * (ptg ? (ptg.tauxHoraireOcc || 16.95) : 16.95);
+    } else {
+      // Fallback: sum equipesMO of all entries of that day
+      let totalDayOccLocal = 0;
+      if (typeof document !== 'undefined') {
+        const tRows = document.querySelectorAll('#tEquipesMO tr:not(:last-child)');
+        if (tRows.length > 0) {
+          tRows.forEach(row => {
+            const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+            const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+            const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 16.95;
+            totalDayOccLocal += nb * heures * taux;
+          });
+        } else {
+          const rRows = document.querySelectorAll('#fEquipesMO tr:not(:last-child)');
+          rRows.forEach(row => {
+            const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+            const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+            const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 16.95;
+            totalDayOccLocal += nb * heures * taux;
           });
         }
-        const totalOccCost = dayOccHours * (ptg.tauxHoraireOcc || 16.95);
-        const monthlyFixed = (ptg.totalSalairesFixeAdmin || 0) +
-                             (ptg.totalSalairesFixeAutre || 0) +
-                             (ptg.totalSalairesOuvriersFixe || 0);
-        const dayFixedCost = monthlyFixed / 26;
-        totalLaborCost = totalOccCost + dayFixedCost;
       }
       
-      const otherEntries = (this.data.production || []).filter(p => p.date === dateStr && p.id != editingId);
-      const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
-      const totalTonnage = dbTonnage + currentPoidsPF;
-      const ratio = totalTonnage > 0 ? totalLaborCost / totalTonnage : 0;
-      const allocatedCost = ratio * currentPoidsPF;
-
-      return {
-        allocatedCost,
-        ratio,
-        totalLaborCost,
-        totalTonnage,
-        targetMonths: [dateStr],
-        fallback: (ratio === 0)
-      };
-    }
-
-    let targetMonths = [];
-    if (periodType === 'quarter') {
-      const startMonth = Math.floor(month / 3) * 3;
-      targetMonths = [
-        `${year}-${String(startMonth + 1).padStart(2, '0')}`,
-        `${year}-${String(startMonth + 2).padStart(2, '0')}`,
-        `${year}-${String(startMonth + 3).padStart(2, '0')}`
-      ];
-    } else if (periodType === 'year') {
-      targetMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-    } else {
-      // Default to month
-      targetMonths = [`${year}-${String(month + 1).padStart(2, '0')}`];
-    }
-
-    let totalLaborCost = 0;
-    targetMonths.forEach(mStr => {
-      if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
-        try {
-          Personnel.recalcPointageMensuel(mStr);
-        } catch(e) {
-          console.error("Error recalcing pointage for " + mStr, e);
+      if (totalDayOccLocal === 0) {
+        const currentEditingEntry = (this.data.production || []).find(p => String(p.id) === String(editingId));
+        if (currentEditingEntry && currentEditingEntry.equipesMO) {
+          currentEditingEntry.equipesMO.forEach(eq => {
+            totalDayOccLocal += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0) * (parseFloat(eq.taux) || 16.95);
+          });
         }
       }
-      const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
-      if (ptg) {
-        totalLaborCost += (ptg.totalSalairesFixeAdmin || 0) +
-                          (ptg.totalSalairesFixeAutre || 0) +
-                          (ptg.totalSalairesOuvriersFixe || 0) +
-                          (ptg.totalMontantOcc || 0);
-      }
-    });
 
-    const otherEntries = (this.data.production || []).filter(p => {
-      const isTargetMonth = targetMonths.some(mStr => p.date && p.date.startsWith(mStr));
-      const isNotCurrent = p.id != editingId;
-      return isTargetMonth && isNotCurrent;
-    });
+      otherDayEntries.forEach(p => {
+        if (p.equipesMO && Array.isArray(p.equipesMO)) {
+          p.equipesMO.forEach(eq => {
+            totalDayOccLocal += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0) * (parseFloat(eq.taux) || 16.95);
+          });
+        }
+      });
+      dayOccCost = totalDayOccLocal;
+    }
 
-    const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
-    const totalTonnage = dbTonnage + currentPoidsPF;
+    // Daily Occasional Ratio
+    const ratioOcc = totalTonnageDay > 0 ? dayOccCost / totalTonnageDay : 0;
 
-    const ratio = totalTonnage > 0 ? totalLaborCost / totalTonnage : 0;
+    // 3. Final allocation sum
+    const ratio = ratioFixed + ratioOcc;
     const allocatedCost = ratio * currentPoidsPF;
 
     return {
       allocatedCost,
       ratio,
-      totalLaborCost,
-      totalTonnage,
-      targetMonths,
-      fallback: (ratio === 0)
+      totalLaborCost: monthlyFixed + dayOccCost,
+      totalTonnage: totalTonnageMonth,
+      targetMonths: [mStr],
+      fallback: (ratioFixed === 0 && ratioOcc === 0),
+      monthlyFixed,
+      totalTonnageMonth,
+      ratioFixed,
+      dayOccCost,
+      totalTonnageDay,
+      ratioOcc
     };
   },
 
@@ -2040,12 +2057,43 @@ const App = {
         tables.forEach((tableName, index) => {
           const result = others[index];
           if (result && result.data && result.data.length > 0) {
-            const localData = this.data[tableName] || [];
+            const unpackSerializedProduction = (item) => {
+              if (item.phasesPF && typeof item.phasesPF === 'object' && item.phasesPF._serialized_trt) {
+                const env = item.phasesPF;
+                item.phases = env.phases;
+                
+                const fields = [
+                  'activite', 'intrants', 'equipesMO', 'allocationPeriod',
+                  'heuresMOF', 'salaireHF', 'coutPersonnelF', 'coutMOO', 'coutMOJ',
+                  'conditionnement', 'produitFini', 'calibre', 'prixMP', 'valeurMP',
+                  'rendement', 'totalIntrants', 'coutFactureParKg', 'prixRevient',
+                  'moFixeJournaliere', 'moParTonnage', 'productiviteKgH'
+                ];
+                fields.forEach(f => {
+                  if (env[f] !== undefined) {
+                    item[f] = env[f];
+                  }
+                });
+                
+                item.phasesPF = env.phasesPF;
+              }
+              return item;
+            };
+
+            const localData = (this.data[tableName] || []).map(item => {
+              if (tableName.toLowerCase() === 'production') {
+                return unpackSerializedProduction(item);
+              }
+              return item;
+            });
             const cloudData = result.data;
             const key = tableName === 'especes' ? 'nom' : 'id';
             
             const cloudMap = new Map();
             cloudData.forEach(item => {
+              if (tableName.toLowerCase() === 'production') {
+                unpackSerializedProduction(item);
+              }
               const itemKey = item[key];
               if (itemKey !== undefined && itemKey !== null) {
                 cloudMap.set(String(itemKey), item);
@@ -2055,12 +2103,41 @@ const App = {
             const merged = [];
             const processedKeys = new Set();
 
+            // Build local map for smart-merge
+            const localMap = new Map();
+            localData.forEach(item => {
+              const itemKey = item[key];
+              if (itemKey !== undefined && itemKey !== null) {
+                localMap.set(String(itemKey), item);
+              }
+            });
+
             localData.forEach(localItem => {
               const itemKey = localItem[key];
               const stringKey = (itemKey !== undefined && itemKey !== null) ? String(itemKey) : null;
               if (stringKey) {
                 if (cloudMap.has(stringKey)) {
-                  merged.push(cloudMap.get(stringKey));
+                  const cloudItem = cloudMap.get(stringKey);
+                  if (tableName.toLowerCase() === 'production') {
+                    // Smart-merge: cloud base + restore missing local fields
+                    // Critical fields that Supabase may strip
+                    const preserveFields = ['activite','phases','phasesPF','intrants','equipesMO',
+                      'allocationPeriod','heuresMOF','salaireHF','coutPersonnelF','coutMOO','coutMOJ',
+                      'rendement','totalIntrants','coutFactureParKg','prixRevient','conditionnement',
+                      'produitFini','calibre','prixMP','valeurMP','poidsBrutPI','sentToStorage',
+                      'sentToStorageDate','sentToChambre','sourceSortieId','sourceLineIdx',
+                      'moFixeJournaliere','moParTonnage','productiviteKgH'];
+                    const mergedItem = { ...localItem, ...cloudItem };
+                    // Restore fields that exist locally but are missing/null in cloud
+                    preserveFields.forEach(f => {
+                      if ((cloudItem[f] === undefined || cloudItem[f] === null) && localItem[f] !== undefined && localItem[f] !== null) {
+                        mergedItem[f] = localItem[f];
+                      }
+                    });
+                    merged.push(mergedItem);
+                  } else {
+                    merged.push(cloudItem);
+                  }
                 } else {
                   merged.push(localItem);
                 }
@@ -2280,6 +2357,37 @@ const App = {
       if (tableName === 'factures') {
         cleanItem = this.cleanAndSerializeFacture(cleanItem);
       }
+      if (tableName.toLowerCase() === 'production') {
+        if (cleanItem.activite === 'traitement' || cleanItem.activite === 'reconditionnement' || cleanItem.phases !== undefined) {
+          cleanItem.phasesPF = {
+            phases: cleanItem.phases || null,
+            phasesPF: cleanItem.phasesPF || null,
+            activite: cleanItem.activite || 'reconditionnement',
+            intrants: cleanItem.intrants || [],
+            equipesMO: cleanItem.equipesMO || [],
+            allocationPeriod: cleanItem.allocationPeriod || 'month',
+            heuresMOF: cleanItem.heuresMOF,
+            salaireHF: cleanItem.salaireHF,
+            coutPersonnelF: cleanItem.coutPersonnelF,
+            coutMOO: cleanItem.coutMOO,
+            coutMOJ: cleanItem.coutMOJ,
+            conditionnement: cleanItem.conditionnement || '',
+            produitFini: cleanItem.produitFini || '',
+            calibre: cleanItem.calibre || '',
+            prixMP: cleanItem.prixMP,
+            valeurMP: cleanItem.valeurMP,
+            rendement: cleanItem.rendement,
+            totalIntrants: cleanItem.totalIntrants,
+            coutFactureParKg: cleanItem.coutFactureParKg,
+            prixRevient: cleanItem.prixRevient,
+            moFixeJournaliere: cleanItem.moFixeJournaliere,
+            moParTonnage: cleanItem.moParTonnage,
+            productiviteKgH: cleanItem.productiviteKgH,
+            _serialized_trt: true
+          };
+          delete cleanItem.phases;
+        }
+      }
       const { error } = await this.supabase.from(tableName.toLowerCase()).upsert(cleanItem);
       if (error) throw error;
       this.setSyncStatus('success', 'Cloud');
@@ -2406,6 +2514,41 @@ const App = {
             let payload = this.data[table];
             if (table === 'factures') {
               payload = this.data[table].map(f => this.cleanAndSerializeFacture(f));
+            }
+            if (table.toLowerCase() === 'production') {
+              payload = this.data[table].map(item => {
+                let cleanItem = JSON.parse(JSON.stringify(item));
+                if (cleanItem.activite === 'traitement' || cleanItem.activite === 'reconditionnement' || cleanItem.phases !== undefined) {
+                  cleanItem.phasesPF = {
+                    phases: cleanItem.phases || null,
+                    phasesPF: cleanItem.phasesPF || null,
+                    activite: cleanItem.activite || 'reconditionnement',
+                    intrants: cleanItem.intrants || [],
+                    equipesMO: cleanItem.equipesMO || [],
+                    allocationPeriod: cleanItem.allocationPeriod || 'month',
+                    heuresMOF: cleanItem.heuresMOF,
+                    salaireHF: cleanItem.salaireHF,
+                    coutPersonnelF: cleanItem.coutPersonnelF,
+                    coutMOO: cleanItem.coutMOO,
+                    coutMOJ: cleanItem.coutMOJ,
+                    conditionnement: cleanItem.conditionnement || '',
+                    produitFini: cleanItem.produitFini || '',
+                    calibre: cleanItem.calibre || '',
+                    prixMP: cleanItem.prixMP,
+                    valeurMP: cleanItem.valeurMP,
+                    rendement: cleanItem.rendement,
+                    totalIntrants: cleanItem.totalIntrants,
+                    coutFactureParKg: cleanItem.coutFactureParKg,
+                    prixRevient: cleanItem.prixRevient,
+                    moFixeJournaliere: cleanItem.moFixeJournaliere,
+                    moParTonnage: cleanItem.moParTonnage,
+                    productiviteKgH: cleanItem.productiviteKgH,
+                    _serialized_trt: true
+                  };
+                  delete cleanItem.phases;
+                }
+                return cleanItem;
+              });
             }
             if (table === 'clients') {
               payload = this.data.clients.map((c, index) => ({
