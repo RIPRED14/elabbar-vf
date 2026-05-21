@@ -571,7 +571,9 @@ Notes: Sois précis sur les noms des articles (ex: SACHET 25x35).`;
       this.applyAIData(data);
     } catch (error) {
       App.AI.hideOverlay();
-      App.toast("Erreur IA: " + error.message, "error");
+      if (!error.handled) {
+        App.toast("Erreur IA: " + error.message, "error");
+      }
     } finally {
       event.target.value = '';
     }

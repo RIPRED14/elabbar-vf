@@ -1377,7 +1377,9 @@ RÈGLES CRUCIALES :
     } catch (error) {
       App.AI.hideOverlay();
       console.error(error);
-      App.toast("Erreur lors du scan : " + error.message, "error");
+      if (!error.handled) {
+        App.toast("Erreur lors du scan : " + error.message, "error");
+      }
     } finally {
       event.target.value = '';
     }

@@ -153,7 +153,9 @@ App.AiEngine = {
 
     } catch (err) {
       console.error("AI Processing Error:", err);
-      App.toast(err.message || "Une erreur s'est produite lors de l'analyse.", 'error');
+      if (!err.handled) {
+        App.toast(err.message || "Une erreur s'est produite lors de l'analyse.", 'error');
+      }
       this.closeScanner();
     }
   },
@@ -201,6 +203,7 @@ App.AiEngine = {
     const modelsToTry = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"];
 
     let lastError = null;
+    let errors = [];
 
     for (const key of keysToTry) {
       for (const model of modelsToTry) {
@@ -228,8 +231,17 @@ App.AiEngine = {
         } catch (err) {
           console.warn(`AiEngine: Échec avec le modèle ${model}:`, err);
           lastError = err;
+          const keyLabel = (key === builtinKey) ? "Gemini (Clé Secours)" : "Gemini (Clé Perso)";
+          errors.push(`${keyLabel}: Modèle ${model} échoué : ${err.message}`);
         }
       }
+    }
+
+    if (errors.length > 0 && typeof App.AI !== 'undefined' && typeof App.AI.showDiagnosticModal === 'function') {
+      App.AI.showDiagnosticModal(errors);
+      const customErr = new Error("Tous les services IA ont échoué.");
+      customErr.handled = true;
+      throw customErr;
     }
 
     throw new Error(lastError ? lastError.message : "Tous les services IA et modèles Gemini ont échoué.");
@@ -294,6 +306,7 @@ App.AiEngine = {
 
     } catch (e) {
       console.error(e);
+      if (e.handled) throw e;
       throw new Error("Erreur de l'IA: " + e.message);
     } finally {
       this.closeScanner();
@@ -363,6 +376,7 @@ App.AiEngine = {
       }
     } catch (e) {
       console.error(e);
+      if (e.handled) throw e;
       throw new Error("Erreur de l'IA Textuelle: " + e.message);
     } finally {
       this.closeScanner();

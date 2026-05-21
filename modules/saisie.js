@@ -2788,7 +2788,9 @@ Notes:
     } catch (error) {
       App.AI.hideOverlay();
       console.error(error);
-      App.toast("Erreur IA: " + error.message, "error");
+      if (!error.handled) {
+        App.toast("Erreur IA: " + error.message, "error");
+      }
     } finally {
       event.target.value = '';
     }

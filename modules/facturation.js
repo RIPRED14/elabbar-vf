@@ -598,7 +598,9 @@ Note pour l'allocation: utilise 'traitement' si c'est du poisson, sel ou matéri
       
     } catch (error) {
       App.AI.hideOverlay();
-      App.toast("Erreur d\'analyse: " + error.message, "error");
+      if (!error.handled) {
+        App.toast("Erreur d'analyse: " + error.message, "error");
+      }
     } finally {
       event.target.value = '';
     }

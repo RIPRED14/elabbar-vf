@@ -3669,7 +3669,9 @@ CONSIGNES STRICTES :
         }
       } catch (error) {
         this.hideOverlay();
-        App.toast("Erreur: " + error.message, "error");
+        if (!error.handled) {
+          App.toast("Erreur: " + error.message, "error");
+        }
       }
     },
 
