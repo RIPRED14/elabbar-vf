@@ -16,8 +16,9 @@ const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
     ]
   });
   
+  let page = null;
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
 
@@ -84,7 +85,7 @@ const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
     }
 
     if (!capturedToken) {
-      await page.screenshot({ path: '/Users/m/Downloads/ELABBAR-main 3/scratch/sync_error.png' });
+      await page.screenshot({ path: 'scratch/sync_error.png' });
       console.log("Saved failure screenshot to scratch/sync_error.png");
       throw new Error("Could not capture OIDC token. Keycloak handshake did not complete successfully.");
     }
@@ -120,6 +121,19 @@ const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
     console.log(`✅ Retrieved ${invoices.length} invoices from Ntsamak.`);
 
     console.log("⚙️ Mapping invoices to Supabase lowercased schema...");
+    const consumableSuppliers = [
+      'FAST MOSK',
+      'DARAA PRODUCT',
+      'SARPINA',
+      'SOLICOMA',
+      'IGUER NEGOCE',
+      'POLYMI',
+      'GRAPHIC INO',
+      'ADAM INDUSTRIES',
+      'AIT MELLOUL CHIMIE',
+      'LA GLOBALE MAROCAINE'
+    ];
+
     const mappedInvoices = invoices.map(inv => {
       // Map payments to payment state
       const isPaid = !!(inv.datesReglements || inv.referencesReglements || (inv.montantReglement && inv.montantReglement >= inv.montantTtc));
@@ -131,6 +145,11 @@ const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
         prixUnitaire: inv.montantHt || 0,
         totalLigne: inv.montantHt || 0
       }];
+
+      // Determine allocation based on supplier type
+      const supplierName = (inv.fournisseurRaisonSociale || '').toUpperCase().trim();
+      const isConsumable = consumableSuppliers.some(s => supplierName.includes(s));
+      const allocation = isConsumable ? 'emballage' : 'general';
 
       return {
         id: `nt_${inv.id}`,
@@ -145,11 +164,20 @@ const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
         lignes: {
           items: defaultLine,
           societe: inv.societeRaisonSociale || 'FISH & FOOD TRAITEMENT',
-          allocation: 'general',
+          allocation: allocation,
           type: inv.type === 'FF' ? 'Facture' : (inv.type === 'FP' ? 'Proforma' : 'Facture'),
-          origine: 'Divers achats',
+          origine: inv.origine === 'D' ? 'Divers achats' : (inv.origine || 'Divers achats'),
           dateEcheance: inv.dateEcheance ? inv.dateEcheance.split('T')[0] : null,
-          etatPaiement: status
+          etatPaiement: status,
+          // New detailed columns from Ntsamak:
+          usineRaisonSociale: inv.usineRaisonSociale || '',
+          creeParNom: inv.creeParNom || '',
+          tauxChange: inv.tauxChange || 1,
+          remiseTtc: inv.remiseTtc || 0,
+          netAPayer: inv.netAPayer || inv.montantTtc || 0,
+          montantReglement: inv.montantReglement || 0,
+          datesReglements: inv.datesReglements || '',
+          referencesReglements: inv.referencesReglements || ''
         }
       };
     });
@@ -187,6 +215,14 @@ const sbKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJl
 
   } catch (error) {
     console.error("\n❌ CRITICAL SYNC ERROR:", error.message);
+    if (page) {
+      try {
+        await page.screenshot({ path: 'scratch/sync_error.png' });
+        console.log("📸 Saved failure screenshot to scratch/sync_error.png");
+      } catch (screenshotError) {
+        console.error("Could not capture failure screenshot:", screenshotError.message);
+      }
+    }
     if (browser) await browser.close();
     process.exit(1);
   }

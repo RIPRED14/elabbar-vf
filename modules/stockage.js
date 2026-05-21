@@ -1269,7 +1269,7 @@ Notes:
   },
 
   viewEntry(id) {
-    const e = (App.data.stockage || []).find(x => x.id == id);
+    const e = (App.data.stockage || []).find(x => x.id === id);
     if (!e) return;
     const totalQty = (e.lignes || []).reduce((s,l) => s+(l.quantite||0), 0);
     const totalBrut = (e.lignes || []).reduce((s,l) => s+(l.pdsBrutTotal||0), 0);
@@ -1973,7 +1973,7 @@ Notes:
 
   printBon(id) {
     try {
-      const e = (App.data.stockage || []).find(x => x.id == id);
+      const e = (App.data.stockage || []).find(x => x.id === id);
       if (!e) return;
       
       const lignes = e.lignes || [];
@@ -2196,7 +2196,7 @@ Notes:
 
   printBonSortie(id) {
     try {
-      const s = (App.data.sortiesStockage || []).find(x => x.id == id);
+      const s = (App.data.sortiesStockage || []).find(x => x.id === id);
       if (!s) return;
       const sourceEntry = (App.data.stockage || []).find(e => e.id === s.receptionId);
       const sourceLine = sourceEntry?.lignes?.[s.lineIdx];
@@ -2438,7 +2438,6 @@ Notes:
                     <td class="td-center">${statusBadge}</td>
                     <td class="td-center" style="white-space:nowrap;">
                       <button class="btn-icon" onclick="Stockage.viewPendingEntry('${e.id}')" title="Voir détails"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
-                      <button class="btn-icon" onclick="if(window.Saisie) Saisie.printBon('${e.productionId}')" title="Imprimer fiche production">🖨️</button>
                       ${isPending ? `<button class="btn-icon" onclick="Stockage.validatePendingEntry('${e.id}')" title="Valider l\'entrée en stock" style="background:rgba(16,185,129,0.15);color:var(--accent-green);border-color:var(--accent-green);">✅</button>` : ''}
                       ${isPending ? `<button class="btn-icon danger" onclick="Stockage.deletePendingEntry('${e.id}')" title="Annuler"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>` : ''}
                     </td>
@@ -2453,7 +2452,7 @@ Notes:
   },
 
   viewPendingEntry(id) {
-    const e = (App.data.pendingStorageEntries || []).find(x => x.id == id);
+    const e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     if (!e) return;
     const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage', direct: '🚀 Passage Direct' };
     const isPending = e.status === 'pending';
@@ -2546,7 +2545,7 @@ Notes:
   },
 
   validatePendingEntry(id) {
-    const e = (App.data.pendingStorageEntries || []).find(x => x.id == id);
+    const e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     if (!e || e.status !== 'pending') { App.toast('Élément introuvable ou déjà validé', 'error'); return; }
 
     const chambreLabels = { chambre1: 'Chambre 1', chambre2: 'Chambre 2', entreposage: 'Entreposage', direct: '🚀 Passage Direct' };
@@ -2571,7 +2570,7 @@ Notes:
   },
 
   doValidatePending(id) {
-    const e = (App.data.pendingStorageEntries || []).find(x => x.id == id);
+    const e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     if (!e || e.status !== 'pending') return;
 
     if (!App.data.stockage) App.data.stockage = [];
@@ -2629,7 +2628,7 @@ Notes:
   },
 
   deletePendingEntry(id) {
-    const e = (App.data.pendingStorageEntries || []).find(x => x.id == id);
+    const e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     if (!e || e.status !== 'pending') return;
 
     App.showModal('🗑️ Annuler l\'envoi', `
@@ -2645,7 +2644,7 @@ Notes:
   },
 
   doDeletePending(id) {
-    const e = (App.data.pendingStorageEntries || []).find(x => x.id == id);
+    const e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     if (!e) return;
 
     // Restore the production entry flag
@@ -2666,9 +2665,9 @@ Notes:
   printTransferQR(id, type = 'final') {
     let e;
     if (type === 'pending') {
-      e = (App.data.pendingStorageEntries || []).find(x => x.id == id);
+      e = (App.data.pendingStorageEntries || []).find(x => x.id === id);
     } else {
-      e = (App.data.stockage || []).find(x => x.id == id);
+      e = (App.data.stockage || []).find(x => x.id === id);
     }
     if (!e) return;
 

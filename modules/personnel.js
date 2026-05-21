@@ -125,17 +125,17 @@ const Personnel = {
     ptg.totalHeuresAdmin = hAdmin;
     ptg.totalMontantOcc = hOcc * ptg.tauxHoraireOcc;
     
-    // Helper inline pour obtenir le ratio d'activité du mois (0 à 1)
-    const getRatio = (p) => this.getPersonnelActiveRatio(p, monthStr);
+    // Helper inline ou appel à une méthode
+    const isActive = (p) => this.isPersonnelActiveInMonth(p, monthStr);
 
-    // Salaires fixes — SALAIRE FIXE MENSUEL, calculé au prorata des jours de présence dans le mois
-    // Les ouvriers fixes travaillent 191h/mois, salaire proportionnel au mois
-    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin').reduce((s, p) => s + (p.salaire || 0) * getRatio(p), 0);
-    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre').reduce((s, p) => s + (p.salaire || 0) * getRatio(p), 0);
-    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe').reduce((s, p) => s + (p.salaire || 0) * getRatio(p), 0);
+    // Salaires fixes — SALAIRE FIXE MENSUEL, PAS de calcul par heures
+    // Les ouvriers fixes travaillent 191h/mois, salaire identique même si > 191h
+    ptg.totalSalairesFixeAdmin = App.data.personnel.filter(p => p.type === 'fixe_admin' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
+    ptg.totalSalairesFixeAutre = App.data.personnel.filter(p => p.type === 'fixe_autre' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
+    ptg.totalSalairesOuvriersFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && isActive(p)).reduce((s, p) => s + (p.salaire || 0), 0);
     
-    // Heures contractuelles fixes = 191h/mois par ouvrier fixe (au prorata aussi)
-    ptg.heuresContractuellesFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe').reduce((s, p) => s + 191 * getRatio(p), 0);
+    // Heures contractuelles fixes = 191h/mois par ouvrier fixe
+    ptg.heuresContractuellesFixe = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' && isActive(p)).length * 191;
     
     // Cloud Sync: Flat pointage table
     this.syncFlatPointage(monthStr);
@@ -143,33 +143,17 @@ const Personnel = {
     App.saveData();
   },
 
-  getPersonnelActiveRatio(p, monthStr) {
-    if (!monthStr || monthStr.length < 7) return 0;
-    
-    const parts = monthStr.split('-');
-    const year = parseInt(parts[0]);
-    const month = parseInt(parts[1]);
-    const daysInMonth = new Date(year, month, 0).getDate();
-    
-    let startDay = 1;
-    let endDay = daysInMonth;
-
-    if (p.dateEmbauche && p.dateEmbauche.startsWith(monthStr)) {
-      startDay = parseInt(p.dateEmbauche.split('-')[2]);
-    } else if (p.dateEmbauche && p.dateEmbauche.substring(0, 7) > monthStr) {
-      return 0; // Hired after this month
+  isPersonnelActiveInMonth(p, monthStr) {
+    if (p.dateEmbauche && p.dateEmbauche.substring(0, 7) > monthStr) {
+      return false; // Hired after this month
     }
-
-    if (p.dateDepart && p.dateDepart.startsWith(monthStr)) {
-      endDay = parseInt(p.dateDepart.split('-')[2]);
-    } else if (p.dateDepart && p.dateDepart.substring(0, 7) < monthStr) {
-      return 0; // Left before this month
-    } else if (!p.actif && !p.dateDepart) {
+    if (p.dateDepart) {
+      if (p.dateDepart.substring(0, 7) < monthStr) return false; // Left before this month
+    } else if (!p.actif) {
       // Legacy behavior: if no departure date is set but they are inactive, assume inactive always
-      return 0;
+      return false;
     }
-    
-    return Math.max(0, (endDay - startDay + 1) / daysInMonth);
+    return true;
   },
 
   async syncFlatPointage(monthStr) {
@@ -205,18 +189,6 @@ const Personnel = {
   },
 
   render() {
-    // Nettoyage automatique des erreurs d'import OCR ou Excel (En-têtes scannés par erreur)
-    if (App.data && App.data.personnel) {
-      const initialLength = App.data.personnel.length;
-      App.data.personnel = App.data.personnel.filter(p => {
-        const n = (p.nom || '').toUpperCase().trim();
-        return !n.includes('NOM ET PRENOM') && !n.includes('NOM & PRENOM') && n !== 'TOTAL' && !n.includes('POINTAGE');
-      });
-      if (App.data.personnel.length < initialLength) {
-        App.saveData(); // Sauvegarder la suppression
-      }
-    }
-
     this.updatePeriodISO();
     this.recalcPointageMensuel(this.selectedPeriod);
     const content = document.getElementById('pageContent');
@@ -621,24 +593,6 @@ const Personnel = {
         return a.nom.localeCompare(b.nom);
       });
 
-    const currentSum = fiche.presences.reduce((s,p) => s + (p.heures || 0), 0);
-    let warningBox = '';
-    if (fiche.totalAttendu !== undefined && fiche.totalAttendu !== null && Math.abs(currentSum - fiche.totalAttendu) > 0.01) {
-      warningBox = `
-        <div style="padding:12px 16px; background:rgba(239, 68, 68, 0.1); border-left:4px solid var(--status-danger); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:12px;">
-          <strong style="color:var(--status-danger);">⚠️ Écart Détecté :</strong>
-          <span style="font-size:0.9rem;">La somme calculée (<b>${currentSum}h</b>) ne correspond pas au total attendu (<b>${fiche.totalAttendu}h</b>). Veuillez revérifier la saisie.</span>
-        </div>
-      `;
-    } else if (fiche.totalAttendu !== undefined && fiche.totalAttendu !== null && Math.abs(currentSum - fiche.totalAttendu) <= 0.01) {
-      warningBox = `
-        <div style="padding:12px 16px; background:rgba(16, 185, 129, 0.1); border-left:4px solid var(--status-success); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:12px;">
-          <strong style="color:var(--status-success);">✅ Total Correct :</strong>
-          <span style="font-size:0.9rem;">La somme calculée correspond parfaitement au total du fichier (${fiche.totalAttendu}h).</span>
-        </div>
-      `;
-    }
-
     return `
       <div class="card slide-up" style="border: 2px solid var(--accent-blue);">
         <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
@@ -649,14 +603,9 @@ const Personnel = {
               <option value="Reconditionnement" ${fiche.activite === 'Reconditionnement' ? 'selected' : ''}>♻️ Reconditionnement</option>
             </select>
             <input type="text" class="form-input" style="width:250px; font-weight:700;" value="${fiche.titre}" placeholder="Nom de l'équipe / feuille" onchange="Personnel.updateFicheTitre(${fiche.id}, this.value)">
-            <div style="display:flex; align-items:center; gap:8px; margin-left:16px;">
-              <span style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">Total Attendu (Fichier) :</span>
-              <input type="number" step="0.5" class="form-input" style="width:90px; text-align:center; font-weight:bold; background:var(--bg-app);" placeholder="Ex: 150" value="${fiche.totalAttendu || ''}" onchange="Personnel.updateFicheTotalAttendu(${fiche.id}, this.value)">
-            </div>
           </div>
           <button class="btn btn-outline" onclick="Personnel.selectFiche(null)">Fermer l'édition</button>
         </div>
-        ${warningBox}
         <div class="card-body" style="padding:0; overflow-x:auto;">
           <table class="table pointage-detail-table" style="min-width:1000px;">
             <thead>
@@ -764,15 +713,6 @@ const Personnel = {
     const fiche = this.getFiche(id);
     if (fiche) {
       fiche.titre = val;
-      App.saveData('fiches_pointage', fiche);
-      this.render();
-    }
-  },
-
-  updateFicheTotalAttendu(id, val) {
-    const fiche = this.getFiche(id);
-    if (fiche) {
-      fiche.totalAttendu = val ? parseFloat(val) : null;
       App.saveData('fiches_pointage', fiche);
       this.render();
     }
@@ -911,12 +851,9 @@ const Personnel = {
                       ` : ''}
                       ${isAdmin ? `<td class="td-right" style="font-family:var(--font-mono);">${h > 0 ? h + 'h' : '-'}</td>` : ''}
                       <td class="td-right td-bold">${p.salaire ? App.formatNumber(p.salaire, 0) : '-'}</td>
-                      <td class="td-center" style="display:flex; justify-content:center; gap:4px;">
+                      <td class="td-center">
                         <button class="btn-icon" onclick="Personnel.editModal(${p.id})" title="Modifier">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                        </button>
-                        <button class="btn-icon danger" onclick="Personnel.deletePersonnel(${p.id})" title="Supprimer">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
                         </button>
                       </td>
                     </tr>
@@ -1171,26 +1108,6 @@ const Personnel = {
     if (entry) this.showAddModal(entry);
   },
 
-  async deletePersonnel(id) {
-    if (!confirm("Voulez-vous vraiment supprimer cet employé ? Cette action est irréversible.")) return;
-    
-    // Suppression dans le cloud si configuré
-    if (typeof App.deleteFromCloud === 'function') {
-      try {
-        await App.deleteFromCloud('personnel', id);
-      } catch (e) {
-        console.warn("Could not delete from cloud:", e);
-      }
-    }
-    
-    // Suppression locale
-    App.data.personnel = App.data.personnel.filter(p => p.id !== id);
-    App.saveData();
-    this.recalcPointageMensuel(this.selectedPeriod);
-    this.render();
-    App.toast("Employé supprimé avec succès.", "info");
-  },
-
   savePersonnel(editId) {
     const nom = document.getElementById('pNom').value.trim().toUpperCase();
     const prenom = document.getElementById('pPrenom').value.trim();
@@ -1269,7 +1186,7 @@ const Personnel = {
 
             for(let i=headerIdx+1; i<rows.length; i++) {
                let nom = String(rows[i][0] || '').trim().toUpperCase();
-               if(!nom || nom === 'TOTAL' || nom === '0' || nom.includes('PAGE') || nom.includes('PRENOM') || nom === 'NOM ET PRENOM') continue;
+               if(!nom || nom === 'TOTAL' || nom === '0' || nom.includes('PAGE')) continue;
                if(!pointages[nom]) pointages[nom] = {};
                
                dateCols.forEach(dc => {
@@ -1429,7 +1346,6 @@ LIVRABLE JSON :
   "date": "YYYY-MM-DD",
   "activite": "EMBALLAGE" | "TRAITEMENT" | "RECONDITIONNEMENT",
   "titre": "Nom de l'équipe (ex: Equipe d'Emballage)",
-  "totalHeuresFeuille": "number (Le grand total des heures écrit en bas de la feuille, s'il y en a un)",
   "presences": [
     { 
       "nom": "NOM COMPLET", 
@@ -1446,7 +1362,6 @@ RÈGLES CRUCIALES :
 - Si une ligne est vide (pas d'heures), ne l'inclus pas ou mets des heures à 0.
 - Si tu vois une croix ou un trait dans "Nbr Heures", cela signifie généralement 4h pour la session (8h total).
 - Capture TOUS les noms, y compris ceux dans le petit tableau en bas de la feuille.
-- N'inclus PAS les entêtes de colonnes tels que "NOM ET PRENOM", "NOM & PRENOM" ou "TOTAL" en tant qu'employés.
 - Sois très précis sur l'orthographe des noms.`;
 
       const result = await App.AI.analyzeImage(file, prompt);
@@ -1472,23 +1387,6 @@ RÈGLES CRUCIALES :
     if (!this.pendingScanData) return;
     const data = this.pendingScanData;
     
-    let sumExtracted = 0;
-    if (data.presences) {
-       data.presences.forEach(p => {
-         sumExtracted += (parseFloat(p.totalHeures) || (parseFloat(p.matinHeures)||0) + (parseFloat(p.soirHeures)||0));
-       });
-    }
-
-    let warningHtml = '';
-    if (data.totalHeuresFeuille && Math.abs(sumExtracted - data.totalHeuresFeuille) > 0.1) {
-       warningHtml = `
-         <div style="background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--status-danger); padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-           <strong style="color: var(--status-danger);">⚠️ Écart détecté !</strong><br>
-           La somme des heures de tous les employés scannés (<b>${sumExtracted}h</b>) ne correspond pas au total inscrit sur la feuille (<b>${data.totalHeuresFeuille}h</b>). Veuillez vérifier attentivement les données ci-dessous.
-         </div>
-       `;
-    }
-
     const html = `
       <div class="modal-header">
         <h2 class="modal-title">🔍 Validation du Scan</h2>
@@ -1509,8 +1407,6 @@ RÈGLES CRUCIALES :
             <input type="text" class="form-input" id="vFicheTitre" value="${data.titre || ''}" style="width:200px; height:32px;">
           </div>
         </div>
-
-        ${warningHtml}
 
         <div style="max-height:400px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px;">
           <table class="table">
@@ -1586,7 +1482,7 @@ RÈGLES CRUCIALES :
     if (!day.fiches) day.fiches = [];
 
     const newId = day.fiches.length > 0 ? Math.max(...day.fiches.map(f => f.id)) + 1 : 1;
-    const fiche = { id: newId, activite: targetActivite, titre, presences: [], totalAttendu: data.totalHeuresFeuille ? parseFloat(data.totalHeuresFeuille) : null };
+    const fiche = { id: newId, activite: targetActivite, titre, presences: [] };
 
     let matchedCount = 0;
     data.presences.forEach(pScan => {

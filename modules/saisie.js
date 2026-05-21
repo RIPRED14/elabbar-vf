@@ -9,7 +9,7 @@ const Saisie = {
   selectedMonth: new Date().getMonth(),
   selectedYear: new Date().getFullYear(),
   selectedQuarter: Math.floor(new Date().getMonth() / 3) + 1,
-  phasesList: ['Triage-Lavage','Lavage','Triage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Evisceration','Decorticage','Mélançage','Trempage','Congélation','Congelation','DECONGELATION','Décongélation'],
+  phasesList: ['Triage-Lavage','Glasurage','Nettoyage','Cuisson','Emballage','RECEPTION','EVISCERATION ET ETETAGE','Mélançage','Trempage','Congélation','DECONGELATION'],
 
   emballagesList: [
     { code: 'Cs', designation: 'N (Caisse)' },
@@ -48,62 +48,67 @@ const Saisie = {
     'S1000IMP': { article: 'SACHET 1KG IMPRIMÉ', prix: 27.76 / 140 },
   },
 
-  get intrantsMaster() {
-    const list = [];
-    if (App.data && App.data.consommables) {
-      App.data.consommables.forEach(c => {
-        let famille = 'DIVERS';
-        const cat = (c.categorie || '').toUpperCase();
-        const nom = (c.nom || '').toUpperCase();
-        
-        if (cat === 'SACHETS' || nom.includes('SACHET')) famille = 'SACHET';
-        else if (cat === 'CONDITIONNEMENT' || cat === 'EMBALLAGE') {
-          if (nom.includes('CARTON')) famille = 'CARTON';
-          else if (nom.includes('ETIQUETTE')) famille = 'ETIQUETTE';
-          else if (nom.includes('FILM') || nom.includes('SCOTCH') || nom.includes('PALETTE') || cat === 'EMBALLAGE') famille = 'EMBALLAGE';
-          else famille = 'PLASTIQUE';
-        }
-        else if (cat === 'INTRANT' || cat === 'INTRANTS' || cat === 'ADDITIF' || cat === 'ADDITIFS' || nom.includes('AGRAFISH') || nom.includes('HYDROMAR') || nom.includes('SEL')) famille = 'INTRANT';
-        else if (cat === 'AUTRES' || cat === 'DIVERS') {
-          if (nom.includes('SAC') || nom.includes('FEUILLE')) famille = 'PLASTIQUE';
-          else famille = 'DIVERS';
-        }
-        else if (cat === 'FOURNITURES') famille = 'FOURNITURES';
-        else if (cat === 'EQUIPEMENT' || cat === 'EQUIPEMENTS') famille = 'EQUIPEMENT';
-        else if (cat === 'SERVICE' || cat === 'SERVICES') famille = 'SERVICE';
-        else famille = cat; // Fallback
-        
-        list.push({
-          ref: c.id ? c.id.toString() : c.nom,
-          article: c.nom,
-          famille: famille,
-          prix: c.prixUnitaire || 0
-        });
-      });
-    }
-
-    // Add required systemic services and default intrants if they don't exist
-    const systemics = [
-      { ref: '00001', article: 'ELECTRICITE', famille: 'EAU-ELEC', prix: 0 },
-      { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 },
-      { ref: 'INT-01', article: 'AGRAFISH', famille: 'INTRANT', prix: 45 },
-      { ref: 'INT-02', article: 'HYDROMAR', famille: 'INTRANT', prix: 35 },
-      { ref: 'INT-03', article: 'SEL', famille: 'INTRANT', prix: 2 }
-    ];
-
-    systemics.forEach(sys => {
-      if (!list.find(i => i.ref === sys.ref || i.article === sys.article)) {
-        list.push(sys);
-      }
-    });
-
-    return list;
-  },
+  intrantsMaster: [
+    // ── SACHET (tailles réelles inventaire) ──
+    { ref: 'S2338', article: 'SACHET 23x38', famille: 'SACHET', prix: 24.00 },
+    { ref: 'S2535', article: 'SACHET 25x35', famille: 'SACHET', prix: 25.28 },
+    { ref: 'S4040', article: 'SACHET 40x40 (1.5KG)', famille: 'SACHET', prix: 24.00 },
+    { ref: 'S4050', article: 'SACHET 40x50 (2KG)', famille: 'SACHET', prix: 24.00 },
+    { ref: 'S7780', article: 'SACHET 77x80', famille: 'SACHET', prix: 25.20 },
+    { ref: 'S4060', article: 'SACHET 40x60', famille: 'SACHET', prix: 24.00 },
+    { ref: 'S1230', article: 'SACHET 12x30', famille: 'SACHET', prix: 27.60 },
+    { ref: 'S1440', article: 'SACHET 14x40', famille: 'SACHET', prix: 27.60 },
+    { ref: 'S1450', article: 'SACHET 14x50', famille: 'SACHET', prix: 27.60 },
+    { ref: 'S4065', article: 'SACHET 40x65', famille: 'SACHET', prix: 27.60 },
+    { ref: 'S645120', article: 'SACHET 6/45x120x80', famille: 'SACHET', prix: 25.12 },
+    { ref: 'S6016', article: 'SACHET 60*5(16)x80', famille: 'SACHET', prix: 25.20 },
+    { ref: 'S4353', article: 'SACHET 43x53', famille: 'SACHET', prix: 24.00 },
+    { ref: 'S5885', article: 'SACHET 58x85', famille: 'SACHET', prix: 24.00 },
+    // ── SAC / PLASTIQUE ──
+    { ref: '11201', article: 'SAC 30/40', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11202', article: 'SAC 25/35', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11203', article: 'SAC 30*40*70', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11204', article: 'SAC 40*40*55', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11205', article: 'FEUILLE 40*60*40', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11206', article: 'SAC 12*30', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11207', article: 'SAC 14*40', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11208', article: 'SAC 14*50', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11209', article: 'SAC 60 (s16)*80', famille: 'PLASTIQUE', prix: 0 },
+    { ref: '11210', article: 'SAC 43*53', famille: 'PLASTIQUE', prix: 0 },
+    // ── CARTON ──
+    { ref: 'C12', article: 'CARTON 12KG', famille: 'CARTON', prix: 11.64 },
+    { ref: 'C13', article: 'CARTON 13KG', famille: 'CARTON', prix: 12.50 },
+    { ref: 'C15', article: 'CARTON 15KG', famille: 'CARTON', prix: 14.00 },
+    { ref: 'C17', article: 'CARTON 17KG', famille: 'CARTON', prix: 15.00 },
+    { ref: 'C19', article: 'CARTON 19KG', famille: 'CARTON', prix: 16.50 },
+    { ref: 'C20', article: 'CARTON 20KG', famille: 'CARTON', prix: 18.00 },
+    // ── ETIQUETTE ──
+    { ref: 'ETQ50', article: 'ETIQUETTE 50*75', famille: 'ETIQUETTE', prix: 45.00 },
+    { ref: 'ETQN', article: 'ETIQUETTE NOIR', famille: 'ETIQUETTE', prix: 78.00 },
+    // ── EMBALLAGE ──
+    { ref: 'FILM', article: 'FILM ETIRABLE', famille: 'EMBALLAGE', prix: 39.60 },
+    { ref: 'SCOTCH', article: 'SCOTCH', famille: 'EMBALLAGE', prix: 10.80 },
+    { ref: 'PALETTE', article: 'PALETTE', famille: 'EMBALLAGE', prix: 0 },
+    // ── INTRANT ──
+    { ref: 'SEL', article: 'SEL', famille: 'INTRANT', prix: 0.60 },
+    // ── EQUIPEMENT ──
+    { ref: '11211', article: 'PISTOLET ARROSEUR', famille: 'EQUIPEMENT', prix: 0 },
+    { ref: '11212', article: 'MT TUYAU', famille: 'EQUIPEMENT', prix: 0 },
+    { ref: '04001269', article: 'MACHINE SOUDEUSE MANUELLE', famille: 'EQUIPEMENT', prix: 0 },
+    { ref: '04001274', article: 'PELLE A NEIGE DETECTABLE GM', famille: 'EQUIPEMENT', prix: 0 },
+    // ── FOURNITURES ──
+    { ref: '04001259', article: 'ARRACHE AGRAFES', famille: 'FOURNITURES', prix: 0 },
+    { ref: '04001263', article: 'MARQUEUR NOIR', famille: 'FOURNITURES', prix: 0 },
+    { ref: '04001264', article: 'MARQUEUR PERMANENTE NOIR', famille: 'FOURNITURES', prix: 0 },
+    // ── SERVICE ──
+    { ref: '04001275', article: 'PACK ANALYSE MICROBIOLOGIQUES', famille: 'SERVICE', prix: 0 },
+    // ── DIVERS ──
+    { ref: '00001', article: 'ELECTRICITE', famille: 'EAU-ELEC', prix: 0 },
+    { ref: 'SC', article: 'AUTRES CHARGES', famille: 'DIVERS', prix: 0 },
+  ],
   render() {
     let prod = this.viewType === 'day' 
       ? App.getDayProduction(this.selectedDay)
-      : this.viewType === 'quarter'
-      ? App.getQuarterProduction(this.selectedYear, this.selectedQuarter)
       : App.getMonthProduction(this.selectedYear, this.selectedMonth);
 
     prod = prod.filter(p => (p.activite||'reconditionnement') === this.currentActivite);
@@ -183,10 +188,6 @@ const Saisie = {
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
               <span class="card-title">📋 Historique des opérations</span>
               <div style="display:flex; gap:12px; align-items:center;">
-                <button class="btn" style="background-color: #ef4444; color: white; border: none; padding:8px 12px; font-size:0.85rem; display:flex; align-items:center; gap:6px; cursor:pointer; border-radius:4px;" onclick="Saisie.confirmBatchDelete()">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                  Supprimer
-                </button>
                 <button class="btn btn-success" onclick="Saisie.confirmBatchSend()" style="padding:8px 12px; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
                   Valider la sélection
@@ -282,11 +283,11 @@ const Saisie = {
                     <button class="btn-icon" onclick="Saisie.printBon('${p.id}')" title="Bon de production">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
                     </button>
-                    ${!isSent ? `
-                      <button class="btn-icon" onclick="Saisie.showSendToStorageModal('${p.id}')" title="Affecter au Stockage" style="color:var(--status-success); background:rgba(34,197,94,0.1);">
+                    ${hasPF && !isSent ? `
+                      <button class="btn-icon" onclick="Saisie.showSendToStorageModal('${p.id}')" title="Transférer au Stockage" style="color:var(--status-success); background:rgba(34,197,94,0.1);">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3m18 0v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8m18 0-9-5-9 5m9 11V8"/></svg>
                       </button>
-                    ` : '<span style="font-size:0.7rem;color:var(--text-muted);">✅</span>'}
+                    ` : ''}
                     <button class="btn-icon danger" onclick="Saisie.deleteEntry('${p.id}')" title="Supprimer" ${isSent ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''}>
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
@@ -389,19 +390,15 @@ const Saisie = {
             </div>
 
             <div class="form-section">
-              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span>🔹 Phases de Reconditionnement</span>
-                <button class="btn btn-sm btn-outline" onclick="Saisie.addPhaseRecond('fPhasesPF')" ${isSent ? 'disabled' : ''}>+ Phase</button>
-              </div>
-              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th>Rend. final</th><th style="width:30px"></th></tr></thead>
-              <tbody id="fPhasesPF">${phasesPF.map((ph,i)=>`<tr draggable="true" ondragstart="Saisie.onPhaseDragStart(event, this)" ondragover="Saisie.onPhaseDragOver(event)" ondrop="Saisie.onPhaseDrop(event, this, 'fPhasesPF')">
-                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom" ${isSent ? 'disabled' : ''}>${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
-                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calc()" ${isSent ? 'disabled' : ''}></td>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;"><span>🔹 Phase (Glaçage)</span></div>
+              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th style="width:30px"></th></tr></thead>
+              <tbody id="fPhasesPF">${phasesPF.map((ph,i)=>`<tr>
+                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom"><option value="${ph.nom}">${ph.nom}</option></select></td>
+                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calc()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calc()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calc()"></td>
                 <td class="td-right td-bold" id="fRendPhPF${i}">0%</td>
-                <td class="td-right" id="fRendCumPF${i}">0%</td>
-                <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removePhaseRecond(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
+                <td></td>
               </tr>`).join('')}</tbody></table>
             </div>
 
@@ -416,8 +413,9 @@ const Saisie = {
             </div>
 
             <div class="form-section">
-              <div class="form-section-title">
-                <span>🔹 Main-d'œuvre (Calcul Automatisé)</span>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>🔹 Main-d'œuvre</span>
+                <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO()" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
               </div>
 
               <div style="margin-bottom:15px; display:flex; gap:12px; align-items:center;">
@@ -429,24 +427,34 @@ const Saisie = {
                   <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>🏆 Annuelle (Année)</option>
                 </select>
               </div>
-
-              <div class="form-grid" style="margin-bottom: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div class="form-group">
-                  <label class="form-label" style="font-weight:600;">M.O. Fixe Réelle (DH)</label>
-                  <input type="number" step="0.01" class="form-input" id="fCoutMOF" value="${entry?.coutMOF || 0}" onchange="Saisie.calc()" placeholder="0.00">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" style="font-weight:600;">M.O. Occasionnelle Réelle (DH)</label>
-                  <input type="number" step="0.01" class="form-input" id="fCoutMOO" value="${entry?.coutMOO || 0}" onchange="Saisie.calc()" placeholder="0.00">
+              
+              <div style="margin-bottom:15px;">
+                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
+                <div class="form-grid">
+                  <div class="form-group"><label class="form-label">Heures M.O. Fixe</label><input type="number" step="0.5" class="form-input" id="fHeuresMOF" value="${entry?entry.heuresMOF||totalFixeH*8:totalFixeH*8}" onchange="Saisie.calc()"></div>
+                  <div class="form-group"><label class="form-label">Salaire H/F (DH)</label><input type="number" step="0.01" class="form-input" id="fSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calc()"></div>
+                  <div class="form-group"><label class="form-label">Coût Personnel Fixe</label><div class="form-computed" id="fCoutPF">0.00 DH</div></div>
                 </div>
               </div>
+
+              <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Équipes Occasionnelles</div>
+              <table><thead><tr><th>Profil</th><th>Nb personnes</th><th>Heures/pers.</th><th>Taux Hor. (DH)</th><th>Coût Total</th><th style="width:30px"></th></tr></thead>
+              <tbody id="fEquipesMO">${(entry?.equipesMO || [{profil: 'Ouvrière', nb: 1, heures: 8, taux: p.salaireHoraireOcc}]).map((eq,i)=>`<tr>
+                <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="${eq.profil}" data-mo="profil"></td>
+                <td><input type="number" class="form-input" style="width:70px;padding:5px" value="${eq.nb}" data-mo="nb" onchange="Saisie.calc()"></td>
+                <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="${eq.heures}" data-mo="heures" onchange="Saisie.calc()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || p.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calc()"></td>
+                <td class="td-right td-bold" id="fCoutEq${i}">0.00</td>
+                <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
+              </tr>`).join('')}
+              <tr style="background:rgba(99,102,241,0.05)"><td colspan="4" class="td-bold">Total M.O. Occasionnelle</td><td class="td-right td-bold" id="fCoutMOO">0.00 DH</td><td></td></tr>
+              </tbody></table>
 
               <div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
                 <span class="form-computed" id="fCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
               <div id="fAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
-              <div id="fAllocationEnergieInfo" style="margin-top:8px;padding:12px;background:rgba(234,179,8,0.05);border-radius:8px;border-left:4px solid #eab308;display:none;"></div>
             </div>
 
             <div class="form-section">
@@ -509,78 +517,59 @@ const Saisie = {
   hideForm() { document.getElementById('saisieFormContainer').innerHTML = ''; this.editingId = null; },
 
   onDateChange() {
+    const d = document.getElementById('fDate');
+    if(!d) return;
+    
+    // Mapper l'activité de saisie vers l'activité de pointage
+    const activiteMap = {
+      'traitement': 'Traitement',
+      'reconditionnement': 'Reconditionnement',
+      'divers': 'Traitement'
+    };
+    const targetAct = activiteMap[this.currentActivite] || 'Traitement';
+    const hp = App.getHeuresJour(d.value, targetAct);
+    
+    const fMOF = document.getElementById('fHeuresMOF');
+    if(fMOF) fMOF.value = hp.hFixe;
+    
+    const fEquipesMO = document.getElementById('fEquipesMO');
+    if(fEquipesMO) {
+       const taux = App.data.parametres.salaireHoraireOcc || 16.8;
+       const trs = fEquipesMO.querySelectorAll('tr:not(:last-child)');
+       if (trs.length > 0) {
+           const row = trs[0];
+           const nbInput = row.querySelector('[data-mo="nb"]');
+           const hInput = row.querySelector('[data-mo="heures"]');
+           const tInput = row.querySelector('[data-mo="taux"]');
+           if (nbInput) nbInput.value = hp.occCount || 1;
+           if (hInput) hInput.value = hp.occCount ? (hp.hOcc / hp.occCount).toFixed(1) : 0;
+           if (tInput) tInput.value = taux;
+           
+           for (let i = 1; i < trs.length; i++) {
+               trs[i].remove();
+           }
+       }
+    }
+    
     this.calc();
-  },
-
-  onDateChangeT() {
-    this.calcT();
   },
 
   calc() {
     const v = (id) => parseFloat(document.getElementById(id)?.value) || 0;
-
-    let poidsPF = v('fPoidsPF');
-    const poidsPI = v('fPoidsPI');
     
-    // Automation: Cascade phases and PF
-    const tbodyPF = document.getElementById('fPhasesPF');
-    if (tbodyPF) {
-      let prevQF = poidsPI;
-      const pfRows = tbodyPF.querySelectorAll('tr');
-      pfRows.forEach((row, i) => {
-        const qiInput = row.querySelector('[data-ph="qteInit"]');
-        if (qiInput) {
-          if (i === 0) {
-            if (document.activeElement === qiInput) {
-               const val = parseFloat(qiInput.value) || 0;
-               const fPoidsPIEl = document.getElementById('fPoidsPI');
-               if (fPoidsPIEl && fPoidsPIEl.value != val) {
-                  fPoidsPIEl.value = val;
-               }
-               poidsPI = val;
-            } else {
-               if (poidsPI > 0) qiInput.value = poidsPI;
-            }
-          } else if (i > 0) {
-            qiInput.value = prevQF;
-          }
-        }
-        
-        const qi = parseFloat(qiInput?.value)||0;
-        const qf = parseFloat(row.querySelector('[data-ph="qteFinale"]')?.value)||0;
-        prevQF = qf || qi;
+    let coutMOO = 0;
+    document.querySelectorAll('#fEquipesMO tr:not(:last-child)').forEach((row, i) => {
+      const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+      const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+      const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0;
+      const val = nb * heures * taux;
+      const valEl = document.getElementById('fCoutEq' + i);
+      if (valEl) valEl.textContent = App.formatNumber(val);
+      coutMOO += val;
+    });
 
-        const rend = qi > 0 ? (qf/qi*100) : 0;
-        const rendEl = document.getElementById('fRendPhPF'+i);
-        if(rendEl) rendEl.textContent = App.formatNumber(rend,2)+'%';
-
-        const rendCum = poidsPI > 0 ? (prevQF/poidsPI*100) : 0;
-        const rendCumEl = document.getElementById('fRendCumPF'+i);
-        if(rendCumEl) rendCumEl.textContent = App.formatNumber(rendCum,2)+'%';
-      });
-
-      const lastRow = pfRows[pfRows.length-1];
-      const lastQF = lastRow ? (parseFloat(lastRow.querySelector('[data-ph="qteFinale"]')?.value)||0) : 0;
-      if (lastQF > 0) {
-        const fPoidsPFEl = document.getElementById('fPoidsPF');
-        if (fPoidsPFEl) {
-          fPoidsPFEl.value = lastQF;
-          poidsPF = lastQF;
-        }
-      }
-    }
-
-    // Find initial weight for TREMPAGE
-    let refWeight = poidsPI;
-    if (tbodyPF) {
-      tbodyPF.querySelectorAll('tr').forEach(row => {
-        const nomInput = row.querySelector('[data-ph="nom"]');
-        if (nomInput && nomInput.value.toUpperCase().includes('TREMPAGE')) {
-          const qi = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value);
-          if (qi > 0) refWeight = qi;
-        }
-      });
-    }
+    const coutPF = v('fHeuresMOF') * v('fSalaireHF');
+    const localCost = coutMOO + coutPF;
 
     // Automation: Calculate Intrants from Nb Caisses PF
     const caissesPF = v('fCaissesPF');
@@ -613,14 +602,7 @@ const Saisie = {
       if (!artInput || !qteInput) return;
       
       const art = artInput.value.toUpperCase();
-      
-      if (refWeight > 0 && art.includes('AGRAFISH')) {
-        qteInput.value = (refWeight / 100 * 1).toFixed(3);
-      } else if (refWeight > 0 && art.includes('HYDROMAR')) {
-        qteInput.value = (refWeight / 100 * 1).toFixed(3);
-      } else if (refWeight > 0 && (art === 'SEL' || art.includes('SEL ') || art.startsWith('SEL'))) {
-        qteInput.value = (refWeight / 100 * 0.5).toFixed(3);
-      } else if (condMatch && caissesPF > 0) {
+      if (condMatch && caissesPF > 0) {
         const currentQte = parseFloat(qteInput.value) || 0;
         if (art.includes('CARTON')) {
           if (!currentQte) qteInput.value = nbCartons;
@@ -647,39 +629,52 @@ const Saisie = {
       totalEmb += val;
     });
 
+    let poidsPF = v('fPoidsPF');
+    
+    // Automation: Link Phase qteFinale to Poids Net PF
+    const tbodyPF = document.getElementById('fPhasesPF');
+    if (tbodyPF) {
+      tbodyPF.querySelectorAll('tr').forEach((row, i) => {
+        const qI = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value)||0;
+        const qF = parseFloat(row.querySelector('[data-ph="qteFinale"]')?.value)||0;
+        const rend = qI > 0 ? (qF/qI*100) : 0;
+        const rendEl = document.getElementById('fRendPhPF'+i);
+        if(rendEl) rendEl.textContent = App.formatNumber(rend,2)+'%';
+        
+        // Auto-fill Poids Net PF from the phase finale (assuming one phase for Reconditionnement)
+        if (qF > 0) {
+          const fPoidsPFEl = document.getElementById('fPoidsPF');
+          if (fPoidsPFEl && fPoidsPFEl.value !== qF.toString()) {
+            fPoidsPFEl.value = qF;
+            poidsPF = qF;
+          }
+        }
+      });
+    }
+
     // Dynamic Labor Cost Allocation
     const dateStr = document.getElementById('fDate')?.value || '';
     const allocationPeriod = document.getElementById('fAllocationPeriod')?.value || 'quarter';
-    const coutMOF = parseFloat(document.getElementById('fCoutMOF')?.value) || 0;
-    const coutMOO = parseFloat(document.getElementById('fCoutMOO')?.value) || 0;
-    const currentEntryRawLabor = coutMOF + coutMOO;
-    const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod, currentEntryRawLabor);
-    const energieAlloc = App.getPeriodEnergyCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
+    const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
     
-    let coutMOJ = 0;
+    let coutMOJ = localCost;
     const infoEl = document.getElementById('fAllocationMOInfo');
-    
-    let labelPeriode = 'Mensuelle';
-    if (allocationPeriod === 'day') labelPeriode = 'Journalière';
-    else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
-    else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
-
     if (infoEl) {
       if (pesos.fallback) {
-        const defaultRate = 1.25; // 1.25 DH/kg fallback rate
-        coutMOJ = poidsPF * defaultRate;
         infoEl.style.display = 'block';
         infoEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
             <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul estimé basé sur un taux standard de <strong>${defaultRate} DH/kg</strong>.</div>
-            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(220,38,38,0.1); color:var(--text-primary); font-weight:600;">
-              Coût M.O. Estimé : ${App.formatNumber(coutMOJ, 2)} DH
-            </div>
+            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
           </div>
         `;
       } else {
         infoEl.style.display = 'block';
+        let labelPeriode = 'Mensuelle';
+        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
+        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
+        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
+
         let labelMasse = 'Masse Salariale Période';
         let labelTonnage = 'Tonnage Total Période';
         if (allocationPeriod === 'day') {
@@ -704,43 +699,16 @@ const Saisie = {
       }
     }
 
-    let coutEnergie = 0;
-    const infoEnergieEl = document.getElementById('fAllocationEnergieInfo');
-    if (infoEnergieEl) {
-      if (energieAlloc.fallback || energieAlloc.totalEnergyCost === 0) {
-        infoEnergieEl.style.display = 'block';
-        infoEnergieEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
-            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Eau & Élec Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée d'énergie (Eau/Élec) ou de tonnage pour la période <strong>${energieAlloc.targetMonths.join(', ')}</strong>.</div>
-          </div>
-        `;
-      } else {
-        infoEnergieEl.style.display = 'block';
-        infoEnergieEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
-            <div style="font-weight:700; color:#eab308; display:flex; align-items:center; gap:4px;">⚡ Ventilation Eau et Électricité (${labelPeriode})</div>
-            <div style="color:var(--text-secondary); line-height:1.4;">
-              Factures Eau & Élec de la période : <strong>${App.formatNumber(energieAlloc.totalEnergyCost, 2)} DH</strong><br>
-              Tonnage Total Période : <strong>${App.formatNumber(energieAlloc.totalTonnage, 1)} kg</strong><br>
-              Ratio Alloué (DH/kg) : <strong>${App.formatNumber(energieAlloc.ratio, 4)} DH/kg</strong>
-            </div>
-            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(234,179,8,0.1); color:var(--text-primary); font-weight:600;">
-              Coût Eau & Élec Alloué pour cette saisie : ${App.formatNumber(energieAlloc.allocatedCost, 2)} DH
-            </div>
-          </div>
-        `;
-        coutEnergie = energieAlloc.allocatedCost;
-      }
-    }
-
-    const totalJ = coutMOJ + totalEmb + coutEnergie;
+    const totalJ = coutMOJ + totalEmb;
     const parKg = poidsPF > 0 ? totalJ / poidsPF : 0;
 
+    const poidsPI = v('fPoidsPI');
     const poidsReliquat = v('fReliquatPoids');
     const poidsNetEngage = Math.max(0, poidsPI - poidsReliquat);
     const rendement = poidsNetEngage > 0 ? (poidsPF / poidsNetEngage * 100) : 0;
 
+    const elMOO = document.getElementById('fCoutMOO'); if(elMOO) elMOO.textContent = App.formatNumber(coutMOO) + ' DH';
+    const elPF = document.getElementById('fCoutPF'); if(elPF) elPF.textContent = App.formatNumber(coutPF) + ' DH';
     const elMOJ = document.getElementById('fCoutMOJ'); if(elMOJ) elMOJ.textContent = App.formatNumber(coutMOJ) + ' DH';
     const elSumMO = document.getElementById('sumMO'); if(elSumMO) elSumMO.textContent = App.formatNumber(coutMOJ, 0) + ' DH';
     
@@ -760,8 +728,8 @@ const Saisie = {
     // 2. Factures
     const facturesMois = (App.data.factures || []).filter(f => (f.date||'').startsWith(monthStr));
     
-    // Charges spécifiques (Reconditionnement + Emballage pour recond)
-    const chargesSpecifiques = facturesMois.filter(f => f.allocation === 'reconditionnement' || f.allocation === 'emballage').reduce((s, f) => s + (f.montant||0), 0);
+    // Charges spécifiques (Reconditionnement uniquement, emballage exclu pour éviter double comptage avec fiches)
+    const chargesSpecifiques = facturesMois.filter(f => f.allocation === 'reconditionnement').reduce((s, f) => s + (f.montant||0), 0);
     const impactSpecifique = totalKgActivite > 0 ? (chargesSpecifiques / totalKgActivite) : 0;
 
     // Charges générales
@@ -801,6 +769,39 @@ const Saisie = {
     }
   },
 
+  addEquipeMO(tbodyId = 'fEquipesMO') {
+    const tbody = document.getElementById(tbodyId);
+    const idx = tbody.querySelectorAll('tr:not(:last-child)').length;
+    const lastRow = tbody.querySelector('tr:last-child');
+    const tr = document.createElement('tr');
+    const defaultTaux = App.data.parametres.salaireHoraireOcc || 17.92;
+    const callback = tbodyId === 'tEquipesMO' ? 'Saisie.calcT()' : 'Saisie.calc()';
+    const prefix = tbodyId === 'tEquipesMO' ? 't' : 'f';
+
+    tr.innerHTML = `
+      <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="Ouvrière" data-mo="profil"></td>
+      <td><input type="number" class="form-input" style="width:70px;padding:5px" value="1" data-mo="nb" onchange="${callback}"></td>
+      <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="8" data-mo="heures" onchange="${callback}"></td>
+      <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${defaultTaux}" data-mo="taux" onchange="${callback}"></td>
+      <td class="td-right td-bold" id="${prefix}CoutEq${idx}">0.00</td>
+      <td><button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>
+    `;
+    tbody.insertBefore(tr, lastRow);
+    if (tbodyId === 'tEquipesMO') this.calcT(); else this.calc();
+  },
+
+  removeEquipeMO(btn) {
+    const tr = btn.closest('tr');
+    const tbody = tr.parentElement;
+    const rows = tbody.querySelectorAll('tr:not(:last-child)');
+    if (rows.length <= 1) { App.toast("Il faut au moins une ligne d'équipe", 'error'); return; }
+    tr.remove();
+    tbody.querySelectorAll('tr:not(:last-child)').forEach((row, i) => {
+      const valEl = row.querySelector('td:nth-child(5)');
+      if (valEl) valEl.id = 'fCoutEq' + i;
+    });
+    this.calc();
+  },
 
   renderIntrantRowRec(it, i, isSent = false) {
     return `<tr>
@@ -868,6 +869,20 @@ const Saisie = {
     const espece = document.getElementById('fEspece').value;
     if (!date || !espece) { App.toast('Veuillez remplir la date et l\'espèce', 'error'); return; }
 
+    const coutPF = v('fHeuresMOF') * v('fSalaireHF');
+    
+    let coutMOO = 0;
+    const equipesMO = [];
+    document.querySelectorAll('#fEquipesMO tr:not(:last-child)').forEach(row => {
+      const profil = row.querySelector('[data-mo="profil"]')?.value || 'Ouvrière';
+      const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+      const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+      const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0;
+      const coutEq = nb * heures * taux;
+      equipesMO.push({ profil, nb, heures, taux, coutEq });
+      coutMOO += coutEq;
+    });
+
     const phasesPF = [];
     document.querySelectorAll('#fPhasesPF tr').forEach(row => {
       phasesPF.push({
@@ -907,10 +922,10 @@ const Saisie = {
       reliquatNom: document.getElementById('fReliquatNom')?.value || '',
       reliquatPoids: v('fReliquatPoids'),
       allocationPeriod: document.getElementById('fAllocationPeriod')?.value || 'quarter',
-      coutMOO: v('fCoutMOO'),
-      coutMOF: v('fCoutMOF'),
-      heuresMOF: 0, salaireHF: 0, coutPersonnelF: 0,
-      coutMOJ: parseFloat(document.getElementById('fCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0,
+      equipesMO,
+      coutMOO,
+      heuresMOF: v('fHeuresMOF'), salaireHF: v('fSalaireHF'), coutPersonnelF: coutPF,
+      coutMOJ: parseFloat(document.getElementById('fCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||(coutMOO + coutPF),
       phasesPF,
       intrants,
       totalIntrants,
@@ -1045,33 +1060,6 @@ const Saisie = {
     cbs.forEach(cb => cb.checked = isChecked);
   },
 
-  async confirmBatchDelete() {
-    const cbs = document.querySelectorAll('.batch-select-cb:checked');
-    if (cbs.length === 0) {
-      App.toast("Veuillez sélectionner au moins une saisie à supprimer.", "error");
-      return;
-    }
-    
-    if (!confirm(`Voulez-vous vraiment supprimer ces ${cbs.length} saisies ? Cette action est irréversible.`)) return;
-    
-    let deleteCount = 0;
-    
-    for (const cb of cbs) {
-      const id = cb.value;
-      const entry = App.data.production.find(p => p.id == id);
-      if (entry) {
-        this.restoreConsumption(this.getReconditionnementConsumption(entry), `Annulation saisie #${id}`);
-      }
-      App.data.production = App.data.production.filter(p => p.id != id);
-      await App.deleteFromCloud('production', id);
-      deleteCount++;
-    }
-    
-    App.saveData();
-    this.render();
-    App.toast(`${deleteCount} saisie(s) supprimée(s) avec succès.`, 'success');
-  },
-
   confirmBatchSend() {
     const cbs = document.querySelectorAll('.batch-select-cb:checked');
     if (cbs.length === 0) {
@@ -1086,9 +1074,8 @@ const Saisie = {
 
     cbs.forEach(cb => {
       const id = cb.value;
-      // eslint-disable-next-line eqeqeq
-      const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
-      if (p && !p.sentToStorage) {
+      const p = App.data.production.find(x => x.id === id);
+      if (p && !p.sentToStorage && (p.poidsBrutPF > 0)) {
         const chambre = 'chambre1'; // Default to chambre 1 for batch
         const activiteLabel = (p.activite === 'traitement') ? 'Traitement' : (p.activite === 'reconditionnement' ? 'Reconditionnement' : p.activite);
         
@@ -1230,12 +1217,12 @@ const Saisie = {
 
             <div class="form-section">
               <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;"><span>🔹 Phases matière première</span><button class="btn btn-sm btn-outline" onclick="Saisie.addPhase('tPhasesMP')" ${isSent ? 'disabled' : ''}>+ Phase</button></div>
-              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th>Rend. final</th><th style="width:30px"></th></tr></thead>
-              <tbody id="tPhasesMP">${phases.map((ph,i)=>`<tr draggable="true" ondragstart="Saisie.onPhaseDragStart(event, this)" ondragover="Saisie.onPhaseDragOver(event)" ondrop="Saisie.onPhaseDrop(event, this, 'tPhasesMP')">
-                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom" ${isSent ? 'disabled' : ''}>${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
-                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calcT()" ${isSent ? 'disabled' : ''}></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calcT()" ${isSent ? 'disabled' : ''}></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calcT()" ${isSent ? 'disabled' : ''}></td>
+              <table><thead><tr><th>Phase</th><th>Seuil %</th><th>Qté initiale</th><th>Qté finale</th><th>Rend. phase</th><th>Rend. cumulé</th><th style="width:30px"></th></tr></thead>
+              <tbody id="tPhasesMP">${phases.map((ph,i)=>`<tr>
+                <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}" ${ph.nom===p?'selected':''}>${p}</option>`).join('')}</select></td>
+                <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="${ph.seuil}" data-ph="seuil" data-idx="${i}" onchange="Saisie.calcT()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteInit||''}" data-ph="qteInit" data-idx="${i}" onchange="Saisie.calcT()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="${ph.qteFinale||''}" data-ph="qteFinale" data-idx="${i}" onchange="Saisie.calcT()"></td>
                 <td class="td-right td-bold" id="rendPhMP${i}">0%</td>
                 <td class="td-right" id="rendCumMP${i}">0%</td>
                 <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removePhase(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
@@ -1295,37 +1282,50 @@ const Saisie = {
             </div>
 
             <div class="form-section">
-              <div class="form-section-title">
-                <span>🔹 Main-d'œuvre (Calcul Automatisé)</span>
+              <div class="form-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                <span>🔹 Main-d'œuvre</span>
+                <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO('tEquipesMO')" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
               </div>
-
-              <div style="margin-bottom:15px; display:flex; gap:12px; align-items:center;">
-                <label class="form-label" style="margin:0; font-weight:600;">Période d'allocation :</label>
-                <select class="form-select" id="tAllocationPeriod" onchange="Saisie.calcT()" style="width:200px; padding:6px; font-size:0.85rem;">
-                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>📅 Journalière (Jour)</option>
-                  <option value="month" ${entry?.allocationPeriod === 'month' ? 'selected' : ''}>📊 Mensuelle (Mois)</option>
-                  <option value="quarter" ${!entry || entry.allocationPeriod === 'quarter' || !entry.allocationPeriod ? 'selected' : ''}>📈 Trimestrielle (Trimestre)</option>
-                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>🏆 Annuelle (Année)</option>
+              <div style="margin-bottom: 12px; padding: 10px; background: rgba(99,102,241,0.05); border-radius: 8px; border: 1px solid rgba(99,102,241,0.2);">
+                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Période d'Allocation des Coûts MO</label>
+                <select id="tAllocationPeriod" class="form-select" style="max-width: 300px; border-color: var(--accent-blue);" onchange="Saisie.calcT()">
+                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>Journalière (Présence du jour)</option>
+                  <option value="month" ${(entry?.allocationPeriod === 'month' || !entry?.allocationPeriod) ? 'selected' : ''}>Mensuelle (Mois en cours)</option>
+                  <option value="quarter" ${entry?.allocationPeriod === 'quarter' ? 'selected' : ''}>Trimestrielle (3 mois fixes)</option>
+                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>Annuelle (12 mois fixes)</option>
                 </select>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                  Sert à diviser la masse salariale totale de la période choisie sur le tonnage total de cette même période.
+                </div>
+              </div>
+              
+              <div style="margin-bottom:15px;">
+                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
+                <div class="form-grid">
+                  <div class="form-group"><label class="form-label">Heures M.O. Fixe</label><input type="number" step="0.5" class="form-input" id="tHeuresMOF" value="${entry?entry.heuresMOF||8:8}" onchange="Saisie.calcT()"></div>
+                  <div class="form-group"><label class="form-label">Salaire H/F (Base 191h)</label><input type="number" step="0.01" class="form-input" id="tSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calcT()"></div>
+                  <div class="form-group"><label class="form-label">Coût Personnel Fixe</label><div class="form-computed" id="tCoutPF">0.00 DH</div></div>
+                </div>
               </div>
 
-              <div class="form-grid" style="margin-bottom: 12px; grid-template-columns: 1fr 1fr; gap: 12px;">
-                <div class="form-group">
-                  <label class="form-label" style="font-weight:600;">M.O. Fixe Réelle (DH)</label>
-                  <input type="number" step="0.01" class="form-input" id="tCoutMOF" value="${entry?.coutMOF || 0}" onchange="Saisie.calcT()" placeholder="0.00">
-                </div>
-                <div class="form-group">
-                  <label class="form-label" style="font-weight:600;">M.O. Occasionnelle Réelle (DH)</label>
-                  <input type="number" step="0.01" class="form-input" id="tCoutMOO" value="${entry?.coutMOO || 0}" onchange="Saisie.calcT()" placeholder="0.00">
-                </div>
-              </div>
+              <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Équipes Occasionnelles</div>
+              <table><thead><tr><th>Profil</th><th>Nb personnes</th><th>Heures/pers.</th><th>Taux Hor. (DH)</th><th>Coût Total</th><th style="width:30px"></th></tr></thead>
+              <tbody id="tEquipesMO">${(entry?.equipesMO || [{profil: 'Ouvrière', nb: 1, heures: 8, taux: App.data.parametres.salaireHoraireOcc}]).map((eq,i)=>`<tr>
+                <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="${eq.profil}" data-mo="profil"></td>
+                <td><input type="number" class="form-input" style="width:70px;padding:5px" value="${eq.nb}" data-mo="nb" onchange="Saisie.calcT()"></td>
+                <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="${eq.heures}" data-mo="heures" onchange="Saisie.calcT()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || App.data.parametres.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calcT()"></td>
+                <td class="td-right td-bold" id="tCoutEq${i}">0.00</td>
+                <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
+              </tr>`).join('')}
+              <tr style="background:rgba(99,102,241,0.05)"><td colspan="4" class="td-bold">Total M.O. Occasionnelle</td><td class="td-right td-bold" id="tCoutMOO">0.00 DH</td><td></td></tr>
+              </tbody></table>
 
               <div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
                 <span class="form-computed" id="tCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
               <div id="tAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
-              <div id="tAllocationEnergieInfo" style="margin-top:8px;padding:12px;background:rgba(234,179,8,0.05);border-radius:8px;border-left:4px solid #eab308;display:none;"></div>
             </div>
 
             <div class="form-section">
@@ -1439,7 +1439,7 @@ const Saisie = {
       const qiInput = row.querySelector('[data-ph="qteInit"]');
       // Phase 0: fill with poidsMP if empty; Phase i>0: always fill with previous qteFinale
       if (qiInput) {
-        if (i === 0 && poidsMP > 0) {
+        if (i === 0 && !qiInput.value && poidsMP > 0) {
           qiInput.value = poidsMP;
         } else if (i > 0) {
           if (!qiInput.value || qiInput.value == "0") {
@@ -1480,11 +1480,8 @@ const Saisie = {
       prevQF_PF = qf || qi;
       
       const rp = qi>0 ? (qf/qi*100) : 0;
-      const rc = poidsMP>0 ? (qf/poidsMP*100) : 0;
       const elPh = document.getElementById('rendPhPF'+i);
-      const elCum = document.getElementById('rendCumPF'+i);
       if(elPh) elPh.textContent = App.formatNumber(rp,2)+'%';
-      if(elCum) elCum.textContent = App.formatNumber(rc,2)+'%';
     });
 
     // Update Poids PF automatically from last PF phase's qteFinale
@@ -1551,16 +1548,6 @@ const Saisie = {
       }
     }
 
-    // Find initial weight for TREMPAGE
-    let refWeight = poidsMP;
-    document.querySelectorAll('#tPhasesMP tr, #tPhasesPF tr').forEach(row => {
-      const nomInput = row.querySelector('[data-ph="nom"]');
-      if (nomInput && nomInput.value.toUpperCase().includes('TREMPAGE')) {
-        const qi = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value);
-        if (qi > 0) refWeight = qi;
-      }
-    });
-
     let totalInt = 0;
     document.querySelectorAll('#tIntrants tr').forEach((row,i) => {
       const artInput = row.querySelector('[data-int="article"]');
@@ -1571,13 +1558,7 @@ const Saisie = {
       const art = artInput.value.toUpperCase();
       
       // Auto-fill quantities based on article type
-      if (refWeight > 0 && art.includes('AGRAFISH')) {
-        qteInput.value = (refWeight / 100 * 1).toFixed(3);
-      } else if (refWeight > 0 && art.includes('HYDROMAR')) {
-        qteInput.value = (refWeight / 100 * 1).toFixed(3);
-      } else if (refWeight > 0 && (art === 'SEL' || art.includes('SEL ') || art.startsWith('SEL'))) {
-        qteInput.value = (refWeight / 100 * 0.5).toFixed(3);
-      } else if (condMatch && currentPoidsPF > 0) {
+      if (condMatch && currentPoidsPF > 0) {
         if (art.includes('CARTON')) {
           qteInput.value = nbCartons;
         } else if (art.includes('SACHET')) {
@@ -1617,8 +1598,8 @@ const Saisie = {
     // 2. Factures
     const facturesMois = (App.data.factures || []).filter(f => (f.date||'').startsWith(monthStr));
     
-    // Charges spécifiques (Traitement + Emballage pour le traitement)
-    const chargesSpecifiques = facturesMois.filter(f => f.allocation === 'traitement' || f.allocation === 'emballage').reduce((s, f) => s + (f.montant||0), 0);
+    // Charges spécifiques (Traitement uniquement, emballage exclu pour éviter double comptage avec fiches)
+    const chargesSpecifiques = facturesMois.filter(f => f.allocation === 'traitement').reduce((s, f) => s + (f.montant||0), 0);
     const impactSpecifique = totalKgActivite > 0 ? (chargesSpecifiques / totalKgActivite) : 0;
 
     // Charges générales
@@ -1634,27 +1615,32 @@ const Saisie = {
     // ---------------------------------
 
     // MAIN D'OEUVRE
+    let coutMOO = 0;
+    document.querySelectorAll('#tEquipesMO tr:not(:last-child)').forEach((row, i) => {
+      const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+      const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+      const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0;
+      const val = nb * heures * taux;
+      const valEl = document.getElementById('tCoutEq' + i);
+      if (valEl) valEl.textContent = App.formatNumber(val);
+      coutMOO += val;
+    });
+    const coutPF = v('tHeuresMOF') * v('tSalaireHF');
+    const localCost = coutMOO + coutPF;
+
     // Dynamic Labor Cost Allocation (Traitement)
     const allocationPeriod = document.getElementById('tAllocationPeriod')?.value || 'month';
-    const coutMOF = parseFloat(document.getElementById('tCoutMOF')?.value) || 0;
-    const coutMOO = parseFloat(document.getElementById('tCoutMOO')?.value) || 0;
-    const currentEntryRawLabor = coutMOF + coutMOO;
-    const pesos = App.getPeriodLaborCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod, currentEntryRawLabor);
+    const pesos = App.getPeriodLaborCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod);
     
-    let coutMOJ = 0;
+    let coutMOJ = localCost;
     const infoEl = document.getElementById('tAllocationMOInfo');
     if (infoEl) {
       if (pesos.fallback) {
-        const defaultRate = 1.25; // 1.25 DH/kg fallback rate
-        coutMOJ = currentPoidsPF * defaultRate;
         infoEl.style.display = 'block';
         infoEl.innerHTML = `
           <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
             <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul estimé basé sur un taux standard de <strong>${defaultRate} DH/kg</strong>.</div>
-            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(220,38,38,0.1); color:var(--text-primary); font-weight:600;">
-              Coût M.O. Estimé : ${App.formatNumber(coutMOJ, 2)} DH
-            </div>
+            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
           </div>
         `;
       } else {
@@ -1688,49 +1674,9 @@ const Saisie = {
       }
     }
 
-    // Dynamic Energy Cost Allocation (Traitement)
-    const energieAlloc = App.getPeriodEnergyCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod);
-    const energieInfoEl = document.getElementById('tAllocationEnergieInfo');
-    if (energieInfoEl) {
-      if (energieAlloc.fallback) {
-        energieInfoEl.style.display = 'block';
-        energieInfoEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
-            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Énergie Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée d'énergie ou de tonnage pour la période <strong>${energieAlloc.targetMonths.join(', ')}</strong>.</div>
-          </div>
-        `;
-      } else {
-        energieInfoEl.style.display = 'block';
-        let labelPeriode = 'Mensuelle';
-        if (allocationPeriod === 'day') labelPeriode = 'Journalière';
-        else if (allocationPeriod === 'quarter') labelPeriode = 'Trimestrielle';
-        else if (allocationPeriod === 'year') labelPeriode = 'Annuelle';
-
-        energieInfoEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
-            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">⚡ Ventilation Énergie (${labelPeriode})</div>
-            <div style="color:var(--text-secondary); line-height:1.4;">
-              Coût Énergie Période : <strong>${App.formatNumber(energieAlloc.totalEnergyCost, 2)} DH</strong><br>
-              Tonnage Total Période : <strong>${App.formatNumber(energieAlloc.totalTonnage, 1)} kg</strong><br>
-              Ratio Alloué : <strong>${App.formatNumber(energieAlloc.ratio, 4)} DH/kg</strong>
-            </div>
-            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
-              Coût Énergie Alloué : ${App.formatNumber(energieAlloc.allocatedCost, 2)} DH
-            </div>
-          </div>
-        `;
-        // Add to facture costs
-        if (coutFactureParKg === App.data.parametres.coutStructureEstime) {
-           coutFactureParKg += energieAlloc.ratio;
-        } else {
-           coutFactureParKg += energieAlloc.ratio;
-        }
-      }
-    }
-
-    const tMOJEl = document.getElementById('tCoutMOJ');
-    if (tMOJEl) tMOJEl.textContent = App.formatNumber(coutMOJ, 2) + ' DH';
+    document.getElementById('tCoutPF').textContent = App.formatNumber(coutPF) + ' DH';
+    document.getElementById('tCoutMOO').textContent = App.formatNumber(coutMOO) + ' DH';
+    document.getElementById('tCoutMOJ').textContent = App.formatNumber(coutMOJ) + ' DH';
 
     const baseCout = currentPoidsPF>0 ? (valeurMP+totalInt+coutMOJ)/currentPoidsPF : 0;
     const prixRevient = baseCout + coutFactureParKg;
@@ -1757,12 +1703,8 @@ const Saisie = {
     const tbody = document.getElementById(tbodyId);
     const idx = tbody.children.length;
     const tr = document.createElement('tr');
-    tr.setAttribute('draggable', 'true');
-    tr.setAttribute('ondragstart', 'Saisie.onPhaseDragStart(event, this)');
-    tr.setAttribute('ondragover', 'Saisie.onPhaseDragOver(event)');
-    tr.setAttribute('ondrop', `Saisie.onPhaseDrop(event, this, '${tbodyId}')`);
     tr.innerHTML = `
-      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
+      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
       <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="100" data-ph="seuil" data-idx="${idx}" onchange="Saisie.calcT()"></td>
       <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteInit" data-idx="${idx}" onchange="Saisie.calcT()"></td>
       <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteFinale" data-idx="${idx}" onchange="Saisie.calcT()"></td>
@@ -1778,104 +1720,6 @@ const Saisie = {
     if (tbody.children.length <= 1) { App.toast('Il faut au moins une phase', 'error'); return; }
     tr.remove();
     this.calcT();
-  },
-
-  addPhaseRecond(tbodyId) {
-    const tbody = document.getElementById(tbodyId);
-    const idx = tbody.children.length;
-    const tr = document.createElement('tr');
-    tr.setAttribute('draggable', 'true');
-    tr.setAttribute('ondragstart', 'Saisie.onPhaseDragStart(event, this)');
-    tr.setAttribute('ondragover', 'Saisie.onPhaseDragOver(event)');
-    tr.setAttribute('ondrop', `Saisie.onPhaseDrop(event, this, '${tbodyId}')`);
-    tr.innerHTML = `
-      <td><select class="form-select" style="width:160px;padding:5px;font-weight:700;cursor:grab;" data-ph="nom">${Saisie.phasesList.map(p=>`<option value="${p}">${p}</option>`).join('')}</select></td>
-      <td><input type="number" step="0.1" class="form-input" style="width:70px;padding:5px" value="100" data-ph="seuil" data-idx="${idx}" onchange="Saisie.calc()"></td>
-      <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteInit" data-idx="${idx}" onchange="Saisie.calc()"></td>
-      <td><input type="number" step="0.01" class="form-input" style="width:100px;padding:5px" value="" data-ph="qteFinale" data-idx="${idx}" onchange="Saisie.calc()"></td>
-      <td class="td-right td-bold" id="fRendPhPF${idx}">0%</td>
-      <td class="td-right" id="fRendCumPF${idx}">0%</td>
-      <td><button class="btn-icon danger" onclick="Saisie.removePhaseRecond(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></td>`;
-    tbody.appendChild(tr);
-  },
-
-  removePhaseRecond(btn) {
-    const tr = btn.closest('tr');
-    const tbody = tr.parentElement;
-    if (tbody.children.length <= 1) { App.toast('Il faut au moins une phase', 'error'); return; }
-    tr.remove();
-    this.calc();
-  },
-
-  draggedRow: null,
-
-  onPhaseDragStart(e, row) {
-    this.draggedRow = row;
-    e.dataTransfer.effectAllowed = 'move';
-    setTimeout(() => {
-      row.style.opacity = '0.4';
-    }, 0);
-  },
-
-  onPhaseDragOver(e) {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  },
-
-  onPhaseDrop(e, targetRow, tbodyId) {
-    e.preventDefault();
-    if (!this.draggedRow || this.draggedRow === targetRow) {
-      if (this.draggedRow) this.draggedRow.style.opacity = '1';
-      this.draggedRow = null;
-      return;
-    }
-    
-    const tbody = document.getElementById(tbodyId);
-    if (this.draggedRow.parentElement !== tbody) {
-      this.draggedRow.style.opacity = '1';
-      this.draggedRow = null;
-      return;
-    }
-
-    const children = Array.from(tbody.children);
-    const draggedIdx = children.indexOf(this.draggedRow);
-    const targetIdx = children.indexOf(targetRow);
-
-    if (draggedIdx < targetIdx) {
-      targetRow.after(this.draggedRow);
-    } else {
-      targetRow.before(this.draggedRow);
-    }
-    
-    this.draggedRow.style.opacity = '1';
-    this.draggedRow = null;
-
-    this.reindexPhases(tbodyId);
-  },
-
-  reindexPhases(tbodyId) {
-    const tbody = document.getElementById(tbodyId);
-    if (!tbody) return;
-    
-    const prefixPh = tbodyId === 'fPhasesPF' ? 'fRendPhPF' : (tbodyId === 'tPhasesMP' ? 'rendPhMP' : 'rendPhPF');
-    const prefixCum = tbodyId === 'fPhasesPF' ? 'fRendCumPF' : (tbodyId === 'tPhasesMP' ? 'rendCumMP' : 'rendCumPF');
-    
-    Array.from(tbody.children).forEach((row, idx) => {
-      const inputs = row.querySelectorAll('input');
-      inputs.forEach(inp => inp.setAttribute('data-idx', idx));
-      
-      const tdPh = row.querySelector(`[id^="${prefixPh}"]`);
-      if (tdPh) tdPh.id = prefixPh + idx;
-      
-      const tdCum = row.querySelector(`[id^="${prefixCum}"]`);
-      if (tdCum) tdCum.id = prefixCum + idx;
-    });
-
-    if (tbodyId === 'fPhasesPF') {
-      this.calc();
-    } else {
-      this.calcT();
-    }
   },
 
   renderIntrantRow(it, i, isSent = false) {
@@ -2022,11 +1866,16 @@ const Saisie = {
       prixRevient: prixRevientBase + (poidsPF > 0 ? (parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0)/poidsPF : 0) + coutFactureParKg,
       // Main-d'œuvre
       allocationPeriod: document.getElementById('tAllocationPeriod')?.value || 'month',
-      heuresMOF: 0,
-      salaireHF: 0,
-      coutPersonnelF: 0,
-      coutMOO: v('tCoutMOO'),
-      coutMOF: v('tCoutMOF'),
+      heuresMOF: v('tHeuresMOF'),
+      salaireHF: v('tSalaireHF'),
+      coutPersonnelF: v('tHeuresMOF') * v('tSalaireHF'),
+      equipesMO: Array.from(document.querySelectorAll('#tEquipesMO tr:not(:last-child)')).map(row => ({
+        profil: row.querySelector('[data-mo="profil"]')?.value || '',
+        nb: parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0,
+        heures: parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0,
+        taux: parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 0
+      })),
+      coutMOO: parseFloat(document.getElementById('tCoutMOO')?.textContent.replace(/[^0-9.]/g,''))||0,
       coutMOJ: parseFloat(document.getElementById('tCoutMOJ')?.textContent.replace(/[^0-9.]/g,''))||0,
       // compat fields
       poidsBrutPI: poidsMP, caissesPI:0,
@@ -2134,9 +1983,8 @@ const Saisie = {
 
   printBon(id) {
     try {
-      // eslint-disable-next-line eqeqeq
-      const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
-      if (!p) { App.toast('Saisie introuvable (ID: ' + id + ')', 'error'); return; }
+      const p = App.data.production.find(x => x.id === id);
+      if (!p) return;
       const isTraitement = (p.activite === 'traitement' || p.activite === 'divers');
       // Calculate intrants total dynamically
       const intrantsArr = (p.intrants || []);
@@ -2263,7 +2111,7 @@ const Saisie = {
       const _kgUsine = _allProd.reduce((s, pr) => s + (pr.poidsBrutPF || 0), 0);
       const _kgActivite = _allProd.filter(pr => pr.activite === p.activite).reduce((s, pr) => s + (pr.poidsBrutPF || 0), 0);
 
-      const _chargesSpec = _allFactures.filter(f => f.allocation === p.activite || f.allocation === 'emballage').reduce((s, f) => s + (f.montant || 0), 0);
+      const _chargesSpec = _allFactures.filter(f => f.allocation === p.activite).reduce((s, f) => s + (f.montant || 0), 0);
       const _chargesGen = _allFactures.filter(f => f.allocation === 'general' || !f.allocation).reduce((s, f) => s + (f.montant || 0), 0);
 
       let _coutFactureKg = (_kgActivite > 0 ? _chargesSpec / _kgActivite : 0) + (_kgUsine > 0 ? _chargesGen / _kgUsine : 0);
@@ -2529,11 +2377,10 @@ const Saisie = {
      ENVOI VERS STOCKAGE — Post-Traitement
      ============================================ */
   showSendToStorageModal(id) {
-    // eslint-disable-next-line eqeqeq
-    const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
-    if (!p) { App.toast('Saisie introuvable (ID: ' + id + ')', 'error'); return; }
+    const p = App.data.production.find(x => x.id === id);
+    if (!p) return;
     if (p.sentToStorage) { App.toast('Cette saisie a déjà été envoyée vers le stockage', 'warning'); return; }
-    // Note: on autorise l'envoi même si PF = 0 (pas d'obligation de stock d'entrée)
+    if (!(p.poidsBrutPF > 0)) { App.toast('Le traitement n\'est pas encore terminé (Poids PF = 0)', 'error'); return; }
 
     const activiteLabel = (p.activite === 'traitement') ? 'Traitement' : (p.activite === 'reconditionnement' ? 'Reconditionnement' : p.activite);
 
@@ -2585,9 +2432,8 @@ const Saisie = {
   },
 
   confirmSendToStorage(id) {
-    // eslint-disable-next-line eqeqeq
-    const p = App.data.production.find(x => x.id == id || String(x.id) === String(id));
-    if (!p) { App.toast('Saisie introuvable (ID: ' + id + ')', 'error'); App.closeModal(); return; }
+    const p = App.data.production.find(x => x.id === id);
+    if (!p) return;
     if (p.sentToStorage) { App.toast('Déjà envoyé', 'warning'); App.closeModal(); return; }
 
     const chambre = document.getElementById('sendToChambre')?.value || 'chambre1';
@@ -3041,13 +2887,8 @@ Notes:
           else if (h.includes('MODE') && h.includes('TRAITEMENT')) colMap.modeTraitement = c;
           else if (h.includes('EVISCERATION') || h.includes('ÉVISCÉR')) colMap.poidsEvisceration = c;
           else if (h.includes('TREMPAGE')) colMap.poidsTrempage = c;
-          else if (h.includes('LAVAGE')) colMap.poidsLavage = c;
-          else if (h.includes('TRIAGE')) colMap.poidsTriage = c;
-          else if (h.includes('CUISSON')) colMap.poidsCuisson = c;
-          else if (h.includes('DECORTICAGE') || h.includes('DÉCORTICAGE')) colMap.poidsDecorticage = c;
-          else if (h.includes('CONGELATION') || h.includes('CONGÉLATION')) colMap.poidsCongelation = c;
           else if (h.match(/RENDEMENT/) && !h.includes('FINAL')) colMap.rendement = c;
-          else if (h.includes('GLAZURAGE') || h.includes('GLACAGE')) colMap.poidsGlazurage = c;
+          else if (h.includes('GLAZURAGE') || h.includes('GLACAGE') || h.includes('CONGÉLATION') || h.includes('CONGELATION')) colMap.poidsGlazurage = c;
           else if (h.includes('TAUX') && h.includes('GLAZURAGE')) colMap.tauxGlazurage = c;
           else if (h.includes('EMBALLÉ') || h.includes('EMBALLE')) colMap.poidsEmballe = c;
           else if (h.includes('RENDEMENT') && h.includes('FINAL')) colMap.rendementFinal = c;
@@ -3090,11 +2931,6 @@ Notes:
       const modeTraitement = String(rows[r][colMap.modeTraitement] || '').trim();
       const poidsEvisceration = parseFloat(rows[r][colMap.poidsEvisceration]) || 0;
       const poidsTrempage = parseFloat(rows[r][colMap.poidsTrempage]) || 0;
-      const poidsLavage = parseFloat(rows[r][colMap.poidsLavage]) || 0;
-      const poidsTriage = parseFloat(rows[r][colMap.poidsTriage]) || 0;
-      const poidsCuisson = parseFloat(rows[r][colMap.poidsCuisson]) || 0;
-      const poidsDecorticage = parseFloat(rows[r][colMap.poidsDecorticage]) || 0;
-      const poidsCongelation = parseFloat(rows[r][colMap.poidsCongelation]) || 0;
       const poidsGlazurage = parseFloat(rows[r][colMap.poidsGlazurage]) || 0;
       const poidsEmballe = parseFloat(rows[r][colMap.poidsEmballe]) || 0;
       const rendementFinal = parseFloat(rows[r][colMap.rendementFinal]) || 0;
@@ -3151,11 +2987,6 @@ Notes:
         activite,
         poidsEvisceration,
         poidsTrempage,
-        poidsLavage,
-        poidsTriage,
-        poidsCuisson,
-        poidsDecorticage,
-        poidsCongelation,
         poidsGlazurage,
         poidsEmballe,
         poidsPF,
@@ -3323,57 +3154,44 @@ Notes:
       // Build phases
       const phases = [];
       const phasesPF = [];
-      // Build phases (Matière Première / Traitement)
-      let currentQteMP = e.poidsPI;
-
-      if (e.poidsLavage > 0) {
-        phases.push({ nom: 'Lavage', seuil: 100, qteInit: currentQteMP, qteFinale: e.poidsLavage });
-        currentQteMP = e.poidsLavage;
-      }
-      if (e.poidsTriage > 0) {
-        phases.push({ nom: 'Triage', seuil: 100, qteInit: currentQteMP, qteFinale: e.poidsTriage });
-        currentQteMP = e.poidsTriage;
-      }
+      
       if (e.poidsEvisceration > 0) {
-        phases.push({ nom: 'Evisceration', seuil: 77, qteInit: currentQteMP, qteFinale: e.poidsEvisceration });
-        currentQteMP = e.poidsEvisceration;
+        phases.push({ nom: 'EVISCERATION ET ETETAGE', seuil: 77, qteInit: e.poidsPI, qteFinale: e.poidsEvisceration });
       }
-      if (e.poidsCuisson > 0) {
-        phases.push({ nom: 'Cuisson', seuil: 80, qteInit: currentQteMP, qteFinale: e.poidsCuisson });
-        currentQteMP = e.poidsCuisson;
-      }
-      if (e.poidsDecorticage > 0) {
-        phases.push({ nom: 'Decorticage', seuil: 70, qteInit: currentQteMP, qteFinale: e.poidsDecorticage });
-        currentQteMP = e.poidsDecorticage;
-      }
-
-      // Build phasesPF (Produit Fini / Reconditionnement)
-      let currentQtePF = currentQteMP; // starts where MP left off
-
       if (e.poidsTrempage > 0) {
-        phasesPF.push({ nom: 'Trempage', seuil: 110, qteInit: currentQtePF, qteFinale: e.poidsTrempage });
-        currentQtePF = e.poidsTrempage;
-      }
-      if (e.poidsCongelation > 0) {
-        phasesPF.push({ nom: 'Congelation', seuil: 95, qteInit: currentQtePF, qteFinale: e.poidsCongelation });
-        currentQtePF = e.poidsCongelation;
+        phasesPF.push({ nom: 'Trempage', seuil: 110, qteInit: e.poidsEvisceration || e.poidsPI, qteFinale: e.poidsTrempage });
       }
       if (e.poidsGlazurage > 0) {
-        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: currentQtePF, qteFinale: e.poidsGlazurage });
-        currentQtePF = e.poidsGlazurage;
+        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: e.poidsTrempage || e.poidsEvisceration || e.poidsPI, qteFinale: e.poidsGlazurage });
       }
       if (e.poidsEmballe > 0) {
-        phasesPF.push({ nom: 'Emballage', seuil: 100, qteInit: currentQtePF, qteFinale: e.poidsEmballe });
+        phasesPF.push({ nom: 'Emballage', seuil: 100, qteInit: e.poidsGlazurage || e.poidsTrempage || e.poidsPI, qteFinale: e.poidsEmballe });
       }
 
-      // If no phasesPF were built, add a default Glasurage if we have a PF weight
+      // If no phases were built, add a default Glasurage
       if (phasesPF.length === 0 && e.poidsPF > 0) {
-        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: currentQtePF, qteFinale: e.poidsPF });
+        phasesPF.push({ nom: 'Glasurage', seuil: 107, qteInit: e.poidsPI, qteFinale: e.poidsPF });
       }
 
       // Build MO
-      const pesos = App.getPeriodLaborCostAllocation(e.date, e.poidsPF, 0, 'month');
-      const coutMOJ = pesos.fallback ? (e.poidsPF * 1.25) : pesos.allocatedCost;
+      const heuresMOF = totalFixeH * 8;
+      const coutPF = heuresMOF * salaireHF;
+      const equipesMO = [];
+      let coutMOO = 0;
+
+      if (e.effectifs > 0 && e.heures > 0) {
+        const heuresParPersonne = e.heures / e.effectifs;
+        const taux = p.salaireHoraireOcc || 17;
+        const coutEq = e.effectifs * heuresParPersonne * taux;
+        equipesMO.push({
+          profil: 'Ouvrière',
+          nb: e.effectifs,
+          heures: parseFloat(heuresParPersonne.toFixed(1)),
+          taux: taux,
+          coutEq: coutEq
+        });
+        coutMOO = coutEq;
+      }
 
       // Build intrants (empty - will be filled manually)
       const intrants = [];
@@ -3400,12 +3218,12 @@ Notes:
         modeEmballage: e.modeEmballage,
         reliquatNom: '',
         reliquatPoids: 0,
-        equipesMO: [],
-        coutMOO: 0,
-        heuresMOF: 0,
-        salaireHF: 0,
-        coutPersonnelF: 0,
-        coutMOJ,
+        equipesMO,
+        coutMOO,
+        heuresMOF,
+        salaireHF,
+        coutPersonnelF: coutPF,
+        coutMOJ: coutMOO + coutPF,
         phases: e.activite === 'traitement' ? phases : undefined,
         phasesPF,
         intrants,

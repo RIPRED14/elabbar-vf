@@ -2,8 +2,8 @@
   "name": "elabbar-erp",
   "version": "1.0.0",
   "scripts": {
-    "dev": "npx serve ./",
-    "start": "npx serve ./",
+    "dev": "npx -y serve ./",
+    "start": "npx -y serve ./",
     "sync-invoices": "node scratch/sync_invoices.js"
   },
   "dependencies": {

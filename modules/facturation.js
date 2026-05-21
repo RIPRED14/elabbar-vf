@@ -132,12 +132,12 @@ const Facturation = {
                   <table>
                     <thead>
                       <tr>
-                        <th>Société / Type</th>
-                        <th>Date / Échéance</th>
-                        <th>N° Facture</th>
-                        <th>Fournisseur</th>
-                        <th>État</th>
-                        <th class="td-right">Montant TTC</th>
+                        <th>Société / Type / Usine</th>
+                        <th>Date / Échéance / Créateur</th>
+                        <th>N° Facture / Origine</th>
+                        <th>Fournisseur / Taux</th>
+                        <th>État / Règlements</th>
+                        <th class="td-right">Finances (Net)</th>
                         <th class="td-center">Actions</th>
                       </tr>
                     </thead>
@@ -146,21 +146,35 @@ const Facturation = {
                         <tr>
                           <td>
                             <div style="font-weight:700; font-size:0.75rem; color:var(--text-muted);">${f.societe || 'FF TRAITEMENT'}</div>
-                            <div style="font-size:0.8rem; font-weight:600;">${f.type || 'Facture'}</div>
+                            <div style="font-size:0.85rem; font-weight:600; color:var(--text-primary);">${f.type || 'Facture'}</div>
+                            ${f.usineRaisonSociale ? `<div style="font-size:0.72rem; color:var(--accent-blue); font-weight:500; margin-top:2px;">🏭 ${f.usineRaisonSociale}</div>` : ''}
                           </td>
                           <td>
                             <div style="font-weight:600;">${App.formatDateFR(f.date)}</div>
                             <div style="font-size:0.7rem; color:var(--text-muted);">Dû le: ${f.dateEcheance ? App.formatDateFR(f.dateEcheance) : '-'}</div>
+                            ${f.creeParNom ? `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">✍️ par: ${f.creeParNom}</div>` : ''}
                           </td>
-                          <td><span class="badge badge-info" style="font-family:var(--font-mono);">${f.numero || '-'}</span></td>
-                          <td><div style="font-weight:600; color:var(--text-primary);">${f.fournisseur}</div></td>
+                          <td>
+                            <div><span class="badge badge-info" style="font-family:var(--font-mono);">${f.numero || '-'}</span></div>
+                            <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" title="Origine: ${f.origine || '-'}">${f.origine || '-'}</div>
+                            ${f.allocation ? `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">📍 ${f.allocation === 'general' ? 'Général' : f.allocation === 'emballage' ? 'Emballage' : f.allocation === 'traitement' ? 'Traitement' : 'Recond.'}</div>` : ''}
+                          </td>
+                          <td>
+                            <div style="font-weight:600; color:var(--text-primary);">${f.fournisseur}</div>
+                            ${f.tauxChange && f.tauxChange !== 1 ? `<div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">💱 Taux: ${App.formatNumber(f.tauxChange, 4)}</div>` : ''}
+                          </td>
                           <td>
                             <span class="badge ${f.etatPaiement === 'Payée' ? 'badge-success' : 'badge-warning'}">
                               ${f.etatPaiement || 'En attente'}
                             </span>
+                            ${f.montantReglement ? `<div style="font-size:0.7rem; color:var(--status-success); font-weight:600; margin-top:4px;">💳 Payé: ${App.formatNumber(f.montantReglement, 2)} DH</div>` : ''}
+                            ${f.referencesReglements ? `<div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;" title="${f.referencesReglements}">Ref: ${f.referencesReglements.substring(0, 15)}${f.referencesReglements.length > 15 ? '...' : ''}</div>` : ''}
+                            ${f.datesReglements ? `<div style="font-size:0.65rem; color:var(--text-muted);">le: ${f.datesReglements}</div>` : ''}
                           </td>
-                          <td class="td-right td-bold" style="color:var(--accent-blue); font-size:1.05rem;">
-                            ${App.formatNumber(f.montant, 2)} <span style="font-size:0.8rem; color:var(--text-muted);">${f.devise || 'MAD'}</span>
+                          <td class="td-right">
+                            <div style="font-size:0.75rem; color:var(--text-muted);">TTC: <span style="font-weight:600; color:var(--text-primary);">${App.formatNumber(f.montant, 2)} ${f.devise || 'MAD'}</span></div>
+                            <div style="font-size:1.05rem; font-weight:800; color:var(--accent-blue); margin-top:2px;">Net: ${App.formatNumber(f.netAPayer !== undefined ? f.netAPayer : f.montant, 2)} <span style="font-size:0.8rem; color:var(--text-muted);">${f.devise || 'MAD'}</span></div>
+                            ${f.remiseTtc ? `<div style="font-size:0.7rem; color:var(--status-success);">- Remise: ${App.formatNumber(f.remiseTtc, 2)} ${f.devise || 'MAD'}</div>` : ''}
                           </td>
                           <td class="td-center">
                             <div style="display:flex; gap:4px; justify-content:center;">
@@ -270,6 +284,42 @@ const Facturation = {
                 <option value="reconditionnement" ${entry?.allocation === 'reconditionnement' ? 'selected' : ''}>📦 Reconditionnement</option>
                 <option value="emballage" ${entry?.allocation === 'emballage' ? 'selected' : ''}>🏷️ Emballage / Intrants</option>
               </select>
+            </div>
+          </div>
+
+          <h4 style="margin-top:24px; margin-bottom:15px; color:var(--accent-blue); border-bottom:1px solid #eee; padding-bottom:5px;">Détails Financiers Avancés & Règlements (Ntsamak)</h4>
+          <div class="form-grid" style="grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+            <div class="form-group">
+              <label class="form-label">Usine (Raison Sociale)</label>
+              <input type="text" class="form-input" id="fUsineRaisonSociale" value="${entry?.usineRaisonSociale||''}" placeholder="Ex: Usine Elabbar">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Créé par (Nom)</label>
+              <input type="text" class="form-input" id="fCreeParNom" value="${entry?.creeParNom||''}" placeholder="Ex: Admin Ntsamak">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Taux de Change</label>
+              <input type="number" step="0.0001" class="form-input" id="fTauxChange" value="${entry?.tauxChange!==undefined ? entry.tauxChange : 1}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Remise TTC</label>
+              <input type="number" step="0.01" class="form-input" id="fRemiseTtc" value="${entry?.remiseTtc||0}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Net à Payer</label>
+              <input type="number" step="0.01" class="form-input" id="fNetAPayer" value="${entry?.netAPayer!==undefined ? entry.netAPayer : (entry?.montant||0)}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Montant Règlement</label>
+              <input type="number" step="0.01" class="form-input" id="fMontantReglement" value="${entry?.montantReglement||0}">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Dates Règlements</label>
+              <input type="text" class="form-input" id="fDatesReglements" value="${entry?.datesReglements||''}" placeholder="Ex: 2026-05-20">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Références Règlements</label>
+              <input type="text" class="form-input" id="fReferencesReglements" value="${entry?.referencesReglements||''}" placeholder="Ex: CHQ-928172">
             </div>
           </div>
 
@@ -441,6 +491,15 @@ const Facturation = {
     const type = document.getElementById('fType').value;
     const dateEcheance = document.getElementById('fDateEcheance').value;
 
+    const usineRaisonSociale = document.getElementById('fUsineRaisonSociale')?.value.trim() || '';
+    const creeParNom = document.getElementById('fCreeParNom')?.value.trim() || '';
+    const tauxChange = parseFloat(document.getElementById('fTauxChange')?.value) || 1;
+    const remiseTtc = parseFloat(document.getElementById('fRemiseTtc')?.value) || 0;
+    const netAPayer = parseFloat(document.getElementById('fNetAPayer')?.value) || montantTTC;
+    const montantReglement = parseFloat(document.getElementById('fMontantReglement')?.value) || 0;
+    const datesReglements = document.getElementById('fDatesReglements')?.value.trim() || '';
+    const referencesReglements = document.getElementById('fReferencesReglements')?.value.trim() || '';
+
     App.data.factures = App.data.factures || [];
     const entry = { 
       id: this.editingId || App.nextId(App.data.factures), 
@@ -458,7 +517,16 @@ const Facturation = {
       allocation: document.getElementById('fAllocation')?.value || 'general',
       societe,
       origine,
-      type
+      type,
+      // Nouveaux champs d'intégration Ntsamak
+      usineRaisonSociale,
+      creeParNom,
+      tauxChange,
+      remiseTtc,
+      netAPayer,
+      montantReglement,
+      datesReglements,
+      referencesReglements
     };
 
     if (this.editingId) {

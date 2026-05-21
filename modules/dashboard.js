@@ -560,6 +560,25 @@ const Dashboard = {
         `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
         `${year}-${String(q * 3 + 3).padStart(2, '0')}`
       ];
+    } else if (this.view === 'yearly') {
+      for (let m = 1; m <= 12; m++) {
+        monthsList.push(`${year}-${String(m).padStart(2, '0')}`);
+      }
+    } else if (this.view === 'custom') {
+      const startVal = document.getElementById('rapportDateDebut')?.value;
+      const endVal = document.getElementById('rapportDateFin')?.value;
+      if (startVal && endVal) {
+        const startD = new Date(startVal);
+        const endD = new Date(endVal);
+        let curr = new Date(startD.getFullYear(), startD.getMonth(), 1);
+        const endLimit = new Date(endD.getFullYear(), endD.getMonth(), 1);
+        while (curr <= endLimit) {
+          monthsList.push(`${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`);
+          curr.setMonth(curr.getMonth() + 1);
+        }
+      } else {
+        monthsList = [this.selectedDate.substring(0, 7)];
+      }
     } else {
       monthsList = [this.selectedDate.substring(0, 7)];
     }

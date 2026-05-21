@@ -1,34 +1,24 @@
 const fs = require('fs');
-const path = require('path');
 
 try {
-  const html = fs.readFileSync('/Users/m/Downloads/ELABBAR-main 3/scratch/facture_page_longer.html', 'utf8');
+  const html = fs.readFileSync('scratch/facture_page_longer.html', 'utf8');
 
-  console.log("=== Matches for Buttons ===");
-  const buttonRegex = /<button([^>]*)>([\s\S]*?)<\/button>/gi;
+  console.log("=== Matches for Table Headers ===");
+  const thRegex = /<th([^>]*)>([\s\S]*?)<\/th>/gi;
   let match;
   let i = 0;
-  while ((match = buttonRegex.exec(html)) !== null) {
+  while ((match = thRegex.exec(html)) !== null) {
     const attrs = match[1].replace(/\s+/g, ' ').trim();
-    const content = match[2].replace(/\s+/g, ' ').trim();
-    console.log(`[Button ${i++}] Attrs: "${attrs}" | Text: "${content}"`);
+    const content = match[2].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    console.log(`[TH ${i++}] Attrs: "${attrs}" | Text: "${content}"`);
   }
 
-  console.log("\n=== Matches for Inputs ===");
-  const inputRegex = /<input([^>]*)\/?>/gi;
-  let j = 0;
-  while ((match = inputRegex.exec(html)) !== null) {
-    const attrs = match[1].replace(/\s+/g, ' ').trim();
-    console.log(`[Input ${j++}] Attrs: "${attrs}"`);
-  }
-
-  console.log("\n=== Matches for Dropdowns ===");
-  const dropdownRegex = /<p-dropdown([^>]*)>([\s\S]*?)<\/p-dropdown>/gi;
-  let k = 0;
-  while ((match = dropdownRegex.exec(html)) !== null) {
-    const attrs = match[1].replace(/\s+/g, ' ').trim();
-    const content = match[2].replace(/\s+/g, ' ').trim().substring(0, 100);
-    console.log(`[Dropdown ${k++}] Attrs: "${attrs}" | Text Sample: "${content}"`);
+  console.log("\n=== Matches for Table Data Columns ===");
+  // Let's find tr template and fields mapped (Primeng p-dataTable template fields)
+  const tdRegex = /\{\{\s*facture\.\w+\s*\}\}/gi;
+  const matches = html.match(/\{\{[\s\S]*?\}\}/g);
+  if (matches) {
+    console.log("Unique curly expressions in table:", Array.from(new Set(matches)));
   }
 
 } catch (e) {

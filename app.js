@@ -1808,79 +1808,7 @@ const App = {
     return { dailyFixed, avgTariff };
   },
 
-  getPeriodEnergyCostAllocation(dateStr, currentPoidsPF, editingId, periodType = 'month') {
-    if (!dateStr) return { allocatedCost: 0, ratio: 0, totalEnergyCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
-
-    const dateObj = new Date(dateStr);
-    if (isNaN(dateObj.getTime())) {
-      return { allocatedCost: 0, ratio: 0, totalEnergyCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
-    }
-
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth();
-
-    let targetMonths = [];
-    if (periodType === 'quarter') {
-      const startMonth = Math.floor(month / 3) * 3;
-      targetMonths = [
-        `${year}-${String(startMonth + 1).padStart(2, '0')}`,
-        `${year}-${String(startMonth + 2).padStart(2, '0')}`,
-        `${year}-${String(startMonth + 3).padStart(2, '0')}`
-      ];
-    } else if (periodType === 'year') {
-      targetMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-    } else if (periodType === 'day') {
-      targetMonths = [dateStr.substring(0, 7)];
-    } else {
-      // Default to month
-      targetMonths = [`${year}-${String(month + 1).padStart(2, '0')}`];
-    }
-
-    let totalEnergyCost = 0;
-    targetMonths.forEach(mStr => {
-      const energieMensuelle = this.data.energieMensuelle || {};
-      // fallback to history if not in energieMensuelle, but let's just use history directly if available
-      // Actually, the energie module stores data in App.data.energie.history[YYYY-MM]
-      if (this.data.energie && this.data.energie.history && this.data.energie.history[mStr]) {
-        const entry = this.data.energie.history[mStr];
-        const coutElect = (entry.electHp || 0) * (entry.tarifHp || 1.45) + (entry.electHpl || 0) * (entry.tarifHpl || 1.15) + (entry.electHc || 0) * (entry.tarifHc || 0.85);
-        const coutEau = (entry.eauVol || 0) * (entry.eauTarif || 5.00);
-        const redevances = (entry.electRed || 0) + (entry.eauRed || 0);
-        totalEnergyCost += coutElect + coutEau + redevances;
-      }
-    });
-
-    if (periodType === 'day') {
-      totalEnergyCost = totalEnergyCost / 26; // Approx daily cost allocation
-    }
-
-    const otherEntries = (this.data.production || []).filter(p => {
-      if (periodType === 'day') {
-        return p.date === dateStr && p.id != editingId;
-      } else {
-        const isTargetMonth = targetMonths.some(mStr => p.date && p.date.startsWith(mStr));
-        const isNotCurrent = p.id != editingId;
-        return isTargetMonth && isNotCurrent;
-      }
-    });
-
-    const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
-    const totalTonnage = dbTonnage + currentPoidsPF;
-
-    const ratio = totalTonnage > 0 ? totalEnergyCost / totalTonnage : 0;
-    const allocatedCost = ratio * currentPoidsPF;
-
-    return {
-      allocatedCost,
-      ratio,
-      totalEnergyCost,
-      totalTonnage,
-      targetMonths,
-      fallback: (ratio === 0)
-    };
-  },
-
-  getPeriodLaborCostAllocation(dateStr, currentPoidsPF, editingId, periodType = 'month', currentEntryRawLabor = 0) {
+  getPeriodLaborCostAllocation(dateStr, currentPoidsPF, editingId, periodType = 'month') {
     if (!dateStr) return { allocatedCost: 0, ratio: 0, totalLaborCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
 
     const dateObj = new Date(dateStr);
@@ -1891,61 +1819,17 @@ const App = {
     const year = dateObj.getFullYear();
     const month = dateObj.getMonth(); // 0-11
 
-    let targetMonths = [];
-    if (periodType === 'quarter') {
-      const startMonth = Math.floor(month / 3) * 3;
-      targetMonths = [
-        `${year}-${String(startMonth + 1).padStart(2, '0')}`,
-        `${year}-${String(startMonth + 2).padStart(2, '0')}`,
-        `${year}-${String(startMonth + 3).padStart(2, '0')}`
-      ];
-    } else if (periodType === 'year') {
-      targetMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
-    } else {
-      // Default to month
-      targetMonths = [`${year}-${String(month + 1).padStart(2, '0')}`];
-    }
-
-    const otherEntries = (this.data.production || []).filter(p => {
-      if (periodType === 'day') {
-        return p.date === dateStr && p.id != editingId;
-      } else {
-        const isTargetMonth = targetMonths.some(mStr => p.date && p.date.startsWith(mStr));
-        const isNotCurrent = p.id != editingId;
-        return isTargetMonth && isNotCurrent;
-      }
-    });
-
-    // --- NOUVEAU CALCUL: MASSE SALARIALE REELLE (Ne cumule plus les anciens coutMOJ) ---
-    // 1. Calcul du salaire fixe total pour le mois à partir des données de base
-    let baseMonthlyFixed = 0;
-    (this.data.personnel || []).forEach(emp => {
-      if (emp.type && emp.type.startsWith('fixe')) {
-        baseMonthlyFixed += (emp.salaire || 0);
-      }
-    });
-
-    let totalFixedCost = baseMonthlyFixed;
-    if (periodType === 'quarter') totalFixedCost = baseMonthlyFixed * 3;
-    else if (periodType === 'year') totalFixedCost = baseMonthlyFixed * 12;
-    else if (periodType === 'day') totalFixedCost = baseMonthlyFixed / 26; // approx jours ouvrés
-
-    // 2. Calcul du coût occasionnel (somme des pointages + couts manuels MOO)
-    let totalOccCost = currentEntryRawLabor; // raw labor de l'entrée courante
-    
-    // On ajoute aussi les couts MOO manuels des autres fiches
-    totalOccCost += otherEntries.reduce((s, p) => s + (parseFloat(p.coutMOO) || 0), 0);
-
-    let pointageOccCost = 0;
-    let fallback = false;
-
-    // 3. Tenter d'enrichir avec le module Pointage si disponible
     if (periodType === 'day') {
       const mStr = dateStr.substring(0, 7);
       if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
-        try { Personnel.recalcPointageMensuel(mStr); } catch(e) {}
+        try {
+          Personnel.recalcPointageMensuel(mStr);
+        } catch(e) {
+          console.error("Error recalcing pointage for " + mStr, e);
+        }
       }
       const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
+      let totalLaborCost = 0;
       if (ptg) {
         let dayOccHours = 0;
         const jour = ptg.jours && ptg.jours[dateStr];
@@ -1958,36 +1842,68 @@ const App = {
             }
           });
         }
-        pointageOccCost = dayOccHours * (ptg.tauxHoraireOcc || 16.95);
-        
-        // Si pointage a des salaires fixes calculés, on peut les privilégier
-        const pointageFixed = (ptg.totalSalairesFixeAdmin || 0) + (ptg.totalSalairesFixeAutre || 0) + (ptg.totalSalairesOuvriersFixe || 0);
-        if (pointageFixed > 0) totalFixedCost = pointageFixed / 26;
+        const totalOccCost = dayOccHours * (ptg.tauxHoraireOcc || 16.95);
+        const monthlyFixed = (ptg.totalSalairesFixeAdmin || 0) +
+                             (ptg.totalSalairesFixeAutre || 0) +
+                             (ptg.totalSalairesOuvriersFixe || 0);
+        const dayFixedCost = monthlyFixed / 26;
+        totalLaborCost = totalOccCost + dayFixedCost;
       }
+      
+      const otherEntries = (this.data.production || []).filter(p => p.date === dateStr && p.id != editingId);
+      const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
+      const totalTonnage = dbTonnage + currentPoidsPF;
+      const ratio = totalTonnage > 0 ? totalLaborCost / totalTonnage : 0;
+      const allocatedCost = ratio * currentPoidsPF;
+
+      return {
+        allocatedCost,
+        ratio,
+        totalLaborCost,
+        totalTonnage,
+        targetMonths: [dateStr],
+        fallback: (ratio === 0)
+      };
+    }
+
+    let targetMonths = [];
+    if (periodType === 'quarter') {
+      const startMonth = Math.floor(month / 3) * 3;
+      targetMonths = [
+        `${year}-${String(startMonth + 1).padStart(2, '0')}`,
+        `${year}-${String(startMonth + 2).padStart(2, '0')}`,
+        `${year}-${String(startMonth + 3).padStart(2, '0')}`
+      ];
+    } else if (periodType === 'year') {
+      targetMonths = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
     } else {
-      targetMonths.forEach(mStr => {
-        if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
-          try { Personnel.recalcPointageMensuel(mStr); } catch(e) {}
-        }
-        const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
-        if (ptg) {
-          pointageOccCost += (ptg.totalMontantOcc || 0);
-          const pointageFixed = (ptg.totalSalairesFixeAdmin || 0) + (ptg.totalSalairesFixeAutre || 0) + (ptg.totalSalairesOuvriersFixe || 0);
-          if (pointageFixed > 0 && periodType === 'month') {
-            totalFixedCost = pointageFixed;
-          }
-        }
-      });
+      // Default to month
+      targetMonths = [`${year}-${String(month + 1).padStart(2, '0')}`];
     }
 
-    // Le coût occasionnel réel est le max entre ce qui est pointé et ce qui est saisi manuellement sur les fiches
-    totalOccCost = Math.max(totalOccCost, pointageOccCost);
+    let totalLaborCost = 0;
+    targetMonths.forEach(mStr => {
+      if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
+        try {
+          Personnel.recalcPointageMensuel(mStr);
+        } catch(e) {
+          console.error("Error recalcing pointage for " + mStr, e);
+        }
+      }
+      const ptg = this.data.pointage ? this.data.pointage[mStr] : null;
+      if (ptg) {
+        totalLaborCost += (ptg.totalSalairesFixeAdmin || 0) +
+                          (ptg.totalSalairesFixeAutre || 0) +
+                          (ptg.totalSalairesOuvriersFixe || 0) +
+                          (ptg.totalMontantOcc || 0);
+      }
+    });
 
-    let totalLaborCost = totalFixedCost + totalOccCost;
-    
-    if (totalLaborCost <= 0) {
-       fallback = true;
-    }
+    const otherEntries = (this.data.production || []).filter(p => {
+      const isTargetMonth = targetMonths.some(mStr => p.date && p.date.startsWith(mStr));
+      const isNotCurrent = p.id != editingId;
+      return isTargetMonth && isNotCurrent;
+    });
 
     const dbTonnage = otherEntries.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
     const totalTonnage = dbTonnage + currentPoidsPF;
@@ -2001,95 +1917,8 @@ const App = {
       totalLaborCost,
       totalTonnage,
       targetMonths,
-      fallback
+      fallback: (ratio === 0)
     };
-  },
-
-  normalizeRowFromDB(tableName, row) {
-    if (!row) return row;
-    if (tableName === 'production') {
-      const mappings = {
-        poidsmp: 'poidsMP',
-        poidspf: 'poidsPF',
-        caissespf: 'caissesPF',
-        caissespi: 'caissesPI',
-        produitfini: 'produitFini',
-        receptionid: 'receptionId',
-        reflot: 'refLot',
-        modetraitement: 'modeTraitement',
-        modeemballage: 'modeEmballage',
-        poidsbrutpi: 'poidsBrutPI',
-        poidsbrutpf: 'poidsBrutPF',
-        heuresmof: 'heuresMOF',
-        salairehf: 'salaireHF',
-        coutpersonnelf: 'coutPersonnelF',
-        coutmoj: 'coutMOJ',
-        phasespf: 'phasesPF',
-        totalintrants: 'totalIntrants',
-        prixmp: 'prixMP',
-        valeurmp: 'valeurMP',
-        importsource: 'importSource',
-        importdate: 'importDate',
-        reliquatnom: 'reliquatNom',
-        reliquatpoids: 'reliquatPoids',
-        equipesmo: 'equipesMO',
-        coutmoo: 'coutMOO',
-        coutmof: 'coutMOF',
-        allocationperiod: 'allocationPeriod',
-        sourcesortieid: 'sourceSortieId',
-        sourcelineidx: 'sourceLineIdx'
-      };
-      for (const [dbKey, jsKey] of Object.entries(mappings)) {
-        if (row[dbKey] !== undefined && row[jsKey] === undefined) {
-          row[jsKey] = row[dbKey];
-        }
-      }
-    }
-    return row;
-  },
-
-  normalizeRowForDB(tableName, item) {
-    if (!item) return item;
-    let cleanItem = JSON.parse(JSON.stringify(item));
-    if (tableName.toLowerCase() === 'production') {
-      const mappings = {
-        poidsMP: 'poidsmp',
-        poidsPF: 'poidspf',
-        caissesPF: 'caissespf',
-        caissesPI: 'caissespi',
-        produitFini: 'produitfini',
-        receptionId: 'receptionid',
-        refLot: 'reflot',
-        modeTraitement: 'modetraitement',
-        modeEmballage: 'modeemballage',
-        poidsBrutPI: 'poidsbrutpi',
-        poidsBrutPF: 'poidsbrutpf',
-        heuresMOF: 'heuresmof',
-        salaireHF: 'salairehf',
-        coutPersonnelF: 'coutpersonnelf',
-        coutMOJ: 'coutmoj',
-        phasesPF: 'phasespf',
-        totalIntrants: 'totalintrants',
-        prixMP: 'prixmp',
-        valeurMP: 'valeurmp',
-        importSource: 'importsource',
-        importDate: 'importdate',
-        reliquatNom: 'reliquatnom',
-        reliquatPoids: 'reliquatpoids',
-        equipesMO: 'equipesmo',
-        coutMOO: 'coutmoo',
-        coutMOF: 'coutmof',
-        allocationPeriod: 'allocationperiod',
-        sourceSortieId: 'sourcesortieid',
-        sourceLineIdx: 'sourcelineidx'
-      };
-      for (const [jsKey, dbKey] of Object.entries(mappings)) {
-        if (cleanItem[jsKey] !== undefined) {
-          cleanItem[dbKey] = cleanItem[jsKey];
-        }
-      }
-    }
-    return cleanItem;
   },
 
   async init() {
@@ -2165,7 +1994,7 @@ const App = {
         tables.forEach((tableName, index) => {
           const result = others[index];
           if (result && result.data && result.data.length > 0) {
-            this.data[tableName] = result.data.map(row => this.normalizeRowFromDB(tableName, row));
+            this.data[tableName] = result.data;
             hasCloudData = true;
             console.log(`✅ Table '${tableName}' hydratée depuis le cloud (${result.data.length} lignes)`);
           }
@@ -2187,6 +2016,16 @@ const App = {
                 f.dateEcheance = meta.dateEcheance || f.date;
                 f.etatPaiement = meta.etatPaiement || 'En attente';
                 f.lignes = meta.items || [];
+                
+                // Detailed columns from Ntsamak:
+                f.usineRaisonSociale = meta.usineRaisonSociale || '';
+                f.creeParNom = meta.creeParNom || '';
+                f.tauxChange = meta.tauxChange || 1;
+                f.remiseTtc = meta.remiseTtc || 0;
+                f.netAPayer = meta.netAPayer !== undefined ? meta.netAPayer : (f.montant || 0);
+                f.montantReglement = meta.montantReglement || 0;
+                f.datesReglements = meta.datesReglements || '';
+                f.referencesReglements = meta.referencesReglements || '';
               } catch (e) {
                 console.error("Error deserializing invoice metadata:", e);
               }
@@ -2317,7 +2156,16 @@ const App = {
         type: item.type || 'Facture',
         origine: item.origine || 'Divers achats',
         dateEcheance: item.dateEcheance || item.date || null,
-        etatPaiement: item.etatPaiement || 'En attente'
+        etatPaiement: item.etatPaiement || 'En attente',
+        // Detailed columns from Ntsamak:
+        usineRaisonSociale: item.usineRaisonSociale !== undefined ? item.usineRaisonSociale : '',
+        creeParNom: item.creeParNom !== undefined ? item.creeParNom : '',
+        tauxChange: item.tauxChange !== undefined ? item.tauxChange : 1,
+        remiseTtc: item.remiseTtc !== undefined ? item.remiseTtc : 0,
+        netAPayer: item.netAPayer !== undefined ? item.netAPayer : (item.montant !== undefined ? item.montant : 0),
+        montantReglement: item.montantReglement !== undefined ? item.montantReglement : 0,
+        datesReglements: item.datesReglements !== undefined ? item.datesReglements : '',
+        referencesReglements: item.referencesReglements !== undefined ? item.referencesReglements : ''
       }
     };
   },
@@ -2348,18 +2196,13 @@ const App = {
       if (tableName === 'factures') {
         cleanItem = this.cleanAndSerializeFacture(cleanItem);
       }
-      cleanItem = this.normalizeRowForDB(tableName, cleanItem);
       const { error } = await this.supabase.from(tableName.toLowerCase()).upsert(cleanItem);
       if (error) throw error;
       this.setSyncStatus('success', 'Cloud');
       console.log(`✅ [Cloud] ${tableName} synchronisé`);
     } catch (err) {
       console.error(`❌ [Cloud] Erreur sync ${tableName}:`, err);
-      if (err.code === 'PGRST116' || (err.message && (err.message.includes('404') || err.message.includes('Could not find the table') || (err.message.toLowerCase().includes('relation') && err.message.toLowerCase().includes('does not exist'))))) {
-        this.setSyncStatus('warning', 'Partiel');
-      } else {
-        this.setSyncStatus('error', 'Erreur');
-      }
+      this.setSyncStatus('error', 'Erreur');
       // On ne bloque pas l'utilisateur, mais on signale l'erreur
     }
   },
@@ -2374,11 +2217,7 @@ const App = {
       console.log(`✅ [Cloud] ${tableName} item ${id} supprimé`);
     } catch (err) {
       console.error(`❌ [Cloud] Erreur suppression ${tableName}:`, err);
-      if (err.code === 'PGRST116' || (err.message && (err.message.includes('404') || err.message.includes('Could not find the table') || (err.message.toLowerCase().includes('relation') && err.message.toLowerCase().includes('does not exist'))))) {
-        this.setSyncStatus('warning', 'Partiel');
-      } else {
-        this.setSyncStatus('error', 'Erreur');
-      }
+      this.setSyncStatus('error', 'Erreur');
     }
   },
 
@@ -2393,7 +2232,6 @@ const App = {
     if (iconEl) {
       if (status === 'syncing') iconEl.textContent = 'sync';
       else if (status === 'success') iconEl.textContent = 'cloud_done';
-      else if (status === 'warning') iconEl.textContent = 'cloud_queue';
       else iconEl.textContent = 'cloud_off';
     }
 
@@ -2424,7 +2262,6 @@ const App = {
     try {
       console.log("☁️ Début synchronisation cloud...");
       let hasError = false;
-      let hasMissingTable = false;
 
       // 1. Settings
       try {
@@ -2465,10 +2302,8 @@ const App = {
                   // Si l'erreur est 404 (table absente), on ne considère pas cela comme critique
                   if (simpleError.code === 'PGRST116' || simpleError.message.includes('404') || simpleError.message.includes('Could not find the table') || (simpleError.message.toLowerCase().includes('relation') && simpleError.message.toLowerCase().includes('does not exist'))) {
                     console.warn("💡 Table 'pointage' absente sur Supabase. Poursuite transparente de la synchronisation.");
-                    hasMissingTable = true;
                   } else {
                     console.error("❌ Échec de la tentative d'upsert simple de repli pour pointage:", simpleError.message);
-                    hasError = true;
                   }
                 }
               }
@@ -2494,7 +2329,6 @@ const App = {
                 id: c.id || (index + 1)
               }));
             }
-            payload = payload.map(item => this.normalizeRowForDB(table, item));
             
             let attempts = 0;
             const maxAttempts = 5;
@@ -2511,7 +2345,6 @@ const App = {
                 // Si la table elle-même n'existe pas (erreur 404 / Relation manquante), on arrête et on ne marque pas d'erreur critique
                 if (error.code === 'PGRST116' || error.message.includes('404') || error.message.includes('Could not find the table') || (error.message.toLowerCase().includes('relation') && error.message.toLowerCase().includes('does not exist'))) {
                   console.warn(`💡 Table '${table}' absente sur Supabase (404/Relation manquante). La synchronisation locale reste prioritaire et continue de manière transparente.`);
-                  hasMissingTable = true;
                   success = true; // On marque comme success pour ne pas bloquer l'état visuel de synchronisation
                   break;
                 }
@@ -2553,10 +2386,6 @@ const App = {
           statusEl.className = 'sync-status error';
           textEl.textContent = 'Erreur';
           iconEl.textContent = 'cloud_off';
-        } else if (hasMissingTable) {
-          statusEl.className = 'sync-status warning';
-          textEl.textContent = 'Partiel';
-          iconEl.textContent = 'cloud_queue';
         } else {
           statusEl.className = 'sync-status success';
           textEl.textContent = 'Cloud';
@@ -2813,55 +2642,42 @@ const App = {
     return this.getQuarterData('production', year, quarter);
   },
 
-  getSemesterData(collection, year, semester, dateField = 'date') {
-    const s = parseInt(semester);
-    const y = parseInt(year);
-    return (this.data[collection] || []).filter(item => {
-      const dStr = item[dateField];
-      if (!dStr) return false;
-      const parts = dStr.split('-');
-      if (parts.length < 2) return false;
-      const itemY = parseInt(parts[0]);
-      const itemM = parseInt(parts[1]) - 1; // 0-11
-      
-      if (itemY !== y) return false;
-      if (s === 1) return itemM >= 0 && itemM <= 5;
-      if (s === 2) return itemM >= 6 && itemM <= 11;
-      return false;
-    });
+  formatQuarter(year, quarter) {
+    return `Trimestre ${quarter} ${year}`;
   },
 
-  getSemesterProduction(year, semester) {
-    return this.getSemesterData('production', year, semester);
-  },
-
-  formatSemester(year, semester) {
-    return `Semestre ${semester} ${year}`;
-  },
-
-  getAnnualData(collection, year, dateField = 'date') {
+  getYearData(collection, year, dateField = 'date') {
     const y = parseInt(year);
     return (this.data[collection] || []).filter(item => {
       const dStr = item[dateField];
       if (!dStr) return false;
       const parts = dStr.split('-');
       if (parts.length < 1) return false;
-      const itemY = parseInt(parts[0]);
-      
-      return itemY === y;
+      return parseInt(parts[0]) === y;
     });
   },
 
-  getAnnualProduction(year) {
-    return this.getAnnualData('production', year);
+  getYearProduction(year) {
+    return this.getYearData('production', year);
   },
 
-  formatAnnual(year) {
-    return `Année ${year}`;
+  getCustomRangeData(collection, startDate, endDate, dateField = 'date') {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    start.setHours(0,0,0,0);
+    end.setHours(23,59,59,999);
+    
+    return (this.data[collection] || []).filter(item => {
+      const dStr = item[dateField];
+      if (!dStr) return false;
+      const d = new Date(dStr);
+      d.setHours(12,0,0,0);
+      return d >= start && d <= end;
+    });
   },
 
-  formatQuarter(year, quarter) {
-    return `Trimestre ${quarter} ${year}`;
+  getCustomRangeProduction(startDate, endDate) {
+    return this.getCustomRangeData('production', startDate, endDate);
   },
 
   getQuarterDates(year, quarter) {
@@ -2884,18 +2700,6 @@ const App = {
   },
 
   getMonthlyLaborCost(monthStr) {
-    const prod = this.data.production || [];
-    const monthProd = prod.filter(p => (p.date || '').startsWith(monthStr));
-    const sheetsLabor = monthProd.reduce((sum, p) => {
-      const entryRaw = (p.coutMOF || 0) + (p.coutMOO || 0);
-      if (entryRaw > 0) return sum + entryRaw;
-      return sum + (p.coutMOJ || 0);
-    }, 0);
-
-    if (sheetsLabor > 0) {
-      return sheetsLabor;
-    }
-
     if (typeof Personnel !== 'undefined' && Personnel.getPointageData) {
       const ptg = Personnel.getPointageData(monthStr);
       const flatSalaries = (ptg.totalSalairesFixeAdmin || 0) + (ptg.totalSalairesFixeAutre || 0) + (ptg.totalSalairesOuvriersFixe || 0);
@@ -2928,6 +2732,25 @@ const App = {
         `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
         `${year}-${String(q * 3 + 3).padStart(2, '0')}`
       ];
+    } else if (view === 'yearly') {
+      for (let m = 1; m <= 12; m++) {
+        months.push(`${year}-${String(m).padStart(2, '0')}`);
+      }
+    } else if (view === 'custom') {
+      const startVal = document.getElementById('rapportDateDebut')?.value;
+      const endVal = document.getElementById('rapportDateFin')?.value;
+      if (startVal && endVal) {
+        const startD = new Date(startVal);
+        const endD = new Date(endVal);
+        let curr = new Date(startD.getFullYear(), startD.getMonth(), 1);
+        const endLimit = new Date(endD.getFullYear(), endD.getMonth(), 1);
+        while (curr <= endLimit) {
+          months.push(`${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`);
+          curr.setMonth(curr.getMonth() + 1);
+        }
+      } else {
+        months = [selectedDate.substring(0, 7)];
+      }
     } else {
       months = [selectedDate.substring(0, 7)];
     }
@@ -2951,6 +2774,25 @@ const App = {
         `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
         `${year}-${String(q * 3 + 3).padStart(2, '0')}`
       ];
+    } else if (view === 'yearly') {
+      for (let m = 1; m <= 12; m++) {
+        months.push(`${year}-${String(m).padStart(2, '0')}`);
+      }
+    } else if (view === 'custom') {
+      const startVal = document.getElementById('rapportDateDebut')?.value;
+      const endVal = document.getElementById('rapportDateFin')?.value;
+      if (startVal && endVal) {
+        const startD = new Date(startVal);
+        const endD = new Date(endVal);
+        let curr = new Date(startD.getFullYear(), startD.getMonth(), 1);
+        const endLimit = new Date(endD.getFullYear(), endD.getMonth(), 1);
+        while (curr <= endLimit) {
+          months.push(`${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`);
+          curr.setMonth(curr.getMonth() + 1);
+        }
+      } else {
+        months = [selectedDate.substring(0, 7)];
+      }
     } else {
       months = [selectedDate.substring(0, 7)];
     }
@@ -3007,9 +2849,6 @@ const App = {
 
   // --- AI Centralization ---
   AI: {
-    // Clé Gemini intégrée (fallback si aucune clé configurée dans Paramètres)
-    BUILTIN_GEMINI_KEY: 'AIzaSyD-9tSrke72I3lBHpRPMjbMSzFwEQ0m7Kw',
-
     async analyzeImage(file, prompt) {
       const p = App.data.parametres;
       
@@ -3037,33 +2876,23 @@ const App = {
         }
       }
 
-      // 2. GEMINI DIRECT (clé utilisateur configurée dans Paramètres)
+      // 2. GEMINI DIRECT - En dernier recours car quota limité (2/min)
       if (p?.geminiApiKey) {
         try {
-          return await this.analyzeWithGemini(file, prompt, p.geminiApiKey);
+          return await this.analyzeWithGemini(file, prompt);
         } catch (error) {
-          console.warn("Gemini (clé utilisateur) échoué.", error);
+          console.warn("Gemini Direct failed.", error);
         }
       }
 
-      // 3. GEMINI FALLBACK INTÉGRÉ - fonctionne sans configuration
-      try {
-        console.log("Utilisation de la clé Gemini intégrée...");
-        return await this.analyzeWithGemini(file, prompt, this.BUILTIN_GEMINI_KEY);
-      } catch (error) {
-        console.warn("Gemini intégré échoué.", error);
-      }
-
-      throw new Error("Service IA temporairement indisponible. Ajoutez votre propre clé Gemini dans Paramètres → Clé API Gemini pour garantir un accès permanent.");
+      throw new Error("Désolé, tous les services IA sont actuellement surchargés. Réessayez dans 1 minute.");
     },
 
-    async analyzeWithGemini(file, prompt, apiKey) {
-      const key = apiKey || App.data.parametres?.geminiApiKey || this.BUILTIN_GEMINI_KEY;
-      if (!key) throw new Error("Clé Gemini manquante");
+    async analyzeWithGemini(file, prompt) {
+      const apiKey = App.data.parametres?.geminiApiKey;
       if (!App.data.bestAiModel) {
-
         try {
-          const mRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+          const mRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
           const mData = await mRes.json();
           if (mData.models) {
              const available = mData.models.filter(m => 
@@ -3091,7 +2920,7 @@ const App = {
         reader.readAsDataURL(file);
       });
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${key}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
