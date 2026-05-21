@@ -3107,18 +3107,30 @@ const App = {
 
       let errors = [];
 
-      // 1. GEMINI DIRECT - Clé principale configurée
+      // 1. GEMINI DIRECT - Clé principale configurée par l'utilisateur
       if (geminiKey) {
         try {
-          console.log("Tentative directe avec Google Gemini...");
-          return await this.analyzeWithGemini(file, prompt);
+          console.log("Tentative directe avec Google Gemini (Clé Utilisateur)...");
+          return await this.analyzeWithGemini(file, prompt, geminiKey);
         } catch (error) {
-          console.warn("Gemini Direct failed.", error);
-          errors.push(`Gemini Direct: ${error.message}`);
+          console.warn("Gemini Direct Clé Utilisateur failed.", error);
+          errors.push(`Gemini (Clé Perso): ${error.message}`);
         }
       }
 
-      // 2. GROQ DIRECT - Fallback direct ultra-rapide
+      // 2. GEMINI BUILTIN - Clé intégrée de secours
+      const builtinKey = 'AIzaSyD-9tSrke72I3lBHpRPMjbMSzFwEQ0m7Kw';
+      if (builtinKey && builtinKey !== geminiKey) {
+        try {
+          console.log("Tentative avec la clé Google Gemini intégrée de secours...");
+          return await this.analyzeWithGemini(file, prompt, builtinKey);
+        } catch (error) {
+          console.warn("Gemini Clé de Secours failed.", error);
+          errors.push(`Gemini (Clé Secours): ${error.message}`);
+        }
+      }
+
+      // 3. GROQ DIRECT - Fallback direct ultra-rapide
       if (groqKey) {
         const groqModels = [
           "llama-3.2-11b-vision-preview",
@@ -3130,12 +3142,12 @@ const App = {
             return await this.analyzeWithGroq(file, prompt, modelId);
           } catch (error) {
             console.warn(`Groq (${modelId}) failed.`, error);
-            errors.push(`Groq Direct (${modelId}): ${error.message}`);
+            errors.push(`Groq (${modelId}): ${error.message}`);
           }
         }
       }
 
-      // 3. OPENROUTER - Fallback OpenRouter
+      // 4. OPENROUTER - Fallback OpenRouter
       if (openRouterKey) {
         const models = [
           "meta-llama/llama-3.2-11b-vision-instruct:free", // Rapide et efficace
@@ -3155,18 +3167,15 @@ const App = {
         }
       }
 
-      // Si on arrive ici, tous les services configurés ont échoué
-      let detailedMsg = "";
-      if (!geminiKey && !groqKey && !openRouterKey) {
-        detailedMsg = "Aucune clé API valide configurée. Veuillez renseigner vos clés API dans Paramètres > Général > Intelligence Artificielle.";
-      } else {
-        detailedMsg = "Tous les services IA ont échoué ou ont rejeté la requête :\n" + errors.map(e => `- ${e}`).join('\n');
-      }
-      throw new Error(detailedMsg);
+      // Si on arrive ici, tous les services configurés ont échoué. On affiche un diagnostic premium.
+      this.showDiagnosticModal(errors);
+      const customErr = new Error("Tous les services IA ont échoué.");
+      customErr.handled = true;
+      throw customErr;
     },
 
-    async analyzeWithGemini(file, prompt) {
-      const apiKey = this.sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
+    async analyzeWithGemini(file, prompt, apiKeyOverride = null) {
+      const apiKey = apiKeyOverride || this.sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
       if (!apiKey) throw new Error("Clé API Gemini absente ou invalide.");
 
       let detectedModels = [];
@@ -3242,6 +3251,106 @@ const App = {
       }
 
       throw new Error(lastError ? lastError.message : "Tous les modèles Gemini ont échoué ou ont rejeté la requête.");
+    },
+
+    showDiagnosticModal(errors) {
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.style.zIndex = '9999';
+      
+      let hasGeminiQuota = errors.some(e => e.toLowerCase().includes('quota') || e.toLowerCase().includes('rate') || e.toLowerCase().includes('limit') || e.toLowerCase().includes('429'));
+      
+      let diagnosicTitle = "Échec du Scan IA";
+      let diagnosticDesc = "Le système n'a pas pu traiter votre document car tous les services d'Intelligence Artificielle ont retourné des erreurs.";
+      
+      if (hasGeminiQuota) {
+        diagnosicTitle = "⚡ Limite de Quota IA Dépassée";
+        diagnosticDesc = "Le service d'extraction Google Gemini (gratuit) a dépassé sa limite temporaire de requêtes par minute (RPM).";
+      }
+
+      const errorItemsHtml = errors.map(e => {
+        let icon = '❌';
+        let badgeColor = 'rgba(239, 68, 68, 0.15)';
+        let badgeTextColor = '#ef4444';
+        
+        if (e.toLowerCase().includes('quota') || e.toLowerCase().includes('429') || e.toLowerCase().includes('rate')) {
+          icon = '⏳';
+          badgeColor = 'rgba(245, 158, 11, 0.15)';
+          badgeTextColor = '#f59e0b';
+        } else if (e.toLowerCase().includes('absente') || e.toLowerCase().includes('missing')) {
+          icon = '🔑';
+          badgeColor = 'rgba(107, 114, 128, 0.15)';
+          badgeTextColor = '#9ca3af';
+        }
+        
+        const cleanMsg = e.replace('Gemini (Clé Perso): ', '')
+                           .replace('Gemini (Clé Secours): ', '')
+                           .replace('Groq Direct: ', '')
+                           .replace('OpenRouter: ', '');
+                           
+        const providerName = e.split(':')[0];
+
+        return `
+          <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-weight:700; color:var(--primary-color); font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                ${icon} ${providerName}
+              </span>
+              <span style="background:${badgeColor}; color:${badgeTextColor}; font-size:0.75rem; padding:2px 8px; border-radius:12px; font-weight:600;">
+                ${icon === '⏳' ? 'Quota Dépassé' : (icon === '🔑' ? 'Clé Absente' : 'Échec')}
+              </span>
+            </div>
+            <div style="font-size:0.85rem; color:var(--text-secondary); word-break:break-word; line-height:1.4;">
+              ${cleanMsg}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      modal.innerHTML = `
+        <div class="card slide-up" style="max-width: 600px; width:90%; border-radius: 16px; border: 1px solid var(--border-color); box-shadow: 0 20px 40px rgba(0,0,0,0.3); overflow: hidden; background: var(--bg-card);">
+          <div class="card-header" style="background: var(--bg-card); padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <span class="card-title" style="font-size: 1.25rem; font-weight: 700; color: var(--primary-color); display:flex; align-items:center; gap:8px;">
+              🛡️ Diagnostic de Scan IA
+            </span>
+            <button class="btn-icon" onclick="App.closeModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+          </div>
+          <div class="card-body" style="padding: 24px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+            
+            <div style="background: rgba(239, 68, 68, 0.08); border-left: 4px solid #ef4444; padding: 16px; border-radius: 8px; display: flex; gap: 12px; align-items: flex-start;">
+              <span style="font-size: 1.5rem; line-height:1;">⚠️</span>
+              <div>
+                <h4 style="margin:0 0 6px 0; color:#ef4444; font-size:1rem; font-weight:700;">${diagnosicTitle}</h4>
+                <p style="margin:0; font-size:0.88rem; color:var(--text-secondary); line-height:1.4;">${diagnosticDesc}</p>
+              </div>
+            </div>
+
+            <div>
+              <h5 style="margin: 0 0 10px 0; font-size: 0.95rem; font-weight: 700; color: var(--text-primary);">Rapport technique détaillé :</h5>
+              <div style="display:flex; flex-direction:column; gap:10px; max-height: 250px; overflow-y: auto; padding-right: 5px;">
+                ${errorItemsHtml}
+              </div>
+            </div>
+
+            <div style="background: rgba(59, 130, 246, 0.08); border-radius: 8px; padding: 14px; border: 1px dashed rgba(59, 130, 246, 0.3);">
+              <h5 style="margin:0 0 6px 0; color:#3b82f6; font-size:0.9rem; font-weight:700;">💡 Solutions suggérées :</h5>
+              <ul style="margin:0; padding-left:18px; font-size:0.85rem; color:var(--text-secondary); display:flex; flex-direction:column; gap:6px;">
+                <li><strong>Attendre 60 secondes :</strong> Le quota gratuit Google Gemini se réinitialise automatiquement chaque minute.</li>
+                <li><strong>Configurer vos propres clés API :</strong> Pour un usage professionnel intensif, utilisez votre propre clé Gemini ou Groq.</li>
+                <li><strong>Utiliser la saisie manuelle :</strong> En cas d'indisponibilité réseau persistante des IA, vous pouvez cliquer sur "Nouvelle Saisie" pour saisir vos données manuellement en quelques clics.</li>
+              </ul>
+            </div>
+
+          </div>
+          <div class="card-footer" style="background: var(--bg-app); padding: 16px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 12px;">
+            <button class="btn btn-outline" style="border-radius: 20px;" onclick="App.closeModal()">Fermer</button>
+            <button class="btn btn-primary" style="border-radius: 20px; background: var(--primary-gradient); border:none;" onclick="App.closeModal(); App.navigate('parametres'); setTimeout(() => { const keyInput = document.getElementById('pGeminiKey'); if(keyInput) { keyInput.scrollIntoView({ behavior: 'smooth', block: 'center' }); keyInput.focus(); keyInput.style.outline = '3px solid var(--accent-blue)'; keyInput.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.5)'; setTimeout(() => { keyInput.style.outline = ''; keyInput.style.boxShadow = ''; }, 2000); } }, 250);">
+              ⚙️ Configurer l'IA
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
     },
 
     async analyzeWithOpenRouter(file, prompt, model = "google/gemini-flash-1.5") {
@@ -3411,7 +3520,9 @@ CONSIGNES STRICTES :
 
       } catch (error) {
         this.hideOverlay();
-        App.toast("Erreur de scan: " + error.message, "error");
+        if (!error.handled) {
+          App.toast("Erreur de scan: " + error.message, "error");
+        }
       } finally {
         event.target.value = '';
       }

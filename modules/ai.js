@@ -192,6 +192,49 @@ App.AiEngine = {
     });
   },
 
+  async queryGeminiWithFallback(payload, userKey) {
+    const builtinKey = 'AIzaSyD-9tSrke72I3lBHpRPMjbMSzFwEQ0m7Kw';
+    const keysToTry = [];
+    if (userKey) keysToTry.push(userKey);
+    if (builtinKey && builtinKey !== userKey) keysToTry.push(builtinKey);
+
+    const modelsToTry = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"];
+
+    let lastError = null;
+
+    for (const key of keysToTry) {
+      for (const model of modelsToTry) {
+        try {
+          console.log(`AiEngine: Tentative avec la clé API et le modèle ${model}...`);
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+          
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error?.message || `HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          if (data.candidates && data.candidates[0].content?.parts?.[0]?.text) {
+            return data;
+          } else {
+            throw new Error("Réponse vide ou malformée.");
+          }
+        } catch (err) {
+          console.warn(`AiEngine: Échec avec le modèle ${model}:`, err);
+          lastError = err;
+        }
+      }
+    }
+
+    throw new Error(lastError ? lastError.message : "Tous les services IA et modèles Gemini ont échoué.");
+  },
+
   async callGeminiApi(base64Image, mimeType) {
     const sanitizeKey = (k) => {
       if (!k) return '';
@@ -211,10 +254,6 @@ App.AiEngine = {
       return trimmed;
     };
     const key = sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
-    if (!key) {
-      throw new Error("Clé API Gemini absente ou invalide. Veuillez renseigner une clé API Gemini valide dans les paramètres.");
-    }
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`;
     
     const prompt = this.prompts[this.currentType] || "Extrait les données en JSON";
 
@@ -235,18 +274,7 @@ App.AiEngine = {
     };
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "Erreur de l'API Gemini");
-      }
-
-      const data = await response.json();
+      const data = await this.queryGeminiWithFallback(payload, key);
       
       if (data.candidates && data.candidates[0].content.parts[0].text) {
         let rawText = data.candidates[0].content.parts[0].text;
@@ -299,8 +327,24 @@ App.AiEngine = {
   },
 
   async callGeminiTextApi(text) {
-    const key = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`;
+    const sanitizeKey = (k) => {
+      if (!k) return '';
+      const trimmed = String(k).trim();
+      if (!trimmed || 
+          trimmed.toLowerCase() === 'undefined' || 
+          trimmed.toLowerCase() === 'null' || 
+          trimmed.length < 15 || 
+          trimmed.includes('...') || 
+          trimmed === 'gsk_' || 
+          trimmed === 'sk-or-v1-' ||
+          trimmed.startsWith('gsk_placeholder') ||
+          trimmed.startsWith('sk-or-v1-placeholder')
+      ) {
+        return '';
+      }
+      return trimmed;
+    };
+    const key = sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
     const prompt = (this.prompts[this.currentType] || "Extrait les données en JSON") + "\n\nVoici le contenu du fichier Excel :\n" + text;
 
     const payload = {
@@ -308,18 +352,8 @@ App.AiEngine = {
     };
 
     try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error?.message || "Erreur de l'API Gemini");
-      }
-
-      const data = await response.json();
+      const data = await this.queryGeminiWithFallback(payload, key);
+      
       if (data.candidates && data.candidates[0].content.parts[0].text) {
         let rawText = data.candidates[0].content.parts[0].text;
         rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
