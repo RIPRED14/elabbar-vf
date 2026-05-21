@@ -72,7 +72,16 @@ const Parametres = {
     const sanitizeKey = (key) => {
       if (!key) return '';
       const trimmed = String(key).trim();
-      if (!trimmed || trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || trimmed.startsWith('sk-or-v1-...') || trimmed.startsWith('AIzaSy...') || trimmed.startsWith('gsk_...')) {
+      if (!trimmed || 
+          trimmed.toLowerCase() === 'undefined' || 
+          trimmed.toLowerCase() === 'null' || 
+          trimmed.length < 15 || 
+          trimmed.includes('...') || 
+          trimmed === 'gsk_' || 
+          trimmed === 'sk-or-v1-' ||
+          trimmed.startsWith('gsk_placeholder') ||
+          trimmed.startsWith('sk-or-v1-placeholder')
+      ) {
         return '';
       }
       return trimmed;

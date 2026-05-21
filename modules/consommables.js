@@ -315,7 +315,7 @@ const Consommables = {
     if (n.includes('CARTON')) return 'Conditionnement';
     if (n.includes('ETIQUETTE')) return 'Conditionnement';
     if (n.includes('FILM') || n.includes('SCOTCH') || n.includes('PALETTE')) return 'Emballage';
-    if (n.includes('SEL')) return 'Intrant';
+    if (n.includes('SEL') || n.includes('HYDROMAR') || n.includes('AGRAFISH') || n.includes('AGRA')) return 'Intrant';
     return 'Autres';
   },
 

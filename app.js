@@ -132,6 +132,8 @@ const App = {
       { id: 25, nom: 'PALETTE', unite: 'pièce', stock: 50, seuilCritique: 5, seuilAlerte: 10, prixUnitaire: 0 },
       // ── INTRANT ──
       { id: 26, nom: 'SEL', unite: 'kg', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 0.60 },
+      { id: 27, nom: 'HYDROMAR', unite: 'kg', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 1.00 },
+      { id: 28, nom: 'AGRAFISH', unite: 'kg', stock: 500, seuilCritique: 50, seuilAlerte: 100, prixUnitaire: 1.00 },
     ],
     chambresSpecs: {
       chambre1: { nom: 'CS 01', surfaceToit: 202.98, surfaceSol: 67.2, tempSol: 8, epaisseur: 150, isolation: 0.28, moteurs: 35, dureeMoteurs: 12, projecteur: 165, dureeProj: 1, degivrage: 3, echangeAir: 540.36, tonnage: 400 },
@@ -1951,7 +1953,16 @@ const App = {
     const sanitizeKey = (key) => {
       if (!key) return '';
       const trimmed = String(key).trim();
-      if (!trimmed || trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || trimmed.startsWith('sk-or-v1-...') || trimmed.startsWith('AIzaSy...') || trimmed.startsWith('gsk_...')) {
+      if (!trimmed || 
+          trimmed.toLowerCase() === 'undefined' || 
+          trimmed.toLowerCase() === 'null' || 
+          trimmed.length < 15 || 
+          trimmed.includes('...') || 
+          trimmed === 'gsk_' || 
+          trimmed === 'sk-or-v1-' ||
+          trimmed.startsWith('gsk_placeholder') ||
+          trimmed.startsWith('sk-or-v1-placeholder')
+      ) {
         return '';
       }
       return trimmed;
@@ -2029,9 +2040,47 @@ const App = {
         tables.forEach((tableName, index) => {
           const result = others[index];
           if (result && result.data && result.data.length > 0) {
-            this.data[tableName] = result.data;
+            const localData = this.data[tableName] || [];
+            const cloudData = result.data;
+            const key = tableName === 'especes' ? 'nom' : 'id';
+            
+            const cloudMap = new Map();
+            cloudData.forEach(item => {
+              const itemKey = item[key];
+              if (itemKey !== undefined && itemKey !== null) {
+                cloudMap.set(String(itemKey), item);
+              }
+            });
+
+            const merged = [];
+            const processedKeys = new Set();
+
+            localData.forEach(localItem => {
+              const itemKey = localItem[key];
+              const stringKey = (itemKey !== undefined && itemKey !== null) ? String(itemKey) : null;
+              if (stringKey) {
+                if (cloudMap.has(stringKey)) {
+                  merged.push(cloudMap.get(stringKey));
+                } else {
+                  merged.push(localItem);
+                }
+                processedKeys.add(stringKey);
+              } else {
+                merged.push(localItem);
+              }
+            });
+
+            cloudData.forEach(cloudItem => {
+              const itemKey = cloudItem[key];
+              const stringKey = (itemKey !== undefined && itemKey !== null) ? String(itemKey) : null;
+              if (stringKey && !processedKeys.has(stringKey)) {
+                merged.push(cloudItem);
+              }
+            });
+
+            this.data[tableName] = merged;
             hasCloudData = true;
-            console.log(`✅ Table '${tableName}' hydratée depuis le cloud (${result.data.length} lignes)`);
+            console.log(`✅ Table '${tableName}' fusionnée avec le cloud (${merged.length} lignes après fusion)`);
           }
         });
 
@@ -2884,6 +2933,23 @@ const App = {
 
   // --- AI Centralization ---
   AI: {
+    sanitizeKey(k) {
+      if (!k) return '';
+      const trimmed = String(k).trim();
+      if (!trimmed || 
+          trimmed.toLowerCase() === 'undefined' || 
+          trimmed.toLowerCase() === 'null' || 
+          trimmed.length < 15 || 
+          trimmed.includes('...') || 
+          trimmed === 'gsk_' || 
+          trimmed === 'sk-or-v1-' ||
+          trimmed.startsWith('gsk_placeholder') ||
+          trimmed.startsWith('sk-or-v1-placeholder')
+      ) {
+        return '';
+      }
+      return trimmed;
+    },
     async analyzeImage(file, prompt) {
       const p = App.data.parametres;
       
@@ -2892,18 +2958,9 @@ const App = {
         App.data.bestAiModel = null;
       }
 
-      const sanitizeKey = (k) => {
-        if (!k) return null;
-        const s = String(k).trim();
-        if (!s || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null' || s.startsWith('sk-or-v1-...') || s.startsWith('AIzaSy...') || s.startsWith('gsk_...')) {
-          return null;
-        }
-        return s;
-      };
-
-      const geminiKey = sanitizeKey(p?.geminiApiKey || p?.geminiKey);
-      const groqKey = sanitizeKey(p?.groqApiKey);
-      const openRouterKey = sanitizeKey(p?.openRouterApiKey);
+      const geminiKey = this.sanitizeKey(p?.geminiApiKey || p?.geminiKey);
+      const groqKey = this.sanitizeKey(p?.groqApiKey);
+      const openRouterKey = this.sanitizeKey(p?.openRouterApiKey);
 
       let errors = [];
 
@@ -2966,7 +3023,8 @@ const App = {
     },
 
     async analyzeWithGemini(file, prompt) {
-      const apiKey = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
+      const apiKey = this.sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
+      if (!apiKey) throw new Error("Clé API Gemini absente ou invalide.");
       if (!App.data.bestAiModel) {
         try {
           const mRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
@@ -3016,7 +3074,8 @@ const App = {
     },
 
     async analyzeWithOpenRouter(file, prompt, model = "google/gemini-flash-1.5") {
-      const apiKey = App.data.parametres?.openRouterApiKey;
+      const apiKey = this.sanitizeKey(App.data.parametres?.openRouterApiKey);
+      if (!apiKey) throw new Error("Clé API OpenRouter absente ou invalide.");
       const base64Data = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
@@ -3055,7 +3114,8 @@ const App = {
     },
 
     async analyzeWithGroq(file, prompt, model = "llama-3.2-11b-vision-preview") {
-      const apiKey = App.data.parametres?.groqApiKey;
+      const apiKey = this.sanitizeKey(App.data.parametres?.groqApiKey);
+      if (!apiKey) throw new Error("Clé API Groq absente ou invalide.");
       const base64Data = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);

@@ -195,13 +195,25 @@ App.AiEngine = {
   async callGeminiApi(base64Image, mimeType) {
     const sanitizeKey = (k) => {
       if (!k) return '';
-      const s = String(k).trim();
-      if (!s || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null' || s.startsWith('sk-or-v1-...') || s.startsWith('AIzaSy...') || s.startsWith('gsk_...')) {
+      const trimmed = String(k).trim();
+      if (!trimmed || 
+          trimmed.toLowerCase() === 'undefined' || 
+          trimmed.toLowerCase() === 'null' || 
+          trimmed.length < 15 || 
+          trimmed.includes('...') || 
+          trimmed === 'gsk_' || 
+          trimmed === 'sk-or-v1-' ||
+          trimmed.startsWith('gsk_placeholder') ||
+          trimmed.startsWith('sk-or-v1-placeholder')
+      ) {
         return '';
       }
-      return s;
+      return trimmed;
     };
     const key = sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
+    if (!key) {
+      throw new Error("Clé API Gemini absente ou invalide. Veuillez renseigner une clé API Gemini valide dans les paramètres.");
+    }
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`;
     
     const prompt = this.prompts[this.currentType] || "Extrait les données en JSON";

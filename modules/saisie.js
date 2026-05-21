@@ -91,6 +91,8 @@ const Saisie = {
     { ref: 'PALETTE', article: 'PALETTE', famille: 'EMBALLAGE', prix: 0 },
     // ── INTRANT ──
     { ref: 'SEL', article: 'SEL', famille: 'INTRANT', prix: 0.60 },
+    { ref: 'HYDROMAR', article: 'HYDROMAR', famille: 'INTRANT', prix: 1.00 },
+    { ref: 'AGRAFISH', article: 'AGRAFISH', famille: 'INTRANT', prix: 1.00 },
     // ── EQUIPEMENT ──
     { ref: '11211', article: 'PISTOLET ARROSEUR', famille: 'EQUIPEMENT', prix: 0 },
     { ref: '11212', article: 'MT TUYAU', famille: 'EQUIPEMENT', prix: 0 },
@@ -602,8 +604,8 @@ const Saisie = {
       if (!artInput || !qteInput) return;
       
       const art = artInput.value.toUpperCase();
+      const currentQte = parseFloat(qteInput.value) || 0;
       if (condMatch && caissesPF > 0) {
-        const currentQte = parseFloat(qteInput.value) || 0;
         if (art.includes('CARTON')) {
           if (!currentQte) qteInput.value = nbCartons;
         } else if (art.includes('SACHET')) {
@@ -618,6 +620,20 @@ const Saisie = {
             qteInput.value = nbToners.toFixed(3);
             if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 78;
           }
+        }
+      }
+
+      const poidsPI = v('fPoidsPI');
+      if (poidsPI > 0) {
+        if (art === 'SEL') {
+          if (!currentQte) qteInput.value = (poidsPI * 0.02).toFixed(2);
+          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 0.60;
+        } else if (art === 'HYDROMAR') {
+          if (!currentQte) qteInput.value = (poidsPI * 0.005).toFixed(3);
+          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
+        } else if (art === 'AGRAFISH') {
+          if (!currentQte) qteInput.value = (poidsPI * 0.001).toFixed(3);
+          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
         }
       }
 
@@ -820,7 +836,7 @@ const Saisie = {
     const existingRows = tbody.querySelectorAll('tr:not(:last-child)');
     const extraIntrants = [];
     existingRows.forEach((row, i) => {
-      if (i >= 4) {
+      if (i >= newIntrants.length) {
         const a = row.querySelector('[data-int="article"]');
         const q = row.querySelector('[data-int="qte"]');
         const p = row.querySelector('[data-int="prix"]');
@@ -1074,7 +1090,7 @@ const Saisie = {
 
     cbs.forEach(cb => {
       const id = cb.value;
-      const p = App.data.production.find(x => x.id === id);
+      const p = App.data.production.find(x => String(x.id) === String(id));
       if (p && !p.sentToStorage && (p.poidsBrutPF > 0)) {
         const chambre = 'chambre1'; // Default to chambre 1 for batch
         const activiteLabel = (p.activite === 'traitement') ? 'Traitement' : (p.activite === 'reconditionnement' ? 'Reconditionnement' : p.activite);
@@ -1558,19 +1574,37 @@ const Saisie = {
       const art = artInput.value.toUpperCase();
       
       // Auto-fill quantities based on article type
+      const currentQte = parseFloat(qteInput.value) || 0;
       if (condMatch && currentPoidsPF > 0) {
         if (art.includes('CARTON')) {
-          qteInput.value = nbCartons;
+          if (!currentQte) qteInput.value = nbCartons;
         } else if (art.includes('SACHET')) {
-          qteInput.value = nbSachetsTotal;
+          if (!currentQte) qteInput.value = nbSachetsTotal;
         } else if (art.includes('50') && art.includes('75') || art.includes('ETIQUETTE') && !art.includes('NOIR')) {
           // Étiquettes normales (rouleaux)
-          qteInput.value = nbRouleaux.toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 45;
+          if (!currentQte) {
+            qteInput.value = nbRouleaux.toFixed(3);
+            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 45;
+          }
         } else if (art.includes('NOIR') || art.includes('TONER')) {
           // Étiquettes noir / toner
-          qteInput.value = nbToners.toFixed(3);
-          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 78;
+          if (!currentQte) {
+            qteInput.value = nbToners.toFixed(3);
+            if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 78;
+          }
+        }
+      }
+
+      if (poidsMP > 0) {
+        if (art === 'SEL') {
+          if (!currentQte) qteInput.value = (poidsMP * 0.02).toFixed(2);
+          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 0.60;
+        } else if (art === 'HYDROMAR') {
+          if (!currentQte) qteInput.value = (poidsMP * 0.005).toFixed(3);
+          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
+        } else if (art === 'AGRAFISH') {
+          if (!currentQte) qteInput.value = (poidsMP * 0.001).toFixed(3);
+          if (prixInput && !parseFloat(prixInput.value)) prixInput.value = 1.00;
         }
       }
       
@@ -1745,18 +1779,21 @@ const Saisie = {
     }
     intrants.push({ article: 'ETIQUETTE 50*75', qte: 0, prix: 45.00 });
     intrants.push({ article: 'ETIQUETTE NOIR', qte: 0, prix: 78.00 });
+    intrants.push({ article: 'SEL', qte: 0, prix: 0.60 });
+    intrants.push({ article: 'HYDROMAR', qte: 0, prix: 1.00 });
+    intrants.push({ article: 'AGRAFISH', qte: 0, prix: 1.00 });
     return intrants;
   },
 
   onConditionnementChange() {
     const code = document.getElementById('tConditionnement')?.value || '';
     const newIntrants = this.getDefaultIntrants(code);
-    // Keep any extra intrants the user added (beyond the base 4)
+    // Keep any extra intrants the user added (beyond the base count)
     const tbody = document.getElementById('tIntrants');
     const existingRows = tbody.querySelectorAll('tr:not(:last-child)');
     const extraIntrants = [];
     existingRows.forEach((row, i) => {
-      if (i >= 4) { // keep rows beyond the base 4
+      if (i >= newIntrants.length) { // keep rows beyond the base count
         const a = row.querySelector('[data-int="article"]');
         const q = row.querySelector('[data-int="qte"]');
         const p = row.querySelector('[data-int="prix"]');
@@ -1983,7 +2020,7 @@ const Saisie = {
 
   printBon(id) {
     try {
-      const p = App.data.production.find(x => x.id === id);
+      const p = App.data.production.find(x => String(x.id) === String(id));
       if (!p) return;
       const isTraitement = (p.activite === 'traitement' || p.activite === 'divers');
       // Calculate intrants total dynamically
@@ -2377,7 +2414,7 @@ const Saisie = {
      ENVOI VERS STOCKAGE — Post-Traitement
      ============================================ */
   showSendToStorageModal(id) {
-    const p = App.data.production.find(x => x.id === id);
+    const p = App.data.production.find(x => String(x.id) === String(id));
     if (!p) return;
     if (p.sentToStorage) { App.toast('Cette saisie a déjà été envoyée vers le stockage', 'warning'); return; }
     if (!(p.poidsBrutPF > 0)) { App.toast('Le traitement n\'est pas encore terminé (Poids PF = 0)', 'error'); return; }
@@ -2432,7 +2469,7 @@ const Saisie = {
   },
 
   confirmSendToStorage(id) {
-    const p = App.data.production.find(x => x.id === id);
+    const p = App.data.production.find(x => String(x.id) === String(id));
     if (!p) return;
     if (p.sentToStorage) { App.toast('Déjà envoyé', 'warning'); App.closeModal(); return; }
 
