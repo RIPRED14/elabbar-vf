@@ -70,6 +70,7 @@ const Parametres = {
     };
     if (document.getElementById('pSalaireOcc')) {
       App.data.parametres = {
+        ...App.data.parametres,
         salaireHoraireOcc: v('pSalaireOcc') ?? App.data.parametres.salaireHoraireOcc,
         heuresMensuelles: v('pHeuresMens') ?? App.data.parametres.heuresMensuelles,
         salaireQualite: v('pSalaireQualite') ?? App.data.parametres.salaireQualite,
@@ -83,6 +84,7 @@ const Parametres = {
         coutPersonnelLogistique: v('pPersLog') ?? App.data.parametres.coutPersonnelLogistique,
         coutStructureEstime: v('pCoutStrEstime') ?? App.data.parametres.coutStructureEstime,
         geminiApiKey: document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiApiKey,
+        geminiKey: document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiKey,
         groqApiKey: document.getElementById('pGroqKey')?.value ?? App.data.parametres.groqApiKey,
         openRouterApiKey: document.getElementById('pOpenRouterKey')?.value ?? App.data.parametres.openRouterApiKey,
         ntsamakToken: document.getElementById('pNtsamakToken')?.value ?? App.data.parametres.ntsamakToken,

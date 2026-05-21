@@ -98,7 +98,7 @@ App.AiEngine = {
   },
 
   openScanner(type, callback) {
-    const key = App.data.parametres?.geminiKey;
+    const key = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
     if (!key || key.trim() === '') {
       App.toast('Erreur : Clé API Gemini manquante. Veuillez la configurer dans les Paramètres.', 'error');
       App.navigate('parametres');
@@ -193,7 +193,7 @@ App.AiEngine = {
   },
 
   async callGeminiApi(base64Image, mimeType) {
-    const key = App.data.parametres.geminiKey;
+    const key = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=\${key}`;
     
     const prompt = this.prompts[this.currentType] || "Extrait les données en JSON";
@@ -279,7 +279,7 @@ App.AiEngine = {
   },
 
   async callGeminiTextApi(text) {
-    const key = App.data.parametres?.geminiKey;
+    const key = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`;
     const prompt = (this.prompts[this.currentType] || "Extrait les données en JSON") + "\n\nVoici le contenu du fichier Excel :\n" + text;
 

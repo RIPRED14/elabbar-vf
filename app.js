@@ -143,6 +143,11 @@ const App = {
     },
     chambresHistory: [],
     parametres: {
+      geminiApiKey: '',
+      geminiKey: '',
+      groqApiKey: '',
+      openRouterApiKey: '',
+      ntsamakToken: '',
       productivityTarget: 25,
       yieldTargets: {
         'OCTOPUS': 75,
@@ -1952,9 +1957,11 @@ const App = {
         this.data = JSON.parse(saved);
         // Migration logic pour les nouveaux réglages
         if (!this.data.parametres) this.data.parametres = { ...this.defaults.parametres };
-        if (this.data.parametres.groqApiKey === undefined) this.data.parametres.groqApiKey = this.defaults.parametres.groqApiKey;
-        if (this.data.parametres.openRouterApiKey === undefined) this.data.parametres.openRouterApiKey = this.defaults.parametres.openRouterApiKey;
-        if (this.data.parametres.ntsamakToken === undefined) this.data.parametres.ntsamakToken = this.defaults.parametres.ntsamakToken;
+        if (this.data.parametres.geminiApiKey === undefined) this.data.parametres.geminiApiKey = '';
+        if (this.data.parametres.geminiKey === undefined) this.data.parametres.geminiKey = '';
+        if (this.data.parametres.groqApiKey === undefined) this.data.parametres.groqApiKey = '';
+        if (this.data.parametres.openRouterApiKey === undefined) this.data.parametres.openRouterApiKey = '';
+        if (this.data.parametres.ntsamakToken === undefined) this.data.parametres.ntsamakToken = '';
         console.log("📂 Données locales chargées");
       } catch (err) {
         console.error('Données locales corrompues, réinitialisation.', err);
@@ -1987,7 +1994,17 @@ const App = {
         let hasCloudData = false;
 
         if (settings.data && settings.data.data) {
-          this.data.parametres = settings.data.data;
+          const cloudParams = settings.data.data;
+          this.data.parametres = {
+            ...this.data.parametres,
+            ...cloudParams,
+            // Keep local API keys if they exist and cloud has empty/null/missing values
+            geminiApiKey: cloudParams.geminiApiKey || this.data.parametres.geminiApiKey || '',
+            geminiKey: cloudParams.geminiKey || this.data.parametres.geminiKey || '',
+            groqApiKey: cloudParams.groqApiKey || this.data.parametres.groqApiKey || '',
+            openRouterApiKey: cloudParams.openRouterApiKey || this.data.parametres.openRouterApiKey || '',
+            ntsamakToken: cloudParams.ntsamakToken || this.data.parametres.ntsamakToken || ''
+          };
           hasCloudData = true;
         }
         
@@ -2857,8 +2874,13 @@ const App = {
         App.data.bestAiModel = null;
       }
 
+      const openRouterKey = p?.openRouterApiKey;
+      const geminiKey = p?.geminiApiKey || p?.geminiKey;
+
+      let errors = [];
+
       // 1. OPENROUTER - Priorité aux modèles gratuits généreux (Groq/Gemma via OpenRouter)
-      if (p?.openRouterApiKey) {
+      if (openRouterKey) {
         const models = [
           "meta-llama/llama-3.2-11b-vision-instruct:free", // Rapide et efficace
           "google/gemma-4-31b-it:free",                   // Nouveau 2026
@@ -2872,24 +2894,33 @@ const App = {
             return await this.analyzeWithOpenRouter(file, prompt, modelId);
           } catch (error) {
             console.warn(`Modèle ${modelId} échoué, essai suivant...`);
+            errors.push(`OpenRouter (${modelId}): ${error.message}`);
           }
         }
       }
 
       // 2. GEMINI DIRECT - En dernier recours car quota limité (2/min)
-      if (p?.geminiApiKey) {
+      if (geminiKey) {
         try {
           return await this.analyzeWithGemini(file, prompt);
         } catch (error) {
           console.warn("Gemini Direct failed.", error);
+          errors.push(`Gemini Direct: ${error.message}`);
         }
       }
 
-      throw new Error("Désolé, tous les services IA sont actuellement surchargés. Réessayez dans 1 minute.");
+      // Si on arrive ici, tous les services configurés ont échoué
+      let detailedMsg = "";
+      if (!openRouterKey && !geminiKey) {
+        detailedMsg = "Aucune clé API configurée. Veuillez renseigner vos clés API dans Paramètres > Général > Intelligence Artificielle.";
+      } else {
+        detailedMsg = "Tous les services IA ont échoué ou ont rejeté l'appel :\n" + errors.map(e => `• ${e}`).join('\n');
+      }
+      throw new Error(detailedMsg);
     },
 
     async analyzeWithGemini(file, prompt) {
-      const apiKey = App.data.parametres?.geminiApiKey;
+      const apiKey = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
       if (!App.data.bestAiModel) {
         try {
           const mRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
