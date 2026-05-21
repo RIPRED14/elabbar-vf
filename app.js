@@ -1947,6 +1947,16 @@ const App = {
 
   // --- Storage ---
   async loadData() {
+    // Helper pour nettoyer les clés API corrompues (ex: chaines "undefined", "null" ou placeholders)
+    const sanitizeKey = (key) => {
+      if (!key) return '';
+      const trimmed = String(key).trim();
+      if (!trimmed || trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || trimmed.startsWith('sk-or-v1-...') || trimmed.startsWith('AIzaSy...') || trimmed.startsWith('gsk_...')) {
+        return '';
+      }
+      return trimmed;
+    };
+
     // Toujours initialiser avec les valeurs par défaut pour éviter les erreurs de nullité
     this.data = JSON.parse(JSON.stringify(this.defaults));
 
@@ -1962,7 +1972,15 @@ const App = {
         if (this.data.parametres.groqApiKey === undefined) this.data.parametres.groqApiKey = '';
         if (this.data.parametres.openRouterApiKey === undefined) this.data.parametres.openRouterApiKey = '';
         if (this.data.parametres.ntsamakToken === undefined) this.data.parametres.ntsamakToken = '';
-        console.log("📂 Données locales chargées");
+        
+        // Nettoyage immédiat
+        this.data.parametres.geminiApiKey = sanitizeKey(this.data.parametres.geminiApiKey);
+        this.data.parametres.geminiKey = sanitizeKey(this.data.parametres.geminiKey);
+        this.data.parametres.groqApiKey = sanitizeKey(this.data.parametres.groqApiKey);
+        this.data.parametres.openRouterApiKey = sanitizeKey(this.data.parametres.openRouterApiKey);
+        this.data.parametres.ntsamakToken = sanitizeKey(this.data.parametres.ntsamakToken);
+
+        console.log("📂 Données locales chargées et assainies");
       } catch (err) {
         console.error('Données locales corrompues, réinitialisation.', err);
         this.data = JSON.parse(JSON.stringify(this.defaults));
@@ -1999,11 +2017,11 @@ const App = {
             ...this.data.parametres,
             ...cloudParams,
             // Keep local API keys if they exist and cloud has empty/null/missing values
-            geminiApiKey: cloudParams.geminiApiKey || this.data.parametres.geminiApiKey || '',
-            geminiKey: cloudParams.geminiKey || this.data.parametres.geminiKey || '',
-            groqApiKey: cloudParams.groqApiKey || this.data.parametres.groqApiKey || '',
-            openRouterApiKey: cloudParams.openRouterApiKey || this.data.parametres.openRouterApiKey || '',
-            ntsamakToken: cloudParams.ntsamakToken || this.data.parametres.ntsamakToken || ''
+            geminiApiKey: sanitizeKey(cloudParams.geminiApiKey || this.data.parametres.geminiApiKey || ''),
+            geminiKey: sanitizeKey(cloudParams.geminiKey || this.data.parametres.geminiKey || ''),
+            groqApiKey: sanitizeKey(cloudParams.groqApiKey || this.data.parametres.groqApiKey || ''),
+            openRouterApiKey: sanitizeKey(cloudParams.openRouterApiKey || this.data.parametres.openRouterApiKey || ''),
+            ntsamakToken: sanitizeKey(cloudParams.ntsamakToken || this.data.parametres.ntsamakToken || '')
           };
           hasCloudData = true;
         }
@@ -2874,12 +2892,50 @@ const App = {
         App.data.bestAiModel = null;
       }
 
-      const openRouterKey = p?.openRouterApiKey;
-      const geminiKey = p?.geminiApiKey || p?.geminiKey;
+      const sanitizeKey = (k) => {
+        if (!k) return null;
+        const s = String(k).trim();
+        if (!s || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null' || s.startsWith('sk-or-v1-...') || s.startsWith('AIzaSy...') || s.startsWith('gsk_...')) {
+          return null;
+        }
+        return s;
+      };
+
+      const geminiKey = sanitizeKey(p?.geminiApiKey || p?.geminiKey);
+      const groqKey = sanitizeKey(p?.groqApiKey);
+      const openRouterKey = sanitizeKey(p?.openRouterApiKey);
 
       let errors = [];
 
-      // 1. OPENROUTER - Priorité aux modèles gratuits généreux (Groq/Gemma via OpenRouter)
+      // 1. GEMINI DIRECT - Clé principale configurée
+      if (geminiKey) {
+        try {
+          console.log("Tentative directe avec Google Gemini...");
+          return await this.analyzeWithGemini(file, prompt);
+        } catch (error) {
+          console.warn("Gemini Direct failed.", error);
+          errors.push(`Gemini Direct: ${error.message}`);
+        }
+      }
+
+      // 2. GROQ DIRECT - Fallback direct ultra-rapide
+      if (groqKey) {
+        const groqModels = [
+          "llama-3.2-11b-vision-preview",
+          "llama-3.2-90b-vision-preview"
+        ];
+        for (const modelId of groqModels) {
+          try {
+            console.log(`Tentative directe avec Groq (${modelId})...`);
+            return await this.analyzeWithGroq(file, prompt, modelId);
+          } catch (error) {
+            console.warn(`Groq (${modelId}) failed.`, error);
+            errors.push(`Groq Direct (${modelId}): ${error.message}`);
+          }
+        }
+      }
+
+      // 3. OPENROUTER - Fallback OpenRouter
       if (openRouterKey) {
         const models = [
           "meta-llama/llama-3.2-11b-vision-instruct:free", // Rapide et efficace
@@ -2899,22 +2955,12 @@ const App = {
         }
       }
 
-      // 2. GEMINI DIRECT - En dernier recours car quota limité (2/min)
-      if (geminiKey) {
-        try {
-          return await this.analyzeWithGemini(file, prompt);
-        } catch (error) {
-          console.warn("Gemini Direct failed.", error);
-          errors.push(`Gemini Direct: ${error.message}`);
-        }
-      }
-
       // Si on arrive ici, tous les services configurés ont échoué
       let detailedMsg = "";
-      if (!openRouterKey && !geminiKey) {
-        detailedMsg = "Aucune clé API configurée. Veuillez renseigner vos clés API dans Paramètres > Général > Intelligence Artificielle.";
+      if (!geminiKey && !groqKey && !openRouterKey) {
+        detailedMsg = "Aucune clé API valide configurée. Veuillez renseigner vos clés API dans Paramètres > Général > Intelligence Artificielle.";
       } else {
-        detailedMsg = "Tous les services IA ont échoué ou ont rejeté l'appel :\n" + errors.map(e => `• ${e}`).join('\n');
+        detailedMsg = "Tous les services IA ont échoué ou ont rejeté la requête :\n" + errors.map(e => `- ${e}`).join('\n');
       }
       throw new Error(detailedMsg);
     },
@@ -3004,6 +3050,44 @@ const App = {
       }
       const res = await response.json();
       if (!res.choices || res.choices.length === 0) throw new Error("OpenRouter: Réponse vide");
+      const text = res.choices[0].message.content;
+      return this.parseAIResponse(text);
+    },
+
+    async analyzeWithGroq(file, prompt, model = "llama-3.2-11b-vision-preview") {
+      const apiKey = App.data.parametres?.groqApiKey;
+      const base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: prompt + " \nIMPORTANT: Tu es un système d'extraction. Réponds UNIQUEMENT par un objet JSON. Si c'est une fiche manuscrite avec des noms d'employés et des heures, classe-la impérativement en 'PERSONNEL'." },
+              { type: "image_url", image_url: { url: base64Data } }
+            ]
+          }],
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || "Groq Error");
+      }
+      const res = await response.json();
+      if (!res.choices || res.choices.length === 0) throw new Error("Groq: Réponse vide");
       const text = res.choices[0].message.content;
       return this.parseAIResponse(text);
     },

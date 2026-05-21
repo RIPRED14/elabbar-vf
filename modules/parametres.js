@@ -68,6 +68,16 @@ const Parametres = {
         const el = document.getElementById(id);
         return el ? (parseFloat(el.value) || 0) : null;
     };
+
+    const sanitizeKey = (key) => {
+      if (!key) return '';
+      const trimmed = String(key).trim();
+      if (!trimmed || trimmed.toLowerCase() === 'undefined' || trimmed.toLowerCase() === 'null' || trimmed.startsWith('sk-or-v1-...') || trimmed.startsWith('AIzaSy...') || trimmed.startsWith('gsk_...')) {
+        return '';
+      }
+      return trimmed;
+    };
+
     if (document.getElementById('pSalaireOcc')) {
       App.data.parametres = {
         ...App.data.parametres,
@@ -83,11 +93,11 @@ const Parametres = {
         coutCarburant: v('pCarburant') ?? App.data.parametres.coutCarburant,
         coutPersonnelLogistique: v('pPersLog') ?? App.data.parametres.coutPersonnelLogistique,
         coutStructureEstime: v('pCoutStrEstime') ?? App.data.parametres.coutStructureEstime,
-        geminiApiKey: document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiApiKey,
-        geminiKey: document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiKey,
-        groqApiKey: document.getElementById('pGroqKey')?.value ?? App.data.parametres.groqApiKey,
-        openRouterApiKey: document.getElementById('pOpenRouterKey')?.value ?? App.data.parametres.openRouterApiKey,
-        ntsamakToken: document.getElementById('pNtsamakToken')?.value ?? App.data.parametres.ntsamakToken,
+        geminiApiKey: sanitizeKey(document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiApiKey),
+        geminiKey: sanitizeKey(document.getElementById('pGeminiKey')?.value ?? App.data.parametres.geminiKey),
+        groqApiKey: sanitizeKey(document.getElementById('pGroqKey')?.value ?? App.data.parametres.groqApiKey),
+        openRouterApiKey: sanitizeKey(document.getElementById('pOpenRouterKey')?.value ?? App.data.parametres.openRouterApiKey),
+        ntsamakToken: sanitizeKey(document.getElementById('pNtsamakToken')?.value ?? App.data.parametres.ntsamakToken),
       };
     }
   },

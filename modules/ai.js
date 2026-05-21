@@ -193,8 +193,16 @@ App.AiEngine = {
   },
 
   async callGeminiApi(base64Image, mimeType) {
-    const key = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=\${key}`;
+    const sanitizeKey = (k) => {
+      if (!k) return '';
+      const s = String(k).trim();
+      if (!s || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null' || s.startsWith('sk-or-v1-...') || s.startsWith('AIzaSy...') || s.startsWith('gsk_...')) {
+        return '';
+      }
+      return s;
+    };
+    const key = sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${key}`;
     
     const prompt = this.prompts[this.currentType] || "Extrait les données en JSON";
 
