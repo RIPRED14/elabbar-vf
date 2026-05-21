@@ -294,6 +294,9 @@ const Saisie = {
               ? '<span class="badge badge-success"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:4px;"><path d="M20 6 9 17l-5-5"/></svg>Stocké</span>'
               : (hasPF ? '<span class="badge badge-warning">⏳ À Transférer</span>' : '<span class="badge badge-info">🔄 En Cours</span>');
 
+            const editTitle = isSent ? 'Corriger (Fiche Validée)' : 'Modifier';
+            const editStyle = isSent ? 'color:var(--status-warning); font-weight:bold;' : '';
+
             return `
               <tr>
                 <td><input type="checkbox" class="batch-select-cb" value="${p.id}" ${isSent || !hasPF ? 'disabled' : ''} /></td>
@@ -309,8 +312,8 @@ const Saisie = {
                 <td>${statusBadge}</td>
                 <td class="td-center">
                   <div style="display:flex; gap:4px; justify-content:center;">
-                    <button class="btn-icon" onclick="Saisie.editEntry('${p.id}')" title="${isSent ? 'Voir (Lecture seule)' : 'Modifier'}" style="${isSent ? 'color:var(--text-muted);' : ''}">
-                      ${isSent ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>'}
+                    <button class="btn-icon" onclick="Saisie.editEntry('${p.id}')" title="${editTitle}" style="${editStyle}">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     </button>
                     <button class="btn-icon" onclick="Saisie.printBon('${p.id}')" title="Bon de production">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>
@@ -320,7 +323,7 @@ const Saisie = {
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v3m18 0v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8m18 0-9-5-9 5m9 11V8"/></svg>
                       </button>
                     ` : ''}
-                    <button class="btn-icon danger" onclick="Saisie.deleteEntry('${p.id}')" title="Supprimer" ${isSent ? 'disabled style="opacity:0.3; cursor:not-allowed;"' : ''}>
+                    <button class="btn-icon danger" onclick="Saisie.deleteEntry('${p.id}')" title="Supprimer">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </button>
                   </div>
@@ -348,31 +351,31 @@ const Saisie = {
     const initialPrixMP = entry?.prixMP !== undefined
       ? entry.prixMP
       : (entry?.poidsMP > 0 && entry?.valeurMP ? entry.valeurMP / entry.poidsMP : '');
-
-    const isSent = entry?.sentToStorage === true;
+    const isFormSent = entry?.sentToStorage === true;
+    const isSent = false; // Always editable for admin
 
     const container = document.getElementById('saisieFormContainer');
     container.innerHTML = `
-      <div class="card slide-up" style="margin-bottom:22px; border:1px solid var(--border-color); box-shadow:var(--shadow-float); overflow:hidden; ${isSent ? 'border-left: 5px solid var(--status-warning);' : ''}">
+      <div class="card slide-up" style="margin-bottom:22px; border:1px solid var(--border-color); box-shadow:var(--shadow-float); overflow:hidden; ${isFormSent ? 'border-left: 5px solid var(--status-warning);' : ''}">
         <div class="card-header" style="background:var(--bg-card); padding:1.5rem; display:flex; justify-content:space-between; align-items:center;">
           <span class="card-title" style="color:var(--primary-color); font-size:1.2rem; font-weight:700;">
-            ${isSent ? '🔒 Voir la saisie (Lecture seule)' : (entry ? '✏️ Modifier la saisie' : '📝 Nouvelle saisie journalière')} 
+            ${isFormSent ? '✏️ Corriger la saisie (Mode Admin)' : (entry ? '✏️ Modifier la saisie' : '📝 Nouvelle saisie journalière')} 
             <span style="opacity:0.8;font-weight:500;color:var(--text-muted);font-size:1rem">— Reconditionnement</span>
           </span>
           <button class="btn-icon" style="background:var(--bg-app);" onclick="Saisie.hideForm()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
         <div class="card-body">
-          ${isSent ? `
-            <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); border-radius:8px; padding:12px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+          ${isFormSent ? `
+            <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:12px; margin-bottom:20px; display:flex; align-items:center; gap:12px; border-left:4px solid var(--status-warning);">
               <span style="font-size:1.4rem;">⚠️</span>
               <div>
-                <div style="font-weight:700; color:var(--status-warning);">Saisie verrouillée</div>
-                <div style="font-size:0.85rem; color:var(--text-secondary);">Cette fiche a été envoyée au stockage. Elle n'est plus modifiable.</div>
+                <div style="font-weight:700; color:var(--status-warning); font-size: 0.95rem;">Fiche Validée (Mode Correction Admin)</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">Cette fiche a déjà été envoyée au stockage. Toute modification affectera le lot historique.</div>
               </div>
             </div>
           ` : ''}
           
-          <fieldset ${isSent ? 'disabled style="border:none; padding:0; margin:0;"' : 'style="border:none; padding:0; margin:0;"'}>
+          <fieldset style="border:none; padding:0; margin:0;">
             <div class="form-section">
               <div class="form-section-title">🔹 Informations générales</div>
               <div class="form-grid">
@@ -546,13 +549,11 @@ const Saisie = {
           </fieldset>
 
           <div style="margin-top:30px; display:flex; gap:15px; justify-content:center; padding: 25px 0; border-top: 1px solid var(--border-color);">
-            <button class="btn btn-outline" style="min-width: 150px; border-radius:30px;" onclick="Saisie.hideForm()">${isSent ? 'Fermer' : '✕ Annuler'}</button>
-            ${!isSent ? `
-              <button class="btn btn-primary" style="min-width: 250px; font-size: 1.1rem; border-radius:30px; background:var(--status-warning); border:none; box-shadow:0 8px 16px rgba(245,166,35,0.3);" onclick="Saisie.saveEntry()">
-                💾 ${entry ? 'Mettre à jour la saisie' : 'Enregistrer la saisie'}
-              </button>
-            ` : ''}
-            ${entry && !isSent ? `
+            <button class="btn btn-outline" style="min-width: 150px; border-radius:30px;" onclick="Saisie.hideForm()">✕ Annuler</button>
+            <button class="btn btn-primary" style="min-width: 250px; font-size: 1.1rem; border-radius:30px; background:var(--status-warning); border:none; box-shadow:0 8px 16px rgba(245,166,35,0.3);" onclick="Saisie.saveEntry()">
+              💾 ${isFormSent ? 'Enregistrer les corrections (Admin)' : (entry ? 'Mettre à jour la saisie' : 'Enregistrer la saisie')}
+            </button>
+            ${entry && !isFormSent ? `
               <button class="btn btn-success" style="min-width: 250px; font-size: 1.1rem; border-radius:30px; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);" onclick="Saisie.showSendToStorageModal('${entry.id}', 'Reconditionnement')">
                 📦 Valider vers Stockage
               </button>
@@ -1055,6 +1056,11 @@ const Saisie = {
       rendement
     };
     const previous = this.editingId ? App.data.production.find(p => p.id == this.editingId) : null;
+    if (previous) {
+      if (previous.sentToStorage !== undefined) entry.sentToStorage = previous.sentToStorage;
+      if (previous.sentToStorageDate !== undefined) entry.sentToStorageDate = previous.sentToStorageDate;
+      if (previous.sentToChambre !== undefined) entry.sentToChambre = previous.sentToChambre;
+    }
     const previousConsumption = previous ? this.getReconditionnementConsumption(previous) : {};
     const nextConsumption = this.getReconditionnementConsumption(entry);
     const missingOrLow = Object.entries(nextConsumption).find(([nom, qty]) => {
@@ -1159,8 +1165,12 @@ const Saisie = {
   },
 
   async deleteEntry(id) {
-    if (!confirm('Supprimer cette saisie ?')) return;
     const entry = App.data.production.find(p => p.id == id);
+    const msg = (entry && entry.sentToStorage) 
+      ? '⚠️ ATTENTION : Cette saisie a déjà été VALIDÉE et envoyée au stockage.\n\nVoulez-vous vraiment la supprimer définitivement ? Cela pourrait désynchroniser les stocks.'
+      : 'Supprimer cette saisie ?';
+    
+    if (!confirm(msg)) return;
     if (entry) {
       this.restoreConsumption(this.getReconditionnementConsumption(entry), `Annulation saisie #${id}`);
     }
@@ -1299,33 +1309,34 @@ const Saisie = {
     ];
     const conditionnement = entry?.conditionnement || 'C12S1000';
     const intrants = entry?.intrants || this.getDefaultIntrants(conditionnement);
-    const isSent = entry?.sentToStorage === true;
+    const isFormSent = entry?.sentToStorage === true;
+    const isSent = false; // Always editable for admin
     const initialPrixMP = entry?.prixMP !== undefined
       ? entry.prixMP
       : (entry?.poidsMP > 0 && entry?.valeurMP ? entry.valeurMP / entry.poidsMP : '');
 
     const container = document.getElementById('saisieFormContainer');
     container.innerHTML = `
-      <div class="card slide-up" style="margin-bottom:22px; ${isSent ? 'border-left: 5px solid var(--status-warning);' : ''}">
+      <div class="card slide-up" style="margin-bottom:22px; ${isFormSent ? 'border-left: 5px solid var(--status-warning);' : ''}">
         <div class="card-header" style="background:var(--bg-card);border-radius:var(--radius-md) var(--radius-md) 0 0;display:flex;justify-content:space-between;align-items:center;padding:1.5rem;">
           <span class="card-title" style="color:var(--primary-color);font-size:1.2rem;font-weight:700;">
-            ${isSent ? '🔒 Voir la saisie (Lecture seule)' : (entry ? '✏️ Modifier' : '📝 Nouvelle saisie')} 
+            ${isFormSent ? '✏️ Corriger la saisie (Mode Admin)' : (entry ? '✏️ Modifier la saisie' : '📝 Nouvelle saisie')} 
             <span style="opacity:0.8;font-weight:500;color:var(--text-muted);font-size:1rem">— ${label}</span>
           </span>
           <button class="btn-icon" style="background:var(--bg-app);" onclick="Saisie.hideForm()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
         </div>
         <div class="card-body">
-          ${isSent ? `
-            <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.2); border-radius:8px; padding:12px; margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+          ${isFormSent ? `
+            <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:12px; margin-bottom:20px; display:flex; align-items:center; gap:12px; border-left:4px solid var(--status-warning);">
               <span style="font-size:1.4rem;">⚠️</span>
               <div>
-                <div style="font-weight:700; color:var(--status-warning);">Saisie verrouillée</div>
-                <div style="font-size:0.85rem; color:var(--text-secondary);">Cette fiche a été envoyée au stockage. Elle n'est plus modifiable.</div>
+                <div style="font-weight:700; color:var(--status-warning); font-size: 0.95rem;">Fiche Validée (Mode Correction Admin)</div>
+                <div style="font-size:0.85rem; color:var(--text-secondary);">Cette fiche a déjà été envoyée au stockage. Toute modification affectera le lot historique.</div>
               </div>
             </div>
           ` : ''}
 
-          <fieldset ${isSent ? 'disabled style="border:none; padding:0; margin:0;"' : 'style="border:none; padding:0; margin:0;"'}>
+          <fieldset style="border:none; padding:0; margin:0;">
             <div class="form-section">
               <div class="form-section-title">🔹 Liaison réception & infos</div>
               <div class="form-grid">
@@ -1512,13 +1523,11 @@ const Saisie = {
           </fieldset>
 
           <div style="margin-top:30px; display:flex; gap:15px; justify-content:center; padding: 25px 0; border-top: 1px solid var(--border-color);">
-            <button class="btn btn-outline" style="min-width: 150px;" onclick="Saisie.hideForm()">${isSent ? 'Fermer' : 'Annuler'}</button>
-            ${!isSent ? `
-              <button class="btn btn-primary" style="min-width: 250px; font-size: 1.1rem; box-shadow: var(--shadow-glow-purple);" onclick="Saisie.saveTraitement()">
-                💾 ${entry ? 'Mettre à jour la saisie' : 'Enregistrer la saisie'}
-              </button>
-            ` : ''}
-            ${entry && !isSent ? `
+            <button class="btn btn-outline" style="min-width: 150px;" onclick="Saisie.hideForm()">✕ Annuler</button>
+            <button class="btn btn-primary" style="min-width: 250px; font-size: 1.1rem; box-shadow: var(--shadow-glow-purple);" onclick="Saisie.saveTraitement()">
+              💾 ${isFormSent ? 'Enregistrer les corrections (Admin)' : (entry ? 'Mettre à jour la saisie' : 'Enregistrer la saisie')}
+            </button>
+            ${entry && !isFormSent ? `
               <button class="btn btn-success" style="min-width: 250px; font-size: 1.1rem; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);" onclick="Saisie.showSendToStorageModal('${entry.id}', 'Traitement')">
                 📦 Valider vers Stockage
               </button>
@@ -2097,6 +2106,12 @@ const Saisie = {
       poidsBrutPI: poidsMP, caissesPI:0,
       coutCarton:0,coutSachet:0,coutEtiquetteNoir:0,coutEtiquette5075:0,coutScotch:0
     };
+
+    if (previous) {
+      if (previous.sentToStorage !== undefined) entry.sentToStorage = previous.sentToStorage;
+      if (previous.sentToStorageDate !== undefined) entry.sentToStorageDate = previous.sentToStorageDate;
+      if (previous.sentToChambre !== undefined) entry.sentToChambre = previous.sentToChambre;
+    }
 
     if(this.editingId){
       const idx=App.data.production.findIndex(p=>String(p.id)===String(this.editingId));

@@ -3168,28 +3168,38 @@ const App = {
     async analyzeWithGemini(file, prompt) {
       const apiKey = this.sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
       if (!apiKey) throw new Error("Clé API Gemini absente ou invalide.");
-      if (!App.data.bestAiModel) {
-        try {
-          const mRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-          const mData = await mRes.json();
-          if (mData.models) {
-             const available = mData.models.filter(m => 
-                m.supportedGenerationMethods?.includes("generateContent") && 
-                m.name.includes("gemini") &&
-                (m.name.includes("1.5-flash") || m.name.includes("2.0-flash") || m.name.includes("1.5-pro"))
-             );
-             const pref = ['gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'];
-             for (let p of pref) {
-               const found = available.find(m => m.name.includes(p));
-               if (found) { App.data.bestAiModel = found.name.split('/').pop(); break; }
-             }
-             if (!App.data.bestAiModel && available.length > 0) {
-                 App.data.bestAiModel = available[0].name.split('/').pop();
-             }
-          }
-        } catch(e) {}
+
+      let detectedModels = [];
+      try {
+        const mRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const mData = await mRes.json();
+        if (mData.models) {
+          detectedModels = mData.models
+            .filter(m => m.supportedGenerationMethods?.includes("generateContent") && m.name.includes("gemini"))
+            .map(m => m.name.split('/').pop());
+        }
+      } catch(e) {
+        console.warn("Could not query available models from Google API:", e);
       }
-      const targetModel = App.data.bestAiModel || "gemini-1.5-flash";
+
+      const baseModels = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+      let modelsToTry = [];
+      if (App.data.bestAiModel) {
+        modelsToTry.push(App.data.bestAiModel);
+      }
+      if (detectedModels.length > 0) {
+        const validDetected = detectedModels.filter(m => m.includes("flash") || m.includes("pro") || m.includes("gemini-2"));
+        for (const m of validDetected) {
+          if (!modelsToTry.includes(m)) {
+            modelsToTry.push(m);
+          }
+        }
+      }
+      for (const m of baseModels) {
+        if (!modelsToTry.includes(m)) {
+          modelsToTry.push(m);
+        }
+      }
 
       const base64Data = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -3198,22 +3208,40 @@ const App = {
         reader.readAsDataURL(file);
       });
 
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: file.type || "image/jpeg", data: base64Data } }] }]
-        })
-      });
+      let lastError = null;
+      for (const targetModel of modelsToTry) {
+        try {
+          console.log(`Tentative de scan avec le modèle Gemini : ${targetModel}...`);
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: file.type || "image/jpeg", data: base64Data } }] }]
+            })
+          });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error?.message || "Gemini Error");
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const errMsg = err.error?.message || `HTTP ${response.status}`;
+            throw new Error(`Modèle ${targetModel} a échoué : ${errMsg}`);
+          }
+
+          const result = await response.json();
+          const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) {
+            throw new Error(`Réponse vide ou invalide de ${targetModel}`);
+          }
+
+          console.log(`Scan réussi avec le modèle Gemini : ${targetModel}!`);
+          App.data.bestAiModel = targetModel;
+          return this.parseAIResponse(text);
+        } catch (error) {
+          console.warn(`Échec avec le modèle Gemini ${targetModel} :`, error);
+          lastError = error;
+        }
       }
 
-      const result = await response.json();
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      return this.parseAIResponse(text);
+      throw new Error(lastError ? lastError.message : "Tous les modèles Gemini ont échoué ou ont rejeté la requête.");
     },
 
     async analyzeWithOpenRouter(file, prompt, model = "google/gemini-flash-1.5") {
