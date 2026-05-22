@@ -639,32 +639,9 @@ const Saisie = {
     if (condSelect && caissesPFInput) {
       const condCode = condSelect.value || '';
       let cartonWeight = 0;
-      
-      const cMatch = condCode.match(/^C(\d+)S(\d+)/i);
-      if (cMatch) {
-        const n = parseInt(cMatch[1]);
-        const w = parseInt(cMatch[2]);
-        cartonWeight = (n * w) / 1000;
-      } else {
-        const crMatch = condCode.match(/^CR(\d+)KG/i);
-        if (crMatch) {
-          cartonWeight = parseFloat(crMatch[1]);
-        } else {
-          const csMatch = condCode.match(/^CS([\d\.]+)/i);
-          if (csMatch) {
-            cartonWeight = parseFloat(csMatch[1]);
-          } else {
-            const crNumMatch = condCode.match(/^CR([\d\.]+)/i);
-            if (crNumMatch) {
-              cartonWeight = parseFloat(crNumMatch[1]);
-            } else {
-              const cNumOnlyMatch = condCode.match(/^C(\d+)/i);
-              if (cNumOnlyMatch) {
-                cartonWeight = parseFloat(cNumOnlyMatch[1]);
-              }
-            }
-          }
-        }
+      const match = condCode.match(/^(?:CS|CR|C)([\d\.]+)/i);
+      if (match) {
+        cartonWeight = parseFloat(match[1]);
       }
 
       if (cartonWeight > 0 && poidsPF > 0) {
@@ -2134,32 +2111,9 @@ const Saisie = {
     let cartonWeightT = 0;
     
     if (condSelectT && caissesPFInputT) {
-      const condCodeT = condSelectT.value || '';
-      const cMatch = condCodeT.match(/^C(\d+)S(\d+)/i);
-      if (cMatch) {
-        const n = parseInt(cMatch[1]);
-        const w = parseInt(cMatch[2]);
-        cartonWeightT = (n * w) / 1000;
-      } else {
-        const crMatch = condCodeT.match(/^CR(\d+)KG/i);
-        if (crMatch) {
-          cartonWeightT = parseFloat(crMatch[1]);
-        } else {
-          const csMatch = condCodeT.match(/^CS([\d\.]+)/i);
-          if (csMatch) {
-            cartonWeightT = parseFloat(csMatch[1]);
-          } else {
-            const crNumMatch = condCodeT.match(/^CR([\d\.]+)/i);
-            if (crNumMatch) {
-              cartonWeightT = parseFloat(crNumMatch[1]);
-            } else {
-              const cNumOnlyMatch = condCodeT.match(/^C(\d+)/i);
-              if (cNumOnlyMatch) {
-                cartonWeightT = parseFloat(cNumOnlyMatch[1]);
-              }
-            }
-          }
-        }
+      const match = condCode.match(/^(?:CS|CR|C)([\d\.]+)/i);
+      if (match) {
+        cartonWeightT = parseFloat(match[1]);
       }
       if (cartonWeightT > 0 && currentPoidsPF > 0) {
         computedCaissesT = Math.floor(currentPoidsPF / cartonWeightT);
