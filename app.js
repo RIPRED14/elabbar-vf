@@ -3518,6 +3518,196 @@ const App = {
       return this.parseAIResponse(text);
     },
 
+    async analyzeText(prompt) {
+      const p = App.data.parametres;
+
+      const geminiKey = this.sanitizeKey(p?.geminiApiKey || p?.geminiKey);
+      const groqKey = this.sanitizeKey(p?.groqApiKey);
+      const openRouterKey = this.sanitizeKey(p?.openRouterApiKey);
+
+      let errors = [];
+
+      // 1. GEMINI DIRECT - Clé principale configurée par l'utilisateur
+      if (geminiKey) {
+        try {
+          console.log("Tentative directe avec Google Gemini pour le texte (Clé Utilisateur)...");
+          return await this.analyzeTextWithGemini(prompt, geminiKey);
+        } catch (error) {
+          console.warn("Gemini Direct Clé Utilisateur failed for text.", error);
+          errors.push(`Gemini (Clé Perso): ${error.message}`);
+        }
+      }
+
+      // 2. GEMINI BUILTIN - Clé intégrée de secours
+      const builtinKey = 'AIzaSyD-9tSrke72I3lBHpRPMjbMSzFwEQ0m7Kw';
+      if (builtinKey && builtinKey !== geminiKey) {
+        try {
+          console.log("Tentative avec la clé Google Gemini intégrée de secours pour le texte...");
+          return await this.analyzeTextWithGemini(prompt, builtinKey);
+        } catch (error) {
+          console.warn("Gemini Clé de Secours failed for text.", error);
+          errors.push(`Gemini (Clé Secours): ${error.message}`);
+        }
+      }
+
+      // 3. GROQ DIRECT - Fallback direct ultra-rapide pour le texte
+      if (groqKey) {
+        const groqModels = [
+          "llama-3.3-70b-versatile",
+          "llama-3.1-8b-instant",
+          "mixtral-8x7b-32768"
+        ];
+        for (const modelId of groqModels) {
+          try {
+            console.log(`Tentative directe avec Groq Texte (${modelId})...`);
+            return await this.analyzeTextWithGroq(prompt, modelId);
+          } catch (error) {
+            console.warn(`Groq Texte (${modelId}) failed.`, error);
+            errors.push(`Groq (${modelId}): ${error.message}`);
+          }
+        }
+      }
+
+      // 4. OPENROUTER - Fallback OpenRouter pour le texte
+      if (openRouterKey) {
+        const models = [
+          "meta-llama/llama-3.3-70b-instruct:free",
+          "google/gemma-2-9b-it:free",
+          "openrouter/auto"
+        ];
+        
+        for (const modelId of models) {
+          try {
+            console.log(`Tentative OpenRouter Texte avec : ${modelId}`);
+            return await this.analyzeTextWithOpenRouter(prompt, modelId);
+          } catch (error) {
+            console.warn(`Modèle OpenRouter Texte ${modelId} échoué, essai suivant...`);
+            errors.push(`OpenRouter (${modelId}): ${error.message}`);
+          }
+        }
+      }
+
+      // Si on arrive ici, tous les services configurés ont échoué. On affiche un diagnostic premium.
+      this.showDiagnosticModal(errors);
+      const customErr = new Error("Tous les services IA ont échoué.");
+      customErr.handled = true;
+      throw customErr;
+    },
+
+    async analyzeTextWithGemini(prompt, apiKeyOverride = null) {
+      const apiKey = apiKeyOverride || this.sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
+      if (!apiKey) throw new Error("Clé API Gemini absente ou invalide.");
+
+      const baseModels = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"];
+      let modelsToTry = [];
+      if (App.data.bestAiModel) {
+        modelsToTry.push(App.data.bestAiModel);
+      }
+      for (const m of baseModels) {
+        if (!modelsToTry.includes(m)) {
+          modelsToTry.push(m);
+        }
+      }
+
+      let lastError = null;
+      for (const targetModel of modelsToTry) {
+        try {
+          console.log(`Tentative de scan texte avec le modèle Gemini : ${targetModel}...`);
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }]
+            })
+          });
+
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            const errMsg = err.error?.message || `HTTP ${response.status}`;
+            throw new Error(`Modèle ${targetModel} a échoué : ${errMsg}`);
+          }
+
+          const result = await response.json();
+          const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!text) {
+            throw new Error(`Réponse vide ou invalide de ${targetModel}`);
+          }
+
+          console.log(`Scan texte réussi avec le modèle Gemini : ${targetModel}!`);
+          App.data.bestAiModel = targetModel;
+          return this.parseAIResponse(text);
+        } catch (error) {
+          console.warn(`Échec texte avec le modèle Gemini ${targetModel} :`, error);
+          lastError = error;
+        }
+      }
+
+      throw new Error(lastError ? lastError.message : "Tous les modèles Gemini ont échoué ou ont rejeté la requête.");
+    },
+
+    async analyzeTextWithGroq(prompt, model = "llama-3.3-70b-versatile") {
+      const apiKey = this.sanitizeKey(App.data.parametres?.groqApiKey);
+      if (!apiKey) throw new Error("Clé API Groq absente ou invalide.");
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{
+            role: "user",
+            content: prompt + " \nIMPORTANT: Tu es un système d'extraction. Réponds UNIQUEMENT par un objet JSON."
+          }],
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || "Groq Error");
+      }
+      const res = await response.json();
+      if (!res.choices || res.choices.length === 0) throw new Error("Groq: Réponse vide");
+      const text = res.choices[0].message.content;
+      return this.parseAIResponse(text);
+    },
+
+    async analyzeTextWithOpenRouter(prompt, model = "meta-llama/llama-3.3-70b-instruct:free") {
+      const apiKey = this.sanitizeKey(App.data.parametres?.openRouterApiKey);
+      if (!apiKey) throw new Error("Clé API OpenRouter absente ou invalide.");
+
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'ELABBAR ERP'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{
+            role: "user",
+            content: prompt + " \nIMPORTANT: Tu es un système d'extraction. Réponds UNIQUEMENT par un objet JSON."
+          }],
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error?.message || "OpenRouter Error");
+      }
+      const res = await response.json();
+      if (!res.choices || res.choices.length === 0) throw new Error("OpenRouter: Réponse vide");
+      const text = res.choices[0].message.content;
+      return this.parseAIResponse(text);
+    },
+
     parseAIResponse(text) {
       if (!text) throw new Error("Réponse vide.");
       

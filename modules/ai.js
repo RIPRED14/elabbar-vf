@@ -122,10 +122,23 @@ App.AiEngine = {
     });
   },
 
+  dataURLtoFile(dataurl, filename) {
+    var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+    while(n--){
+        u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, {type:mime});
+  },
+
   openScanner(type, callback) {
-    const key = App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey;
-    if (!key || key.trim() === '') {
-      App.toast('Erreur : Clé API Gemini manquante. Veuillez la configurer dans les Paramètres.', 'error');
+    const p = App.data.parametres || {};
+    const hasGemini = !!(p.geminiApiKey || p.geminiKey);
+    const hasGroq = !!p.groqApiKey;
+    const hasOpenRouter = !!p.openRouterApiKey;
+    
+    if (!hasGemini && !hasGroq && !hasOpenRouter) {
+      App.toast('Erreur : Aucune clé API configurée. Veuillez configurer Gemini, Groq ou OpenRouter dans les Paramètres.', 'error');
       App.navigate('parametres');
       return;
     }
@@ -155,34 +168,41 @@ App.AiEngine = {
     document.getElementById('aiProcessing').classList.add('active');
 
     try {
-      let base64Data = '';
-      let mimeType = '';
+      const prompt = this.prompts[this.currentType] || "Extrait les données en JSON";
 
       if (file.type === 'application/pdf') {
-        base64Data = await this.extractPdfImage(file);
-        mimeType = 'image/jpeg';
+        const base64Data = await this.extractPdfImage(file);
+        const fileToAnalyze = this.dataURLtoFile(base64Data, "page1.jpg");
+        const extractedJson = await App.AI.analyzeImage(fileToAnalyze, prompt);
+        App.toast("Extraction réussie !", 'success');
+        if (this.currentCallback) {
+          this.currentCallback(extractedJson);
+        }
       } else if (file.type.startsWith('image/')) {
-        base64Data = await this.fileToBase64(file);
-        mimeType = file.type;
+        const extractedJson = await App.AI.analyzeImage(file, prompt);
+        App.toast("Extraction réussie !", 'success');
+        if (this.currentCallback) {
+          this.currentCallback(extractedJson);
+        }
       } else if (file.name.endsWith('.xlsx')) {
         // Special case: Excel to Text for AI
         const text = await this.excelToText(file);
-        await this.callGeminiTextApi(text);
-        return;
+        const fullPrompt = prompt + "\n\nVoici le contenu du fichier Excel :\n" + text;
+        const extractedJson = await App.AI.analyzeText(fullPrompt);
+        App.toast("Intelligence IA : Analyse réussie !", 'success');
+        if (this.currentCallback) {
+          this.currentCallback(extractedJson);
+        }
       } else {
         throw new Error('Format de fichier non supporté. Veuillez utiliser un PDF, une Image ou un Excel.');
       }
-
-      // Format for Gemini (remove data:image/jpeg;base64, prefix)
-      const base64Clean = base64Data.split(',')[1];
-
-      await this.callGeminiApi(base64Clean, mimeType);
 
     } catch (err) {
       console.error("AI Processing Error:", err);
       if (!err.handled) {
         App.toast(err.message || "Une erreur s'est produite lors de l'analyse.", 'error');
       }
+    } finally {
       this.closeScanner();
     }
   },
@@ -221,125 +241,6 @@ App.AiEngine = {
     });
   },
 
-  async queryGeminiWithFallback(payload, userKey) {
-    const builtinKey = 'AIzaSyD-9tSrke72I3lBHpRPMjbMSzFwEQ0m7Kw';
-    const keysToTry = [];
-    if (userKey) keysToTry.push(userKey);
-    if (builtinKey && builtinKey !== userKey) keysToTry.push(builtinKey);
-
-    const modelsToTry = ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"];
-
-    let lastError = null;
-    let errors = [];
-
-    for (const key of keysToTry) {
-      for (const model of modelsToTry) {
-        try {
-          console.log(`AiEngine: Tentative avec la clé API et le modèle ${model}...`);
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
-          
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error?.message || `HTTP ${response.status}`);
-          }
-
-          const data = await response.json();
-          if (data.candidates && data.candidates[0].content?.parts?.[0]?.text) {
-            return data;
-          } else {
-            throw new Error("Réponse vide ou malformée.");
-          }
-        } catch (err) {
-          console.warn(`AiEngine: Échec avec le modèle ${model}:`, err);
-          lastError = err;
-          const keyLabel = (key === builtinKey) ? "Gemini (Clé Secours)" : "Gemini (Clé Perso)";
-          errors.push(`${keyLabel}: Modèle ${model} échoué : ${err.message}`);
-        }
-      }
-    }
-
-    if (errors.length > 0 && typeof App.AI !== 'undefined' && typeof App.AI.showDiagnosticModal === 'function') {
-      App.AI.showDiagnosticModal(errors);
-      const customErr = new Error("Tous les services IA ont échoué.");
-      customErr.handled = true;
-      throw customErr;
-    }
-
-    throw new Error(lastError ? lastError.message : "Tous les services IA et modèles Gemini ont échoué.");
-  },
-
-  async callGeminiApi(base64Image, mimeType) {
-    const sanitizeKey = (k) => {
-      if (!k) return '';
-      const trimmed = String(k).trim();
-      if (!trimmed || 
-          trimmed.toLowerCase() === 'undefined' || 
-          trimmed.toLowerCase() === 'null' || 
-          trimmed.length < 15 || 
-          trimmed.includes('...') || 
-          trimmed === 'gsk_' || 
-          trimmed === 'sk-or-v1-' ||
-          trimmed.startsWith('gsk_placeholder') ||
-          trimmed.startsWith('sk-or-v1-placeholder')
-      ) {
-        return '';
-      }
-      return trimmed;
-    };
-    const key = sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
-    
-    const prompt = this.prompts[this.currentType] || "Extrait les données en JSON";
-
-    const payload = {
-      "contents": [
-        {
-          "parts": [
-            { "text": prompt },
-            {
-              "inline_data": {
-                "mime_type": mimeType,
-                "data": base64Image
-              }
-            }
-          ]
-        }
-      ]
-    };
-
-    try {
-      const data = await this.queryGeminiWithFallback(payload, key);
-      
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        let rawText = data.candidates[0].content.parts[0].text;
-        
-        // Clean markdown JSON wrapper if present
-        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        
-        const extractedJson = JSON.parse(rawText);
-        App.toast("Extraction réussie !", 'success');
-        
-        if (this.currentCallback) {
-          this.currentCallback(extractedJson);
-        }
-      } else {
-        throw new Error("Format de réponse inattendu de Gemini.");
-      }
-
-    } catch (e) {
-      console.error(e);
-      if (e.handled) throw e;
-      throw new Error("Erreur de l'IA: " + e.message);
-    } finally {
-      this.closeScanner();
-    }
-  },
-
   async excelToText(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -364,50 +265,6 @@ App.AiEngine = {
       reader.onerror = reject;
       reader.readAsArrayBuffer(file);
     });
-  },
-
-  async callGeminiTextApi(text) {
-    const sanitizeKey = (k) => {
-      if (!k) return '';
-      const trimmed = String(k).trim();
-      if (!trimmed || 
-          trimmed.toLowerCase() === 'undefined' || 
-          trimmed.toLowerCase() === 'null' || 
-          trimmed.length < 15 || 
-          trimmed.includes('...') || 
-          trimmed === 'gsk_' || 
-          trimmed === 'sk-or-v1-' ||
-          trimmed.startsWith('gsk_placeholder') ||
-          trimmed.startsWith('sk-or-v1-placeholder')
-      ) {
-        return '';
-      }
-      return trimmed;
-    };
-    const key = sanitizeKey(App.data.parametres?.geminiApiKey || App.data.parametres?.geminiKey);
-    const prompt = (this.prompts[this.currentType] || "Extrait les données en JSON") + "\n\nVoici le contenu du fichier Excel :\n" + text;
-
-    const payload = {
-      "contents": [{ "parts": [{ "text": prompt }] }]
-    };
-
-    try {
-      const data = await this.queryGeminiWithFallback(payload, key);
-      
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        let rawText = data.candidates[0].content.parts[0].text;
-        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const extractedJson = JSON.parse(rawText);
-        App.toast("Intelligence IA : Analyse réussie !", 'success');
-        if (this.currentCallback) this.currentCallback(extractedJson);
-      }
-    } catch (e) {
-      console.error(e);
-      if (e.handled) throw e;
-      throw new Error("Erreur de l'IA Textuelle: " + e.message);
-    } finally {
-      this.closeScanner();
-    }
   },
 
   showOverlay(text) {
