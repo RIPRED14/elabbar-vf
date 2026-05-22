@@ -10,5 +10,8 @@
         { "key": "Expires", "value": "0" }
       ]
     }
-  ]
+  ],
+  "installCommand": "echo 'skipping install'",
+  "buildCommand": "echo 'skipping build'",
+  "framework": null
 }
