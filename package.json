@@ -12,7 +12,6 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "puppeteer": "^25.0.2",
     "supabase": "^2.98.2"
   }
 }
