@@ -130,6 +130,8 @@ App.AiEngine = {
       return;
     }
 
+    this.init();
+
     this.currentType = type;
     this.currentCallback = callback;
     document.getElementById('aiDropzone').style.display = 'block';
