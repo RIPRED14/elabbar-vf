@@ -391,7 +391,7 @@ const Saisie = {
                 <div class="form-group">
                   <label class="form-label">Espèce</label>
                   <div style="display:flex;gap:6px;">
-                    <select class="form-select" id="fEspece" onchange="Saisie.onEspeceChange('fEspece', 'fCalibre'); Saisie.autoFillProduitFini()" style="flex:1">
+                    <select class="form-select" id="fEspece" onchange="Saisie.onEspeceChange('fEspece', 'fCalibre'); Saisie.autoFillProduitFini(true)" style="flex:1">
                       ${App.data.especes.map(e => `<option value="${e.nom}" ${entry && entry.espece===e.nom ? 'selected' : ''}>${e.nom}</option>`).join('')}
                     </select>
                     <button class="btn btn-purple btn-sm" onclick="document.querySelector('#saisieFormContainer input[type=file]').click()" title="Analyser une fiche pour cette espèce">📸 IA</button>
@@ -401,7 +401,7 @@ const Saisie = {
                 </div>
                 <div class="form-group">
                   <label class="form-label">Calibre</label>
-                  <select class="form-select" id="fCalibre" onchange="Saisie.autoFillProduitFini()">
+                  <select class="form-select" id="fCalibre" onchange="Saisie.autoFillProduitFini(true)">
                     <!-- Filled dynamically -->
                   </select>
                 </div>
@@ -558,7 +558,12 @@ const Saisie = {
       </div>
     `;
     this.onEspeceChange('fEspece', 'fCalibre', entry?.calibre);
-    if (!entry) this.onDateChange(); else this.calc();
+    if (!entry) {
+      this.autoFillProduitFini(false);
+      this.onDateChange();
+    } else {
+      this.calc();
+    }
   },
 
   hideForm() { document.getElementById('saisieFormContainer').innerHTML = ''; this.editingId = null; },
@@ -603,6 +608,78 @@ const Saisie = {
 
   calc() {
     const v = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+
+    // First, sync Poids Net PF from the phase finale if there's any Qte Finale
+    let poidsPF = v('fPoidsPF');
+    const tbodyPF = document.getElementById('fPhasesPF');
+    if (tbodyPF) {
+      tbodyPF.querySelectorAll('tr').forEach((row, i) => {
+        const qI = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value)||0;
+        const qF = parseFloat(row.querySelector('[data-ph="qteFinale"]')?.value)||0;
+        const rend = qI > 0 ? (qF/qI*100) : 0;
+        const rendEl = document.getElementById('fRendPhPF'+i);
+        if(rendEl) rendEl.textContent = App.formatNumber(rend,2)+'%';
+        
+        if (qF > 0) {
+          const fPoidsPFEl = document.getElementById('fPoidsPF');
+          if (fPoidsPFEl) {
+            fPoidsPFEl.value = qF;
+            poidsPF = qF;
+          }
+        }
+      });
+    }
+
+    // Auto-calculate Nb Caisses PF & Reliquat weight from Poids Net PF & Conditionnement
+    const condSelect = document.getElementById('fConditionnement');
+    const caissesPFInput = document.getElementById('fCaissesPF');
+    const reliquatPoidsInput = document.getElementById('fReliquatPoids');
+    const reliquatNomInput = document.getElementById('fReliquatNom');
+
+    if (condSelect && caissesPFInput) {
+      const condCode = condSelect.value || '';
+      let cartonWeight = 0;
+      
+      const cMatch = condCode.match(/^C(\d+)S(\d+)/i);
+      if (cMatch) {
+        const n = parseInt(cMatch[1]);
+        const w = parseInt(cMatch[2]);
+        cartonWeight = (n * w) / 1000;
+      } else {
+        const crMatch = condCode.match(/^CR(\d+)KG/i);
+        if (crMatch) {
+          cartonWeight = parseFloat(crMatch[1]);
+        } else {
+          const csMatch = condCode.match(/^CS([\d\.]+)/i);
+          if (csMatch) {
+            cartonWeight = parseFloat(csMatch[1]);
+          } else {
+            const crNumMatch = condCode.match(/^CR([\d\.]+)/i);
+            if (crNumMatch) {
+              cartonWeight = parseFloat(crNumMatch[1]);
+            } else {
+              const cNumOnlyMatch = condCode.match(/^C(\d+)/i);
+              if (cNumOnlyMatch) {
+                cartonWeight = parseFloat(cNumOnlyMatch[1]);
+              }
+            }
+          }
+        }
+      }
+
+      if (cartonWeight > 0 && poidsPF > 0) {
+        const nbCaissesVal = Math.floor(poidsPF / cartonWeight);
+        caissesPFInput.value = nbCaissesVal;
+        
+        const remainderVal = poidsPF - (nbCaissesVal * cartonWeight);
+        if (reliquatPoidsInput) {
+          reliquatPoidsInput.value = parseFloat(remainderVal.toFixed(3));
+        }
+        if (reliquatNomInput && !reliquatNomInput.value) {
+          reliquatNomInput.value = 'RELIQUAT PF';
+        }
+      }
+    }
     
     let coutMOO = 0;
     document.querySelectorAll('#fEquipesMO tr:not(:last-child)').forEach((row, i) => {
@@ -689,29 +766,6 @@ const Saisie = {
       if (valEl) valEl.textContent = App.formatNumber(val);
       totalEmb += val;
     });
-
-    let poidsPF = v('fPoidsPF');
-    
-    // Automation: Link Phase qteFinale to Poids Net PF
-    const tbodyPF = document.getElementById('fPhasesPF');
-    if (tbodyPF) {
-      tbodyPF.querySelectorAll('tr').forEach((row, i) => {
-        const qI = parseFloat(row.querySelector('[data-ph="qteInit"]')?.value)||0;
-        const qF = parseFloat(row.querySelector('[data-ph="qteFinale"]')?.value)||0;
-        const rend = qI > 0 ? (qF/qI*100) : 0;
-        const rendEl = document.getElementById('fRendPhPF'+i);
-        if(rendEl) rendEl.textContent = App.formatNumber(rend,2)+'%';
-        
-        // Auto-fill Poids Net PF from the phase finale (assuming one phase for Reconditionnement)
-        if (qF > 0) {
-          const fPoidsPFEl = document.getElementById('fPoidsPF');
-          if (fPoidsPFEl && fPoidsPFEl.value !== qF.toString()) {
-            fPoidsPFEl.value = qF;
-            poidsPF = qF;
-          }
-        }
-      });
-    }
 
     // Dynamic Labor Cost Allocation (Partie Mensuelle & Journalière)
     const dateStr = document.getElementById('fDate')?.value || '';
@@ -940,13 +994,24 @@ const Saisie = {
     }
   },
 
-  autoFillProduitFini() {
+  autoFillProduitFini(force = false) {
     const espece = document.getElementById('fEspece')?.value || '';
     const calibre = document.getElementById('fCalibre')?.value || '';
     const pfInput = document.getElementById('fProduitFini');
     if (pfInput && espece) {
-      if (!pfInput.value || pfInput.value.includes('Reconditionné')) {
-        pfInput.value = (espece + ' ' + calibre + ' Reconditionné').trim().toUpperCase();
+      if (force || !pfInput.value) {
+        pfInput.value = (espece + ' ' + calibre).trim().toUpperCase();
+      }
+    }
+  },
+
+  autoFillProduitFiniT(force = false) {
+    const espece = document.getElementById('tEspece')?.value || '';
+    const calibre = document.getElementById('tCalibre')?.value || '';
+    const pfInput = document.getElementById('tProduitFini');
+    if (pfInput && espece) {
+      if (force || !pfInput.value) {
+        pfInput.value = (espece + ' ' + calibre).trim().toUpperCase();
       }
     }
   },
@@ -1768,7 +1833,7 @@ const Saisie = {
                 <div class="form-group">
                   <label class="form-label">Espèce</label>
                   <div style="display:flex;gap:6px;">
-                    <select class="form-select" id="tEspece" onchange="Saisie.onEspeceChange('tEspece', 'tCalibre'); Saisie.refreshQR()" style="flex:1">
+                    <select class="form-select" id="tEspece" onchange="Saisie.onEspeceChange('tEspece', 'tCalibre'); Saisie.autoFillProduitFiniT(true); Saisie.refreshQR()" style="flex:1">
                       ${App.data.especes.map(e => `<option value="${e.nom}" ${entry && entry.espece===e.nom ? 'selected' : ''}>${e.nom}</option>`).join('')}
                     </select>
                     <button class="btn btn-purple btn-sm" onclick="document.querySelector('#saisieFormContainer input[type=file]').click()" title="Analyser une fiche pour cette espèce">📸 IA</button>
@@ -1778,7 +1843,7 @@ const Saisie = {
                 </div>
                 <div class="form-group">
                   <label class="form-label">Calibre</label>
-                  <select class="form-select" id="tCalibre" onchange="Saisie.refreshQR()">
+                  <select class="form-select" id="tCalibre" onchange="Saisie.autoFillProduitFiniT(true); Saisie.refreshQR()">
                     <!-- Filled dynamically -->
                   </select>
                 </div>
@@ -1931,6 +1996,9 @@ const Saisie = {
         </div>
       </div>`;
     this.onEspeceChange('tEspece', 'tCalibre', entry?.calibre);
+    if (!entry) {
+      this.autoFillProduitFiniT(false);
+    }
     this.calcT();
     this.refreshQR();
   },
@@ -1947,6 +2015,7 @@ const Saisie = {
     if (espSelect) {
       espSelect.value = line.espece || '';
       this.onEspeceChange('tEspece', 'tCalibre', line.calibre);
+      this.autoFillProduitFiniT(true);
     }
     
     const poidsMP = document.getElementById('tPoidsMP');
@@ -2059,8 +2128,47 @@ const Saisie = {
     //   nbToners = nbRouleaux / 4 (prix 78 DH/toner)
     // ═══════════════════════════════════════════════════════
     const condCode = document.getElementById('tConditionnement')?.value || '';
+    const condSelectT = document.getElementById('tConditionnement');
+    const caissesPFInputT = document.getElementById('tCaissesPF');
+    let computedCaissesT = 0;
+    let cartonWeightT = 0;
+    
+    if (condSelectT && caissesPFInputT) {
+      const condCodeT = condSelectT.value || '';
+      const cMatch = condCodeT.match(/^C(\d+)S(\d+)/i);
+      if (cMatch) {
+        const n = parseInt(cMatch[1]);
+        const w = parseInt(cMatch[2]);
+        cartonWeightT = (n * w) / 1000;
+      } else {
+        const crMatch = condCodeT.match(/^CR(\d+)KG/i);
+        if (crMatch) {
+          cartonWeightT = parseFloat(crMatch[1]);
+        } else {
+          const csMatch = condCodeT.match(/^CS([\d\.]+)/i);
+          if (csMatch) {
+            cartonWeightT = parseFloat(csMatch[1]);
+          } else {
+            const crNumMatch = condCodeT.match(/^CR([\d\.]+)/i);
+            if (crNumMatch) {
+              cartonWeightT = parseFloat(crNumMatch[1]);
+            } else {
+              const cNumOnlyMatch = condCodeT.match(/^C(\d+)/i);
+              if (cNumOnlyMatch) {
+                cartonWeightT = parseFloat(cNumOnlyMatch[1]);
+              }
+            }
+          }
+        }
+      }
+      if (cartonWeightT > 0 && currentPoidsPF > 0) {
+        computedCaissesT = Math.floor(currentPoidsPF / cartonWeightT);
+        caissesPFInputT.value = computedCaissesT;
+      }
+    }
+
     const condMatch = condCode.match(/^C(\d+)S(\d+)$/);
-    let nbCartons = 0;
+    let nbCartons = computedCaissesT || 0;
     let nbSachetsTotal = 0;
     let totalEtiquettes = 0;
     let nbRouleaux = 0;
@@ -2072,7 +2180,7 @@ const Saisie = {
       const sachetKg = sachetG / 1000;               // ex: 1 (kg)
       const sachetsParCarton = cartonKg / sachetKg;   // ex: 12
       
-      nbCartons = Math.ceil(currentPoidsPF / cartonKg);  // ex: 2700/12 = 225
+      nbCartons = computedCaissesT || Math.floor(currentPoidsPF / cartonKg);
       nbSachetsTotal = nbCartons * sachetsParCarton;      // ex: 225 * 12 = 2700
       
       // Étiquettes: chaque sachet + chaque carton = sachetsParCarton + 1 par carton
@@ -2084,11 +2192,6 @@ const Saisie = {
       
       // Toner noir = 1/4 de la consommation des étiquettes (78 DH/toner)
       nbToners = nbRouleaux / 4;                          // ex: 0.731
-      
-      const caissesPFInput = document.getElementById('tCaissesPF');
-      if (caissesPFInput && (!parseFloat(caissesPFInput.value) || caissesPFInput.value == "")) {
-        caissesPFInput.value = nbCartons;
-      }
     }
 
     let totalInt = 0;
