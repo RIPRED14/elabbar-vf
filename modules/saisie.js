@@ -558,8 +558,8 @@ const Saisie = {
       </div>
     `;
     this.onEspeceChange('fEspece', 'fCalibre', entry?.calibre);
+    this.autoFillProduitFini(false);
     if (!entry) {
-      this.autoFillProduitFini(false);
       this.onDateChange();
     } else {
       this.calc();
@@ -608,6 +608,9 @@ const Saisie = {
 
   calc() {
     const v = (id) => parseFloat(document.getElementById(id)?.value) || 0;
+
+    // Auto-fill product name if empty
+    this.autoFillProduitFini(false);
 
     // First, sync Poids Net PF from the phase finale if there's any Qte Finale
     let poidsPF = v('fPoidsPF');
@@ -973,7 +976,8 @@ const Saisie = {
 
   autoFillProduitFini(force = false) {
     const espece = document.getElementById('fEspece')?.value || '';
-    const calibre = document.getElementById('fCalibre')?.value || '';
+    const calSelect = document.getElementById('fCalibre');
+    const calibre = calSelect?.value || calSelect?.options[0]?.value || '';
     const pfInput = document.getElementById('fProduitFini');
     if (pfInput && espece) {
       if (force || !pfInput.value) {
@@ -984,7 +988,8 @@ const Saisie = {
 
   autoFillProduitFiniT(force = false) {
     const espece = document.getElementById('tEspece')?.value || '';
-    const calibre = document.getElementById('tCalibre')?.value || '';
+    const calSelect = document.getElementById('tCalibre');
+    const calibre = calSelect?.value || calSelect?.options[0]?.value || '';
     const pfInput = document.getElementById('tProduitFini');
     if (pfInput && espece) {
       if (force || !pfInput.value) {
@@ -1973,9 +1978,7 @@ const Saisie = {
         </div>
       </div>`;
     this.onEspeceChange('tEspece', 'tCalibre', entry?.calibre);
-    if (!entry) {
-      this.autoFillProduitFiniT(false);
-    }
+    this.autoFillProduitFiniT(false);
     this.calcT();
     this.refreshQR();
   },
@@ -2014,6 +2017,10 @@ const Saisie = {
 
   calcT() {
     const v = id => parseFloat(document.getElementById(id)?.value) || 0;
+    
+    // Auto-fill product name if empty
+    this.autoFillProduitFiniT(false);
+
     const poidsMP = v('tPoidsMP');
     const prixMP = v('tPrixMoyen');
     const valeurMP = poidsMP * prixMP;
