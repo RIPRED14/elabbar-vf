@@ -46,6 +46,31 @@ App.AiEngine = {
       "prixUnitaire": "number (en DH, sans le sigle)"
     }
   ]
+}`,
+    'eau': `Extrait les informations de cette facture d'eau et d'assainissement liquide (SRM Souss Massa / SRM / Amendis / Lydec / ONEE). Renvoie UNIQUEMENT un objet JSON valide avec cette structure exacte (remplace les null par les valeurs trouvées) :
+{
+  "factureNo": "string (ex: 55387371)",
+  "policeNo": "string (ex: 553856)",
+  "reference": "string (ex: 50 G 001 006 023)",
+  "dateFacture": "YYYY-MM-DD (ex: 2026-02-27)",
+  "periode": "YYYY-MM (ex: 2026-01)",
+  "clientNom": "string (ex: STE FISH AND FOOD PROCESS)",
+  "iceClient": "string (ex: 003047045000044)",
+  "indexAncien": "number (ex: 380)",
+  "indexNouveau": "number (ex: 671)",
+  "consommation": "number (consommation en m³, ex: 291)",
+  "montantHT": "number (montant hors TVA et droit de timbre, ex: 4003.51)",
+  "tva": "number (dont TVA, ex: 400.35)",
+  "timbre": "number (timbre, ex: 11.01)",
+  "montantTTC": "number (net à payer TTC, ex: 4414.87)",
+  "lignes": [
+    {
+      "designation": "string (ex: 5éme tranche eau sélective, 1ère tranche assainissement, Redevance fixe...)",
+      "quantite": "number",
+      "prixUnitaire": "number",
+      "totalLigne": "number"
+    }
+  ]
 }`
   },
 

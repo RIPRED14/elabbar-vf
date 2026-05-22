@@ -200,7 +200,8 @@ const Rapports = {
     Dashboard.selectedDate = oldDate;
 
     const alloc = App.getFinancialAllocation(dateForAlloc);
-    const energy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+    const isSingleMonth = this.view === 'monthly';
+    const energy = App.getFluidsCostForPeriod(isSingleMonth ? 'month' : 'day', dateForAlloc, stats.totalPoidsPF).total;
     
     let totalFixed = 0;
     if (this.view === 'daily') {
@@ -508,7 +509,9 @@ const Rapports = {
     Dashboard.view = oldView;
     Dashboard.selectedDate = oldDate;
 
-    const prevEnergy = prevStats.totalPoidsPF * 0.15 * prevTariff;
+    const isSingleMonth = this.view === 'monthly';
+    const prevDate = prevProd[0].date;
+    const prevEnergy = App.getFluidsCostForPeriod(isSingleMonth ? 'month' : 'day', prevDate, prevStats.totalPoidsPF).total;
     const prevTotal = prevStats.totalCoutMO + prevStats.totalCoutEmballage + prevEnergy + prevFixed;
     const prevCostPerKg = prevStats.totalPoidsPF > 0 ? prevTotal / prevStats.totalPoidsPF : 0;
 

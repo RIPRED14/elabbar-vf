@@ -178,7 +178,7 @@ const Dashboard = {
 
   renderTabFinance(prod, stats, label) {
     const alloc = App.getFinancialAllocation(this.selectedDate);
-    const dailyEnergy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+    const dailyEnergy = App.getFluidsCostForPeriod(this.view === 'daily' ? 'day' : 'month', this.selectedDate, stats.totalPoidsPF).total;
     const totalCost = stats.totalCoutMO + stats.totalCoutEmballage + dailyEnergy + (this.view === 'daily' ? alloc.dailyFixed : (alloc.dailyFixed * 30));
     const pru = stats.totalPoidsPF > 0 ? totalCost / stats.totalPoidsPF : 0;
     
@@ -429,7 +429,7 @@ const Dashboard = {
     const prodGap = stats.productivite - prodTarget;
 
     const alloc = App.getFinancialAllocation(this.selectedDate);
-    const dailyEnergy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+    const dailyEnergy = App.getFluidsCostForPeriod('day', this.selectedDate, stats.totalPoidsPF).total;
     const totalDailyCost = stats.totalCoutMO + stats.totalCoutEmballage + dailyEnergy + alloc.dailyFixed;
     const pruComplet = stats.totalPoidsPF > 0 ? totalDailyCost / stats.totalPoidsPF : 0;
 
@@ -767,7 +767,7 @@ const Dashboard = {
       const ctxCost = document.getElementById('chartCostDaily');
       if (ctxCost) {
         const alloc = App.getFinancialAllocation(this.selectedDate);
-        const dailyEnergy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+        const dailyEnergy = App.getFluidsCostForPeriod('day', this.selectedDate, stats.totalPoidsPF).total;
         
         App.charts.cost = new Chart(ctxCost, {
           type: 'doughnut',
@@ -811,7 +811,7 @@ const Dashboard = {
       const ctxFullCost = document.getElementById('chartFullCostBreakdown');
       if (ctxFullCost) {
         const alloc = App.getFinancialAllocation(this.selectedDate);
-        const energy = stats.totalPoidsPF * 0.15 * alloc.avgTariff;
+        const energy = App.getFluidsCostForPeriod(this.view === 'daily' ? 'day' : 'month', this.selectedDate, stats.totalPoidsPF).total;
         App.charts.fullCost = new Chart(ctxFullCost, {
           type: 'pie',
           data: {
@@ -831,7 +831,7 @@ const Dashboard = {
         const data = fullMonth.map(p => {
           const s = this.calcStats([p]);
           const a = App.getFinancialAllocation(p.date);
-          const e = s.totalPoidsPF * 0.15 * a.avgTariff;
+          const e = App.getFluidsCostForPeriod('day', p.date, s.totalPoidsPF).total;
           const total = s.totalCoutMO + s.totalCoutEmballage + e + a.dailyFixed;
           return s.totalPoidsPF > 0 ? total / s.totalPoidsPF : 0;
         }).slice(-7);

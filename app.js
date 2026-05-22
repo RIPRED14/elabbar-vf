@@ -1815,6 +1815,77 @@ const App = {
     return { dailyFixed, avgTariff };
   },
 
+  getMonthlyFluidsCost(monthKey) {
+    let elecCost = 0;
+    let waterCost = 0;
+    
+    // 1. Électricité
+    const e = this.data.energieMensuelle?.months?.[monthKey];
+    if (e) {
+      const p = this.data.parametres || {};
+      const htConso = ((e.consoHP || 0) * (p.tarifHP || 1.45)) + 
+                      ((e.consoHPl || 0) * (p.tarifHPl || 1.15)) + 
+                      ((e.consoHC || 0) * (p.tarifHC || 0.85));
+      const htRedev = (p.redevancePuissance || 0) + (p.redevanceEntretien || 0) + (p.redevanceLocation || 0);
+      const tva = (htConso + htRedev) * (p.tvaEnergetique || 0.14);
+      const taxes = (htConso + htRedev) * (p.taxeCollectivite || 0.01);
+      elecCost = htConso + htRedev + tva + taxes;
+    }
+    
+    // 2. Eau
+    const w = this.data.energieMensuelle?.eauMonths?.[monthKey];
+    if (w) {
+      waterCost = w.montantTTC || 0;
+    }
+    
+    return { elecCost, waterCost, total: elecCost + waterCost };
+  },
+
+  getFluidsCostForPeriod(periodType, dateStr, totalPoidsPF) {
+    if (!dateStr) return { elec: 0, water: 0, total: 0, actual: false };
+    
+    const p = this.data.parametres || {};
+    const avgTariff = ((p.tarifHP || 1.45) + (p.tarifHPl || 1.15) + (p.tarifHC || 0.85)) / 3;
+    const estElecRate = 0.15 * avgTariff; // 0.15 kWh/kg * tarif
+    const estWaterRate = 0.003 * 15.00;   // 3 Litres/kg * 15 DH/m³ = 0.045 DH/kg
+    const estTotalRate = estElecRate + estWaterRate;
+
+    const monthKey = dateStr.substring(0, 7);
+    const fluids = this.getMonthlyFluidsCost(monthKey);
+    
+    if (periodType === 'month' || periodType === 'monthly') {
+      let elec = fluids.elecCost;
+      let water = fluids.waterCost;
+      
+      // If no actual data is entered, use estimate
+      if (elec === 0) elec = totalPoidsPF * estElecRate;
+      if (water === 0) water = totalPoidsPF * estWaterRate;
+      
+      return { elec, water, total: elec + water, actual: fluids.elecCost > 0 || fluids.waterCost > 0 };
+    } else { // 'day', 'daily', or other ranges
+      // Compute monthly tonnage to allocate actuals
+      const monthProd = (this.data.production || []).filter(prod => prod.date && prod.date.substring(0, 7) === monthKey);
+      const monthTonnage = monthProd.reduce((sum, prod) => sum + (prod.poidsBrutPF || 0), 0);
+      
+      let elecRate = estElecRate;
+      let waterRate = estWaterRate;
+      
+      if (fluids.elecCost > 0 && monthTonnage > 0) {
+        elecRate = fluids.elecCost / monthTonnage;
+      }
+      if (fluids.waterCost > 0 && monthTonnage > 0) {
+        waterRate = fluids.waterCost / monthTonnage;
+      }
+      
+      return {
+        elec: totalPoidsPF * elecRate,
+        water: totalPoidsPF * waterRate,
+        total: totalPoidsPF * (elecRate + waterRate),
+        actual: fluids.elecCost > 0 || fluids.waterCost > 0
+      };
+    }
+  },
+
   getPeriodLaborCostAllocation(dateStr, currentPoidsPF, editingId, periodType = 'month') {
     if (!dateStr) return { allocatedCost: 0, ratio: 0, totalLaborCost: 0, totalTonnage: 0, targetMonths: [], fallback: true };
 
