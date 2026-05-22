@@ -453,32 +453,45 @@ const Saisie = {
                 <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO()" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
               </div>
 
-              <div style="margin-bottom:15px; display:flex; gap:12px; align-items:center;">
-                <label class="form-label" style="margin:0; font-weight:600;">Période d'allocation :</label>
-                <select class="form-select" id="fAllocationPeriod" onchange="Saisie.calc()" style="width:200px; padding:6px; font-size:0.85rem;">
-                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>📅 Journalière (Jour)</option>
-                  <option value="month" ${entry?.allocationPeriod === 'month' ? 'selected' : ''}>📊 Mensuelle (Mois)</option>
-                  <option value="quarter" ${!entry || entry.allocationPeriod === 'quarter' || !entry.allocationPeriod ? 'selected' : ''}>📈 Trimestrielle (Trimestre)</option>
-                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>🏆 Annuelle (Année)</option>
-                </select>
-              </div>
+              <select id="fAllocationPeriod" style="display:none;">
+                <option value="month" selected>Mensuelle (Mois)</option>
+              </select>
               
               <div style="margin-bottom:15px;">
-                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
-                <div class="form-grid">
-                  <div class="form-group"><label class="form-label">Heures M.O. Fixe</label><input type="number" step="0.5" class="form-input" id="fHeuresMOF" value="${entry?entry.heuresMOF||totalFixeH*8:totalFixeH*8}" onchange="Saisie.calc()"></div>
-                  <div class="form-group"><label class="form-label">Salaire H/F (DH)</label><input type="number" step="0.01" class="form-input" id="fSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calc()"></div>
-                  <div class="form-group"><label class="form-label">Coût Personnel Fixe</label><div class="form-computed" id="fCoutPF">0.00 DH</div></div>
+                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                  <span>Personnel Fixe (Allocation mensuelle)</span>
+                  <span id="fRHModeBadge" style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(245, 158, 11, 0.15); color:#fbbf24;">Mode Manuel</span>
                 </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" style="display:flex; align-items:center; justify-content:space-between;">
+                      <span>Heures M.O. Fixe</span>
+                      <span id="fHeuresMOFBadge" style="font-size:0.7rem; font-weight:600; color:#94a3b8;"></span>
+                    </label>
+                    <input type="number" step="0.5" class="form-input" id="fHeuresMOF" value="${entry?entry.heuresMOF||totalFixeH*8:totalFixeH*8}" onchange="Saisie.calc()">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" style="display:flex; align-items:center; justify-content:space-between;">
+                      <span>Salaire H/F (DH)</span>
+                      <span id="fSalaireHFBadge" style="font-size:0.7rem; font-weight:600; color:#94a3b8;"></span>
+                    </label>
+                    <input type="number" step="0.01" class="form-input" id="fSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calc()">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Coût Personnel Fixe</label>
+                    <div class="form-computed" id="fCoutPF" style="border: 1px dashed #6366f1; background: rgba(99, 102, 241, 0.05); font-weight: 700;">0.00 DH</div>
+                  </div>
+                </div>
+                <div id="fFixedLaborExplanation" style="margin-top: 10px; display: none;"></div>
               </div>
 
               <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Équipes Occasionnelles</div>
               <table><thead><tr><th>Profil</th><th>Nb personnes</th><th>Heures/pers.</th><th>Taux Hor. (DH)</th><th>Coût Total</th><th style="width:30px"></th></tr></thead>
-              <tbody id="fEquipesMO">${(entry?.equipesMO || [{profil: 'Ouvrière', nb: 1, heures: 8, taux: p.salaireHoraireOcc}]).map((eq,i)=>`<tr>
+              <tbody id="fEquipesMO">${(entry?.equipesMO || [{profil: 'Ouvrière', nb: 1, heures: 8, taux: p.salaireHoraireOcc || 17.92}]).map((eq,i)=>`<tr>
                 <td><input type="text" class="form-input" style="width:140px;padding:5px;font-weight:600" value="${eq.profil}" data-mo="profil"></td>
                 <td><input type="number" class="form-input" style="width:70px;padding:5px" value="${eq.nb}" data-mo="nb" onchange="Saisie.calc()"></td>
                 <td><input type="number" step="0.5" class="form-input" style="width:70px;padding:5px" value="${eq.heures}" data-mo="heures" onchange="Saisie.calc()"></td>
-                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || p.salaireHoraireOcc}" data-mo="taux" onchange="Saisie.calc()"></td>
+                <td><input type="number" step="0.01" class="form-input" style="width:80px;padding:5px" value="${eq.taux || p.salaireHoraireOcc || 17.92}" data-mo="taux" onchange="Saisie.calc()"></td>
                 <td class="td-right td-bold" id="fCoutEq${i}">0.00</td>
                 <td>${!isSent ? `<button class="btn-icon danger" onclick="Saisie.removeEquipeMO(this)" style="width:24px;height:24px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}</td>
               </tr>`).join('')}
@@ -486,29 +499,11 @@ const Saisie = {
               </tbody></table>
 
               <div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
+                <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. ALLOUÉ (JOUR / FICHE)</span>
                 <span class="form-computed" id="fCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
-              <div id="fAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
               
-              <!-- Premium Labor & Productivity Live Analytics -->
-              <div class="mo-premium-analytics" style="margin-top:12px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">M.O. Fixe Journalière (Admin + Ouvriers)</div>
-                  <div id="fMOFixeJournaliere" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin-top:4px;">0.00 DH</div>
-                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Masse salariale / 26j (Base 191h/mois)</div>
-                </div>
-                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Coût M.O. Directe / Tonnage</div>
-                  <div id="fMOParTonnage" style="font-size:1.15rem; font-weight:700; color:var(--accent-blue); margin-top:4px;">0.00 DH/kg</div>
-                  <div id="fMOParTonnageTonne" style="font-size:0.7rem; color:var(--text-secondary); margin-top:2px;">(0.00 DH/Tonne)</div>
-                </div>
-                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Productivité Horaire</div>
-                  <div id="fProductiviteKgH" style="font-size:1.15rem; font-weight:700; color:var(--status-success); margin-top:4px;">0.00 kg/h</div>
-                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Tonnage / heures de travail ouvrières</div>
-                </div>
-              </div>
+              <div id="fLaborAnalysisContainer" style="margin-top:12px;"></div>
             </div>
 
             <div class="form-section">
@@ -620,8 +615,8 @@ const Saisie = {
       coutMOO += val;
     });
 
-    const coutPF = v('fHeuresMOF') * v('fSalaireHF');
-    const localCost = coutMOO + coutPF;
+    let coutPF = v('fHeuresMOF') * v('fSalaireHF');
+    let localCost = coutMOO + coutPF;
 
     // Automation: Calculate Intrants from Nb Caisses PF
     const caissesPF = v('fCaissesPF');
@@ -718,40 +713,110 @@ const Saisie = {
       });
     }
 
-    // Dynamic Labor Cost Allocation
+    // Dynamic Labor Cost Allocation (Partie Mensuelle & Journalière)
     const dateStr = document.getElementById('fDate')?.value || '';
-    const allocationPeriod = document.getElementById('fAllocationPeriod')?.value || 'quarter';
-    const pesos = App.getPeriodLaborCostAllocation(dateStr, poidsPF, Saisie.editingId, allocationPeriod);
-    
+    const factors = Saisie.getLaborFactors(dateStr, poidsPF, 'f');
     let coutMOJ = localCost;
-    const infoEl = document.getElementById('fAllocationMOInfo');
-    if (infoEl) {
-      if (pesos.fallback) {
-        infoEl.style.display = 'block';
-        infoEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
-            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
+    let finalCoutPF = coutPF;
+
+    const fMOFInput = document.getElementById('fHeuresMOF');
+    const fSalaireInput = document.getElementById('fSalaireHF');
+    const fRHModeBadge = document.getElementById('fRHModeBadge');
+    const fHeuresMOFBadge = document.getElementById('fHeuresMOFBadge');
+    const fSalaireHFBadge = document.getElementById('fSalaireHFBadge');
+    const fExplain = document.getElementById('fFixedLaborExplanation');
+
+    if (factors && poidsPF > 0) {
+      coutMOJ = factors.coutMOJ;
+      
+      const totalFixeH = App.data.personnel.filter(e => e.dept === 'Production').length || 16;
+      const nominalFixedHours = totalFixeH * 8;
+      const proportion = factors.totalTonnageDay > 0 ? (poidsPF / factors.totalTonnageDay) : 0;
+      const proratedHours = nominalFixedHours * proportion;
+      const allocatedFixedCost = (factors.adminDailyRatio + factors.fixesDailyRatio) * poidsPF;
+      const equivalentHourlyRate = proratedHours > 0 ? (allocatedFixedCost / proratedHours) : 0;
+
+      if (fMOFInput) {
+        fMOFInput.value = proratedHours.toFixed(1);
+        fMOFInput.readOnly = true;
+        fMOFInput.style.background = 'rgba(255, 255, 255, 0.03)';
+        fMOFInput.style.color = '#94a3b8';
+        fMOFInput.style.cursor = 'not-allowed';
+      }
+      if (fSalaireInput) {
+        fSalaireInput.value = equivalentHourlyRate.toFixed(2);
+        fSalaireInput.readOnly = true;
+        fSalaireInput.style.background = 'rgba(255, 255, 255, 0.03)';
+        fSalaireInput.style.color = '#94a3b8';
+        fSalaireInput.style.cursor = 'not-allowed';
+      }
+      if (fRHModeBadge) {
+        fRHModeBadge.textContent = 'Auto (RH)';
+        fRHModeBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+        fRHModeBadge.style.color = '#10b981';
+      }
+      if (fHeuresMOFBadge) {
+        fHeuresMOFBadge.textContent = `(${App.formatNumber(proportion * 100, 1)}%)`;
+        fHeuresMOFBadge.style.color = '#10b981';
+      }
+      if (fSalaireHFBadge) {
+        fSalaireHFBadge.textContent = `(Calculé)`;
+        fSalaireHFBadge.style.color = '#10b981';
+      }
+      if (fExplain) {
+        fExplain.style.display = 'block';
+        fExplain.innerHTML = `
+          <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 8px; padding: 10px; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; font-family: 'Outfit', sans-serif;">
+            <div style="font-weight: 700; color: #10b981; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>Calcul M.O. Fixe (Ventilation RH) :</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div>• <strong>Prorata tonnage :</strong> ${App.formatNumber(poidsPF, 1)} kg (cette fiche) / ${App.formatNumber(factors.totalTonnageDay, 1)} kg (total jour) = <strong>${App.formatNumber(proportion * 100, 2)}%</strong></div>
+              <div>• <strong>Heures allouées :</strong> ${nominalFixedHours}h nominales (${totalFixeH} ouvriers × 8h) × ${App.formatNumber(proportion * 100, 2)}% = <strong>${App.formatNumber(proratedHours, 1)}h</strong></div>
+              <div>• <strong>Coût alloué :</strong> (Admin journalier ${App.formatNumber(factors.monthlyAdmin/26, 0)} DH + Fixes ${App.formatNumber(factors.monthlyFixes/26, 0)} DH) × ${App.formatNumber(proportion * 100, 2)}% = <strong>${App.formatNumber(allocatedFixedCost, 2)} DH</strong></div>
+              <div style="border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 3px; margin-top: 2px;">• <strong>Salaire Horaire équivalent :</strong> ${App.formatNumber(allocatedFixedCost, 2)} DH / ${App.formatNumber(proratedHours, 1)}h = <strong>${App.formatNumber(equivalentHourlyRate, 2)} DH/h</strong></div>
+            </div>
           </div>
         `;
-      } else {
-        infoEl.style.display = 'block';
-        infoEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
-            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (Double Niveau)</div>
-            <div style="color:var(--text-secondary); line-height:1.4;">
-              • M.O. Fixe Mensuelle : <strong>${App.formatNumber(pesos.monthlyFixed, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageMonth, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioFixed, 4)} DH/kg</strong>)<br>
-              • M.O. Occasionnelle Jour : <strong>${App.formatNumber(pesos.dayOccCost, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageDay, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioOcc, 4)} DH/kg</strong>)<br>
-              • Ratio Total : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
+      }
+      finalCoutPF = allocatedFixedCost;
+    } else {
+      if (fMOFInput) {
+        fMOFInput.readOnly = false;
+        fMOFInput.style.background = '';
+        fMOFInput.style.color = '';
+        fMOFInput.style.cursor = '';
+      }
+      if (fSalaireInput) {
+        fSalaireInput.readOnly = false;
+        fSalaireInput.style.background = '';
+        fSalaireInput.style.color = '';
+        fSalaireInput.style.cursor = '';
+      }
+      if (fRHModeBadge) {
+        fRHModeBadge.textContent = 'Manuel';
+        fRHModeBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+        fRHModeBadge.style.color = '#fbbf24';
+      }
+      if (fHeuresMOFBadge) fHeuresMOFBadge.textContent = '';
+      if (fSalaireHFBadge) fSalaireHFBadge.textContent = '';
+      if (fExplain) {
+        fExplain.style.display = 'block';
+        fExplain.innerHTML = `
+          <div style="background: rgba(245, 158, 11, 0.04); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 8px; padding: 10px; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; font-family: 'Outfit', sans-serif;">
+            <div style="font-weight: 700; color: #fbbf24; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Saisie incomplète :</span>
             </div>
-            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
-              Coût M.O. Alloué Total : ${App.formatNumber(pesos.allocatedCost, 2)} DH
-            </div>
+            <div>Veuillez renseigner une date valide et un poids final (PF) pour activer la ventilation automatique du registre RH.</div>
           </div>
         `;
-        coutMOJ = pesos.allocatedCost;
       }
     }
+    
+    // Rendre l'analyse haut de gamme
+    Saisie.renderLaborAnalysis('f', factors, poidsPF);
 
     const totalJ = coutMOJ + totalEmb;
     const parKg = poidsPF > 0 ? totalJ / poidsPF : 0;
@@ -762,7 +827,7 @@ const Saisie = {
     const rendement = poidsNetEngage > 0 ? (poidsPF / poidsNetEngage * 100) : 0;
 
     const elMOO = document.getElementById('fCoutMOO'); if(elMOO) elMOO.textContent = App.formatNumber(coutMOO) + ' DH';
-    const elPF = document.getElementById('fCoutPF'); if(elPF) elPF.textContent = App.formatNumber(coutPF) + ' DH';
+    const elPF = document.getElementById('fCoutPF'); if(elPF) elPF.textContent = App.formatNumber(finalCoutPF) + ' DH';
     const elMOJ = document.getElementById('fCoutMOJ'); if(elMOJ) elMOJ.textContent = App.formatNumber(coutMOJ) + ' DH';
     const elSumMO = document.getElementById('sumMO'); if(elSumMO) elSumMO.textContent = App.formatNumber(coutMOJ, 0) + ' DH';
     
@@ -884,6 +949,343 @@ const Saisie = {
         pfInput.value = (espece + ' ' + calibre + ' Reconditionné').trim().toUpperCase();
       }
     }
+  },
+
+  getLaborFactors(dateStr, currentPoidsPF, prefix) {
+    if (!dateStr || isNaN(new Date(dateStr).getTime())) {
+      return null;
+    }
+    const editingId = Saisie.editingId;
+    const mStr = dateStr.substring(0, 7);
+
+    // Ensure pointage is calculated for the month
+    if (typeof Personnel !== 'undefined' && Personnel.recalcPointageMensuel) {
+      try {
+        Personnel.recalcPointageMensuel(mStr);
+      } catch(e) {
+        console.error("Error recalcing pointage for " + mStr, e);
+      }
+    }
+
+    const ptg = App.data.pointage ? App.data.pointage[mStr] : null;
+
+    // 1. Get Monthly salaries
+    let monthlyAdmin = ptg ? ((ptg.totalSalairesFixeAdmin || 0) + (ptg.totalSalairesFixeAutre || 0)) : 0;
+    if (monthlyAdmin === 0) {
+      monthlyAdmin = (App.data.personnel || [])
+        .filter(p => (p.type === 'fixe_admin' || p.type === 'fixe_autre') && p.actif !== false)
+        .reduce((sum, p) => sum + (p.salaire || 0), 0);
+    }
+
+    let monthlyFixes = ptg ? (ptg.totalSalairesOuvriersFixe || 0) : 0;
+    if (monthlyFixes === 0) {
+      monthlyFixes = (App.data.personnel || [])
+        .filter(p => p.type === 'ouvrier_fixe' && p.actif !== false)
+        .reduce((sum, p) => sum + (p.salaire || 0), 0);
+    }
+
+    let totalOccHoursMonth = ptg ? (ptg.totalHeuresOcc || 0) : 0;
+    if (totalOccHoursMonth === 0) {
+      let sumOccHoursLocal = 0;
+      const activeEquipesRows = document.querySelectorAll(prefix === 'f' ? '#fEquipesMO tr:not(:last-child)' : '#tEquipesMO tr:not(:last-child)');
+      activeEquipesRows.forEach(row => {
+        const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+        const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+        sumOccHoursLocal += nb * heures;
+      });
+
+      const monthEntries = (App.data.production || []).filter(p => p.date && p.date.substring(0, 7) === mStr && String(p.id) !== String(editingId));
+      monthEntries.forEach(p => {
+        if (p.equipesMO && Array.isArray(p.equipesMO)) {
+          p.equipesMO.forEach(eq => {
+            sumOccHoursLocal += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0);
+          });
+        }
+      });
+      totalOccHoursMonth = sumOccHoursLocal;
+    }
+    const occRate = App.data.parametres?.salaireHoraireOcc || 17.92;
+    const monthlyOccas = totalOccHoursMonth * occRate;
+
+    // 2. Get Tonnages (Finished weights)
+    const monthEntries = (App.data.production || []).filter(p => p.date && p.date.substring(0, 7) === mStr && String(p.id) !== String(editingId));
+    const totalTonnageMonth = monthEntries.reduce((s, p) => s + (p.poidsBrutPF || p.poidsPF || 0), 0) + currentPoidsPF;
+
+    const dayEntries = (App.data.production || []).filter(p => p.date === dateStr && String(p.id) !== String(editingId));
+    const totalTonnageDay = dayEntries.reduce((s, p) => s + (p.poidsBrutPF || p.poidsPF || 0), 0) + currentPoidsPF;
+
+    // 3. Get Daily Occasional Hours
+    let totalOccHoursDay = 0;
+    if (ptg && ptg.jours && ptg.jours[dateStr]) {
+      const jour = ptg.jours[dateStr];
+      const presences = Personnel.getDayPresences ? Personnel.getDayPresences(jour) : [];
+      presences.forEach(p => {
+        const emp = App.data.personnel.find(e => e.id === p.personnelId);
+        if (emp && emp.type === 'occasionnel') {
+          totalOccHoursDay += p.heures || 0;
+        }
+      });
+    }
+
+    if (totalOccHoursDay === 0) {
+      let currentFormHours = 0;
+      const activeEquipesRows = document.querySelectorAll(prefix === 'f' ? '#fEquipesMO tr:not(:last-child)' : '#tEquipesMO tr:not(:last-child)');
+      activeEquipesRows.forEach(row => {
+        const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
+        const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
+        currentFormHours += nb * heures;
+      });
+
+      let otherSheetsHours = 0;
+      dayEntries.forEach(p => {
+        if (p.equipesMO && Array.isArray(p.equipesMO)) {
+          p.equipesMO.forEach(eq => {
+            otherSheetsHours += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0);
+          });
+        }
+      });
+      totalOccHoursDay = currentFormHours + otherSheetsHours;
+    }
+
+    const dayOccasCost = totalOccHoursDay * occRate;
+
+    // --- Calculations ---
+    const adminMonthlyRatio = totalTonnageMonth > 0 ? (monthlyAdmin / totalTonnageMonth) : 0;
+    const fixesMonthlyRatio = totalTonnageMonth > 0 ? (monthlyFixes / totalTonnageMonth) : 0;
+    const occasMonthlyRatio = totalTonnageMonth > 0 ? (monthlyOccas / totalTonnageMonth) : 0;
+    const totalMonthlyRatio = adminMonthlyRatio + fixesMonthlyRatio + occasMonthlyRatio;
+
+    const adminDailyRatio = totalTonnageDay > 0 ? ((monthlyAdmin / 26) / totalTonnageDay) : 0;
+    const fixesDailyRatio = totalTonnageDay > 0 ? ((monthlyFixes / 26) / totalTonnageDay) : 0;
+    const occasDailyRatio = totalTonnageDay > 0 ? (dayOccasCost / totalTonnageDay) : 0;
+    const totalDailyRatio = adminDailyRatio + fixesDailyRatio + occasDailyRatio;
+
+    const coutMOJ = totalDailyRatio * currentPoidsPF;
+
+    return {
+      monthlyAdmin,
+      monthlyFixes,
+      monthlyOccas,
+      totalTonnageMonth,
+      totalTonnageDay,
+      totalOccHoursDay,
+      dayOccasCost,
+
+      adminMonthlyRatio,
+      fixesMonthlyRatio,
+      occasMonthlyRatio,
+      totalMonthlyRatio,
+
+      adminDailyRatio,
+      fixesDailyRatio,
+      occasDailyRatio,
+      totalDailyRatio,
+
+      coutMOJ
+    };
+  },
+
+  renderLaborAnalysis(prefix, factors, currentPoidsPF) {
+    const containerId = prefix === 'f' ? 'fLaborAnalysisContainer' : 'tLaborAnalysisContainer';
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    if (!factors || !(currentPoidsPF > 0)) {
+      container.innerHTML = `
+        <div style="padding:16px; background:rgba(255,255,255,0.02); border:1px dashed rgba(255,255,255,0.1); border-radius:12px; text-align:center; color:var(--text-secondary); font-size:0.85rem;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:8px; opacity:0.6; display:inline-block;"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div>Veuillez sélectionner une date valide et saisir un poids final (PF) pour afficher l'analyse détaillée.</div>
+        </div>
+      `;
+      return;
+    }
+
+    const {
+      monthlyAdmin,
+      monthlyFixes,
+      monthlyOccas,
+      totalTonnageMonth,
+      totalTonnageDay,
+      totalOccHoursDay,
+      dayOccasCost,
+
+      adminMonthlyRatio,
+      fixesMonthlyRatio,
+      occasMonthlyRatio,
+      totalMonthlyRatio,
+
+      adminDailyRatio,
+      fixesDailyRatio,
+      occasDailyRatio,
+      totalDailyRatio,
+
+      coutMOJ
+    } = factors;
+
+    const adminDailyAllocated = adminDailyRatio * currentPoidsPF;
+    const fixesDailyAllocated = fixesDailyRatio * currentPoidsPF;
+    const occasDailyAllocated = occasDailyRatio * currentPoidsPF;
+
+    const totalFixeH = App.data.personnel.filter(e => e.dept === 'Production').length || 16;
+    const nominalFixedHours = totalFixeH * 8;
+    const proportion = totalTonnageDay > 0 ? (currentPoidsPF / totalTonnageDay) : 0;
+    const proratedHours = nominalFixedHours * proportion;
+    const allocatedFixedCost = adminDailyAllocated + fixesDailyAllocated;
+    const equivalentHourlyRate = proratedHours > 0 ? (allocatedFixedCost / proratedHours) : 0;
+
+    container.innerHTML = `
+      <div class="labor-analysis-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px; font-family:'Outfit', 'Inter', sans-serif;">
+        
+        <!-- Panel 1: Partie Mensuelle -->
+        <div class="labor-card glass" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 14px; padding: 18px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); backdrop-filter: blur(8px); transition: transform 0.2s, border-color 0.2s;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width: 8px; height: 8px; background: #6366f1; border-radius: 50%;"></div>
+              <span style="font-weight: 700; color: #e2e8f0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Partie Mensuelle (Mois)</span>
+            </div>
+            <span style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 0.75rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;">Indicateur Global</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="color: #94a3b8; font-size: 0.82rem;">Tonnage Mensuel Final</span>
+              <span style="color: #f8fafc; font-weight: 700; font-size: 0.88rem;">${App.formatNumber(totalTonnageMonth, 1)} kg</span>
+            </div>
+
+            <!-- Table of ratios -->
+            <div style="background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
+                <span style="color: #94a3b8;">Admin & Autre</span>
+                <span style="font-weight:600; color: #cbd5e1;">${App.formatNumber(adminMonthlyRatio, 4)} DH/kg</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
+                <span style="color: #94a3b8;">Ouvriers Fixes</span>
+                <span style="font-weight:600; color: #cbd5e1;">${App.formatNumber(fixesMonthlyRatio, 4)} DH/kg</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; padding-bottom:2px;">
+                <span style="color: #94a3b8;">Ouvriers Occas.</span>
+                <span style="font-weight:600; color: #cbd5e1;">${App.formatNumber(occasMonthlyRatio, 4)} DH/kg</span>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:10px; background: rgba(99, 102, 241, 0.08); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.15);">
+              <span style="color: #c7d2fe; font-size: 0.85rem; font-weight: 600;">Coût Unitaire Moyen</span>
+              <span style="color: #818cf8; font-weight: 800; font-size: 1.05rem;">${App.formatNumber(totalMonthlyRatio, 4)} DH/kg</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Partie Journalière -->
+        <div class="labor-card glass" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 14px; padding: 18px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); backdrop-filter: blur(8px); transition: transform 0.2s, border-color 0.2s;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div style="width: 8px; height: 8px; background: #f59e0b; border-radius: 50%;"></div>
+              <span style="font-weight: 700; color: #e2e8f0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Partie Journalière (Prorata)</span>
+            </div>
+            <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.75rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;">Ventilé sans doublon</span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size: 0.82rem;">
+              <span style="color: #94a3b8;">Tonnage Journalier Final</span>
+              <span style="color: #f8fafc; font-weight: 700;">${App.formatNumber(totalTonnageDay, 1)} kg</span>
+            </div>
+
+            <!-- Table of ratios and costs -->
+            <div style="background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
+                <div style="display:flex; flex-direction:column;">
+                  <span style="color: #cbd5e1; font-weight:600;">Admin</span>
+                  <span style="color: #64748b; font-size:0.7rem;">(${App.formatNumber(monthlyAdmin / 26, 0)} DH / 26)</span>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:700; color: #f8fafc;">${App.formatNumber(adminDailyAllocated, 2)} DH</div>
+                  <div style="color: #94a3b8; font-size:0.75rem;">${App.formatNumber(adminDailyRatio, 4)} DH/kg</div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
+                <div style="display:flex; flex-direction:column;">
+                  <span style="color: #cbd5e1; font-weight:600;">Fixes</span>
+                  <span style="color: #64748b; font-size:0.7rem;">(${App.formatNumber(monthlyFixes / 26, 0)} DH / 26)</span>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:700; color: #f8fafc;">${App.formatNumber(fixesDailyAllocated, 2)} DH</div>
+                  <div style="color: #94a3b8; font-size:0.75rem;">${App.formatNumber(fixesDailyRatio, 4)} DH/kg</div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; padding-bottom:2px;">
+                <div style="display:flex; flex-direction:column;">
+                  <span style="color: #cbd5e1; font-weight:600;">Occasionnels</span>
+                  <span style="color: #64748b; font-size:0.7rem;">(${App.formatNumber(totalOccHoursDay, 1)} h × ${App.formatNumber(App.data.parametres.salaireHoraireOcc || 17.92, 2)})</span>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:700; color: #f8fafc;">${App.formatNumber(occasDailyAllocated, 2)} DH</div>
+                  <div style="color: #94a3b8; font-size:0.75rem;">${App.formatNumber(occasDailyRatio, 4)} DH/kg</div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:10px; background: rgba(245, 158, 11, 0.08); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.15);">
+              <span style="color: #fde68a; font-size: 0.85rem; font-weight: 600;">Ratio Journalier</span>
+              <span style="color: #fbbf24; font-weight: 800; font-size: 1.05rem;">${App.formatNumber(totalDailyRatio, 4)} DH/kg</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 3: Explication détaillée & réconciliation -->
+        <div class="labor-card glass" style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.9)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; padding: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); backdrop-filter: blur(8px);">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+            <span style="font-weight: 700; color: #f8fafc; font-size: 1.05rem; letter-spacing: 0.5px; text-transform: uppercase;">🔍 Détail & Source des Calculs (Registre M.O. Fixe)</span>
+          </div>
+          
+          <div style="font-size:0.88rem; color:#cbd5e1; line-height:1.6; display:flex; flex-direction:column; gap:12px;">
+            <p>
+              Le coût du <strong>Personnel Fixe</strong> ci-dessus est entièrement automatisé et réconcilié avec le <strong>Registre de Paie</strong> mensuel. 
+              Pour éviter tout doublon, le coût journalier est réparti proportionnellement au <strong>Tonnage produit aujourd'hui</strong> :
+            </p>
+            
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:6px;">
+              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #6366f1;">
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">1. PRORATA DU TONNAGE</div>
+                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(proportion * 100, 2)}% du jour</div>
+                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">Fiche (${App.formatNumber(currentPoidsPF, 1)} kg) / Total jour (${App.formatNumber(totalTonnageDay, 1)} kg)</div>
+              </div>
+
+              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #10b981;">
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">2. HEURES M.O. FIXE ALLOUÉES</div>
+                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(proratedHours, 1)} Heures</div>
+                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">${totalFixeH} ouvriers nominal (${nominalFixedHours}h/jour) × ${App.formatNumber(proportion * 100, 1)}% prorata</div>
+              </div>
+
+              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #f59e0b;">
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">3. COÛT PERSONNEL FIXE</div>
+                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(allocatedFixedCost, 2)} DH</div>
+                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">(Admin journalier ${App.formatNumber(monthlyAdmin/26, 0)} DH + Ouvriers ${App.formatNumber(monthlyFixes/26, 0)} DH) × ${App.formatNumber(proportion * 100, 1)}%</div>
+              </div>
+
+              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #84cc16;">
+                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">4. SALAIRE HORAIRE MOYEN</div>
+                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(equivalentHourlyRate, 2)} DH / H</div>
+                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">Coût Fixe alloué (${App.formatNumber(allocatedFixedCost, 2)} DH) / Heures M.O. Fixe (${App.formatNumber(proratedHours, 1)}h)</div>
+              </div>
+            </div>
+
+            <div style="margin-top:8px; font-size:0.78rem; color:#10b981; display:flex; align-items:center; gap:6px; background:rgba(16,185,129,0.06); padding:8px 12px; border-radius:6px; border: 1px solid rgba(16,185,129,0.15); line-height: 1.4;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span><strong>Mode Automatique Activé :</strong> Les champs de saisie du <em>Personnel Fixe (Allocation mensuelle)</em> en haut ont été pré-remplis avec ces valeurs calculées pour correspondre exactement à votre Registre RH.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <style>
+        .labor-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+        }
+      </style>
+    `;
   },
 
   addEquipeMO(tbodyId = 'fEquipesMO') {
@@ -1417,26 +1819,37 @@ const Saisie = {
                 <span>🔹 Main-d'œuvre</span>
                 <button class="btn btn-sm btn-outline" onclick="Saisie.addEquipeMO('tEquipesMO')" ${isSent ? 'disabled' : ''}>+ Ajouter Équipe</button>
               </div>
-              <div style="margin-bottom: 12px; padding: 10px; background: rgba(99,102,241,0.05); border-radius: 8px; border: 1px solid rgba(99,102,241,0.2);">
-                <label style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">Période d'Allocation des Coûts MO</label>
-                <select id="tAllocationPeriod" class="form-select" style="max-width: 300px; border-color: var(--accent-blue);" onchange="Saisie.calcT()">
-                  <option value="day" ${entry?.allocationPeriod === 'day' ? 'selected' : ''}>Journalière (Présence du jour)</option>
-                  <option value="month" ${(entry?.allocationPeriod === 'month' || !entry?.allocationPeriod) ? 'selected' : ''}>Mensuelle (Mois en cours)</option>
-                  <option value="quarter" ${entry?.allocationPeriod === 'quarter' ? 'selected' : ''}>Trimestrielle (3 mois fixes)</option>
-                  <option value="year" ${entry?.allocationPeriod === 'year' ? 'selected' : ''}>Annuelle (12 mois fixes)</option>
-                </select>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
-                  Sert à diviser la masse salariale totale de la période choisie sur le tonnage total de cette même période.
-                </div>
-              </div>
+              
+              <select id="tAllocationPeriod" style="display:none;">
+                <option value="month" selected>Mensuelle (Mois)</option>
+              </select>
               
               <div style="margin-bottom:15px;">
-                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Personnel Fixe (Allocation mensuelle)</div>
-                <div class="form-grid">
-                  <div class="form-group"><label class="form-label">Heures M.O. Fixe</label><input type="number" step="0.5" class="form-input" id="tHeuresMOF" value="${entry?entry.heuresMOF||8:8}" onchange="Saisie.calcT()"></div>
-                  <div class="form-group"><label class="form-label">Salaire H/F (Base 191h)</label><input type="number" step="0.01" class="form-input" id="tSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calcT()"></div>
-                  <div class="form-group"><label class="form-label">Coût Personnel Fixe</label><div class="form-computed" id="tCoutPF">0.00 DH</div></div>
+                <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center;">
+                  <span>Personnel Fixe (Allocation mensuelle)</span>
+                  <span id="tRHModeBadge" style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:10px; background:rgba(245, 158, 11, 0.15); color:#fbbf24;">Mode Manuel</span>
                 </div>
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label class="form-label" style="display:flex; align-items:center; justify-content:space-between;">
+                      <span>Heures M.O. Fixe</span>
+                      <span id="tHeuresMOFBadge" style="font-size:0.7rem; font-weight:600; color:#94a3b8;"></span>
+                    </label>
+                    <input type="number" step="0.5" class="form-input" id="tHeuresMOF" value="${entry?entry.heuresMOF||8:8}" onchange="Saisie.calcT()">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" style="display:flex; align-items:center; justify-content:space-between;">
+                      <span>Salaire H/F (DH)</span>
+                      <span id="tSalaireHFBadge" style="font-size:0.7rem; font-weight:600; color:#94a3b8;"></span>
+                    </label>
+                    <input type="number" step="0.01" class="form-input" id="tSalaireHF" value="${entry?entry.salaireHF||22.1:22.1}" onchange="Saisie.calcT()">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Coût Personnel Fixe</label>
+                    <div class="form-computed" id="tCoutPF" style="border: 1px dashed #6366f1; background: rgba(99, 102, 241, 0.05); font-weight: 700;">0.00 DH</div>
+                  </div>
+                </div>
+                <div id="tFixedLaborExplanation" style="margin-top: 10px; display: none;"></div>
               </div>
 
               <div style="font-size:0.9rem;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Équipes Occasionnelles</div>
@@ -1453,29 +1866,11 @@ const Saisie = {
               </tbody></table>
 
               <div style="margin-top:12px;padding:14px;background:rgba(99,102,241,0.08);border-radius:8px;display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. TOTAL / JOUR</span>
+                <span style="font-weight:600;color:var(--text-secondary);">COÛT M.O. ALLOUÉ (JOUR / FICHE)</span>
                 <span class="form-computed" id="tCoutMOJ" style="font-size:1.2rem;border:none;padding:0;">0.00 DH</span>
               </div>
-              <div id="tAllocationMOInfo" style="margin-top:8px;padding:12px;background:rgba(99,102,241,0.05);border-radius:8px;border-left:4px solid var(--accent-blue);display:none;"></div>
               
-              <!-- Premium Labor & Productivity Live Analytics -->
-              <div class="mo-premium-analytics" style="margin-top:12px; display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">M.O. Fixe Journalière (Admin + Ouvriers)</div>
-                  <div id="tMOFixeJournaliere" style="font-size:1.15rem; font-weight:700; color:var(--text-primary); margin-top:4px;">0.00 DH</div>
-                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Masse salariale / 26j (Base 191h/mois)</div>
-                </div>
-                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Coût M.O. Directe / Tonnage</div>
-                  <div id="tMOParTonnage" style="font-size:1.15rem; font-weight:700; color:var(--accent-blue); margin-top:4px;">0.00 DH/kg</div>
-                  <div id="tMOParTonnageTonne" style="font-size:0.7rem; color:var(--text-secondary); margin-top:2px;">(0.00 DH/Tonne)</div>
-                </div>
-                <div style="background:rgba(99,102,241,0.04); padding:10px; border-radius:8px; border:1px solid rgba(99,102,241,0.1); text-align:center; box-shadow:0 2px 4px rgba(0,0,0,0.02);">
-                  <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; font-weight:600;">Productivité Horaire</div>
-                  <div id="tProductiviteKgH" style="font-size:1.15rem; font-weight:700; color:var(--status-success); margin-top:4px;">0.00 kg/h</div>
-                  <div style="font-size:0.65rem; color:var(--text-secondary); margin-top:2px;">Tonnage / heures de travail ouvrières</div>
-                </div>
-              </div>
+              <div id="tLaborAnalysisContainer" style="margin-top:12px;"></div>
             </div>
 
             <div class="form-section">
@@ -1792,44 +2187,114 @@ const Saisie = {
       if (valEl) valEl.textContent = App.formatNumber(val);
       coutMOO += val;
     });
-    const coutPF = v('tHeuresMOF') * v('tSalaireHF');
-    const localCost = coutMOO + coutPF;
+    let coutPF = v('tHeuresMOF') * v('tSalaireHF');
+    let localCost = coutMOO + coutPF;
 
-    // Dynamic Labor Cost Allocation (Traitement)
-    const allocationPeriod = document.getElementById('tAllocationPeriod')?.value || 'month';
-    const pesos = App.getPeriodLaborCostAllocation(dateStr, currentPoidsPF, Saisie.editingId, allocationPeriod);
-    
+    // Dynamic Labor Cost Allocation (Partie Mensuelle & Journalière - Traitement)
+    const factors = Saisie.getLaborFactors(dateStr, currentPoidsPF, 't');
     let coutMOJ = localCost;
-    const infoEl = document.getElementById('tAllocationMOInfo');
-    if (infoEl) {
-      if (pesos.fallback) {
-        infoEl.style.display = 'block';
-        infoEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:4px; font-size:0.8rem; color:var(--status-warning);">
-            <div style="font-weight:700; display:flex; align-items:center; gap:4px;">⚠️ Mode Repli Activé</div>
-            <div style="color:var(--text-secondary);">Aucune donnée de pointage ou de tonnage pour la période <strong>${pesos.targetMonths.join(', ')}</strong>. Calcul basé sur les équipes locales de la fiche.</div>
+    let finalCoutPF = coutPF;
+
+    const tMOFInput = document.getElementById('tHeuresMOF');
+    const tSalaireInput = document.getElementById('tSalaireHF');
+    const tRHModeBadge = document.getElementById('tRHModeBadge');
+    const tHeuresMOFBadge = document.getElementById('tHeuresMOFBadge');
+    const tSalaireHFBadge = document.getElementById('tSalaireHFBadge');
+    const tExplain = document.getElementById('tFixedLaborExplanation');
+
+    if (factors && currentPoidsPF > 0) {
+      coutMOJ = factors.coutMOJ;
+      
+      const totalFixeH = App.data.personnel.filter(e => e.dept === 'Production').length || 16;
+      const nominalFixedHours = totalFixeH * 8;
+      const proportion = factors.totalTonnageDay > 0 ? (currentPoidsPF / factors.totalTonnageDay) : 0;
+      const proratedHours = nominalFixedHours * proportion;
+      const allocatedFixedCost = (factors.adminDailyRatio + factors.fixesDailyRatio) * currentPoidsPF;
+      const equivalentHourlyRate = proratedHours > 0 ? (allocatedFixedCost / proratedHours) : 0;
+
+      if (tMOFInput) {
+        tMOFInput.value = proratedHours.toFixed(1);
+        tMOFInput.readOnly = true;
+        tMOFInput.style.background = 'rgba(255, 255, 255, 0.03)';
+        tMOFInput.style.color = '#94a3b8';
+        tMOFInput.style.cursor = 'not-allowed';
+      }
+      if (tSalaireInput) {
+        tSalaireInput.value = equivalentHourlyRate.toFixed(2);
+        tSalaireInput.readOnly = true;
+        tSalaireInput.style.background = 'rgba(255, 255, 255, 0.03)';
+        tSalaireInput.style.color = '#94a3b8';
+        tSalaireInput.style.cursor = 'not-allowed';
+      }
+      if (tRHModeBadge) {
+        tRHModeBadge.textContent = 'Auto (RH)';
+        tRHModeBadge.style.background = 'rgba(16, 185, 129, 0.15)';
+        tRHModeBadge.style.color = '#10b981';
+      }
+      if (tHeuresMOFBadge) {
+        tHeuresMOFBadge.textContent = `(${App.formatNumber(proportion * 100, 1)}%)`;
+        tHeuresMOFBadge.style.color = '#10b981';
+      }
+      if (tSalaireHFBadge) {
+        tSalaireHFBadge.textContent = `(Calculé)`;
+        tSalaireHFBadge.style.color = '#10b981';
+      }
+      if (tExplain) {
+        tExplain.style.display = 'block';
+        tExplain.innerHTML = `
+          <div style="background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 8px; padding: 10px; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; font-family: 'Outfit', sans-serif;">
+            <div style="font-weight: 700; color: #10b981; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>Calcul M.O. Fixe (Ventilation RH) :</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div>• <strong>Prorata tonnage :</strong> ${App.formatNumber(currentPoidsPF, 1)} kg (cette fiche) / ${App.formatNumber(factors.totalTonnageDay, 1)} kg (total jour) = <strong>${App.formatNumber(proportion * 100, 2)}%</strong></div>
+              <div>• <strong>Heures allouées :</strong> ${nominalFixedHours}h nominales (${totalFixeH} ouvriers × 8h) × ${App.formatNumber(proportion * 100, 2)}% = <strong>${App.formatNumber(proratedHours, 1)}h</strong></div>
+              <div>• <strong>Coût alloué :</strong> (Admin journalier ${App.formatNumber(factors.monthlyAdmin/26, 0)} DH + Fixes ${App.formatNumber(factors.monthlyFixes/26, 0)} DH) × ${App.formatNumber(proportion * 100, 2)}% = <strong>${App.formatNumber(allocatedFixedCost, 2)} DH</strong></div>
+              <div style="border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 3px; margin-top: 2px;">• <strong>Salaire Horaire équivalent :</strong> ${App.formatNumber(allocatedFixedCost, 2)} DH / ${App.formatNumber(proratedHours, 1)}h = <strong>${App.formatNumber(equivalentHourlyRate, 2)} DH/h</strong></div>
+            </div>
           </div>
         `;
-      } else {
-        infoEl.style.display = 'block';
-        infoEl.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:6px; font-size:0.8rem;">
-            <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">📊 Ventilation Dynamique (Double Niveau)</div>
-            <div style="color:var(--text-secondary); line-height:1.4;">
-              • M.O. Fixe Mensuelle : <strong>${App.formatNumber(pesos.monthlyFixed, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageMonth, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioFixed, 4)} DH/kg</strong>)<br>
-              • M.O. Occasionnelle Jour : <strong>${App.formatNumber(pesos.dayOccCost, 0)} DH</strong> alloué sur <strong>${App.formatNumber(pesos.totalTonnageDay, 1)} kg</strong> (Ratio : <strong>${App.formatNumber(pesos.ratioOcc, 4)} DH/kg</strong>)<br>
-              • Ratio Total : <strong>${App.formatNumber(pesos.ratio, 4)} DH/kg</strong>
+      }
+      finalCoutPF = allocatedFixedCost;
+    } else {
+      if (tMOFInput) {
+        tMOFInput.readOnly = false;
+        tMOFInput.style.background = '';
+        tMOFInput.style.color = '';
+        tMOFInput.style.cursor = '';
+      }
+      if (tSalaireInput) {
+        tSalaireInput.readOnly = false;
+        tSalaireInput.style.background = '';
+        tSalaireInput.style.color = '';
+        tSalaireInput.style.cursor = '';
+      }
+      if (tRHModeBadge) {
+        tRHModeBadge.textContent = 'Manuel';
+        tRHModeBadge.style.background = 'rgba(245, 158, 11, 0.15)';
+        tRHModeBadge.style.color = '#fbbf24';
+      }
+      if (tHeuresMOFBadge) tHeuresMOFBadge.textContent = '';
+      if (tSalaireHFBadge) tSalaireHFBadge.textContent = '';
+      if (tExplain) {
+        tExplain.style.display = 'block';
+        tExplain.innerHTML = `
+          <div style="background: rgba(245, 158, 11, 0.04); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 8px; padding: 10px; font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; font-family: 'Outfit', sans-serif;">
+            <div style="font-weight: 700; color: #fbbf24; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              <span>Saisie incomplète :</span>
             </div>
-            <div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(99,102,241,0.1); color:var(--text-primary); font-weight:600;">
-              Coût M.O. Alloué Total : ${App.formatNumber(pesos.allocatedCost, 2)} DH
-            </div>
+            <div>Veuillez renseigner une date valide et un poids final (PF) pour activer la ventilation automatique du registre RH.</div>
           </div>
         `;
-        coutMOJ = pesos.allocatedCost;
       }
     }
+    
+    // Rendre l'analyse haut de gamme
+    Saisie.renderLaborAnalysis('t', factors, currentPoidsPF);
 
-    document.getElementById('tCoutPF').textContent = App.formatNumber(coutPF) + ' DH';
+    document.getElementById('tCoutPF').textContent = App.formatNumber(finalCoutPF) + ' DH';
     document.getElementById('tCoutMOO').textContent = App.formatNumber(coutMOO) + ' DH';
     document.getElementById('tCoutMOJ').textContent = App.formatNumber(coutMOJ) + ' DH';
 
@@ -1851,69 +2316,6 @@ const Saisie = {
       const qi=parseFloat(last.querySelector('[data-ph="qteInit"]')?.value)||0;
       const qf=parseFloat(last.querySelector('[data-ph="qteFinale"]')?.value)||0;
       document.getElementById('sumRendFinal').textContent = qi>0?App.formatNumber(qf/qi*100,2)+'%':'0%';
-    }
-
-    // === NEW CALCULATIONS & PREMIUM DISPLAYS (Traitement) ===
-    try {
-      const personnelList = App.data.personnel || [];
-      const fixedAdminSalaries = personnelList.filter(p => p.type === 'fixe_admin' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
-      const fixedOuvrierSalaries = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
-      const fixedAutreSalaries = personnelList.filter(p => p.type === 'fixe_autre' && p.actif !== false).reduce((sum, p) => sum + (p.salaire || 0), 0);
-      const totalFixedSalaries = fixedAdminSalaries + fixedOuvrierSalaries + fixedAutreSalaries;
-      const moFixeJournaliere = totalFixedSalaries / 26;
-
-      const otherDayEntries = (App.data.production || []).filter(p => p.date === dateStr && p.id != Saisie.editingId);
-      const totalTonnageDay = otherDayEntries.reduce((s, p) => s + (p.poidsBrutPF || p.poidsPF || 0), 0) + currentPoidsPF;
-      
-      const dailyWorkerFixed = fixedOuvrierSalaries / 26;
-
-      // Sum all occasional costs for this day
-      const otherDayOccCost = otherDayEntries.reduce((s, p) => s + (p.coutMOO || 0), 0);
-      const totalOccCostDay = otherDayOccCost + coutMOO;
-      const moParTonnage = totalTonnageDay > 0 ? (dailyWorkerFixed + totalOccCostDay) / totalTonnageDay : 0;
-
-      // Occasional hours of other entries on the same day
-      const otherDayOccHours = otherDayEntries.reduce((s, p) => {
-        let occ = 0;
-        if (p.equipesMO && Array.isArray(p.equipesMO)) {
-          p.equipesMO.forEach(eq => {
-            occ += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0);
-          });
-        }
-        return s + occ;
-      }, 0);
-
-      // Occasional hours of current entry
-      let totalOccHours = 0;
-      document.querySelectorAll('#tEquipesMO tr:not(:last-child)').forEach(row => {
-        const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
-        const h = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
-        totalOccHours += nb * h;
-      });
-
-      const totalOccHoursDay = otherDayOccHours + totalOccHours;
-
-      // Fixed hours (Base 191h/mois per active worker, which is 191/26 = 7.346h/day per worker)
-      const activeOuvriersFixeCount = personnelList.filter(p => p.type === 'ouvrier_fixe' && p.actif !== false).length;
-      const totalFixedHours = activeOuvriersFixeCount * (191 / 26);
-      const totalLaborHours = totalOccHoursDay + totalFixedHours;
-      const productiviteKgH = totalLaborHours > 0 ? totalTonnageDay / totalLaborHours : 0;
-
-      // Live update DOM elements
-      const elMOFixeJ = document.getElementById('tMOFixeJournaliere');
-      if (elMOFixeJ) elMOFixeJ.textContent = App.formatNumber(moFixeJournaliere, 2) + ' DH';
-
-      const elMOParT = document.getElementById('tMOParTonnage');
-      if (elMOParT) elMOParT.textContent = App.formatNumber(moParTonnage, 4) + ' DH/kg';
-
-      const elMOParTT = document.getElementById('tMOParTonnageTonne');
-      if (elMOParTT) elMOParTT.textContent = '(' + App.formatNumber(moParTonnage * 1000, 0) + ' DH/Tonne)';
-
-      const elProd = document.getElementById('tProductiviteKgH');
-      if (elProd) elProd.textContent = App.formatNumber(productiviteKgH, 2) + ' kg/h';
-
-    } catch(err) {
-      console.error("Error in premium calculations (Traitement): ", err);
     }
   },
 

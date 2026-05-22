@@ -592,15 +592,17 @@ const Dashboard = {
                             ? Personnel.getDayPresences(dayData) 
                             : (dayData?.presences || []);
           presences.forEach(pt => {
-            totalHeuresTotales += (pt.heures || 0);
             const emp = App.data.personnel.find(e => e.id === pt.personnelId);
-            if (emp && emp.type === 'occasionnel') {
-              totalHeures += (pt.heures || 0);
+            if (emp && (emp.type === 'occasionnel' || emp.type === 'ouvrier_fixe')) {
+              totalHeuresTotales += (pt.heures || 0);
+              if (emp.type === 'occasionnel') {
+                totalHeures += (pt.heures || 0);
+              }
             }
           });
         } else {
           totalHeures += (ptg.totalHeuresOcc || 0);
-          totalHeuresTotales += (ptg.totalHeuresOcc || 0) + (ptg.totalHeuresOuvriersFixe || 0) + (ptg.totalHeuresAdmin || 0);
+          totalHeuresTotales += (ptg.totalHeuresOcc || 0) + (ptg.totalHeuresOuvriersFixe || 0);
         }
       }
     });

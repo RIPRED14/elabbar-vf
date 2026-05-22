@@ -1879,7 +1879,7 @@ const App = {
 
     let dayOccCost = 0;
     if (dayOccHours > 0) {
-      dayOccCost = dayOccHours * (ptg ? (ptg.tauxHoraireOcc || 16.95) : 16.95);
+      dayOccCost = dayOccHours * (ptg ? (ptg.tauxHoraireOcc || 17.92) : 17.92);
     } else {
       // Fallback: sum equipesMO of all entries of that day
       let totalDayOccLocal = 0;
@@ -1889,7 +1889,7 @@ const App = {
           tRows.forEach(row => {
             const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
             const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
-            const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 16.95;
+            const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 17.92;
             totalDayOccLocal += nb * heures * taux;
           });
         } else {
@@ -1897,7 +1897,7 @@ const App = {
           rRows.forEach(row => {
             const nb = parseFloat(row.querySelector('[data-mo="nb"]')?.value) || 0;
             const heures = parseFloat(row.querySelector('[data-mo="heures"]')?.value) || 0;
-            const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 16.95;
+            const taux = parseFloat(row.querySelector('[data-mo="taux"]')?.value) || 17.92;
             totalDayOccLocal += nb * heures * taux;
           });
         }
@@ -1907,7 +1907,7 @@ const App = {
         const currentEditingEntry = (this.data.production || []).find(p => String(p.id) === String(editingId));
         if (currentEditingEntry && currentEditingEntry.equipesMO) {
           currentEditingEntry.equipesMO.forEach(eq => {
-            totalDayOccLocal += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0) * (parseFloat(eq.taux) || 16.95);
+            totalDayOccLocal += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0) * (parseFloat(eq.taux) || 17.92);
           });
         }
       }
@@ -1915,7 +1915,7 @@ const App = {
       otherDayEntries.forEach(p => {
         if (p.equipesMO && Array.isArray(p.equipesMO)) {
           p.equipesMO.forEach(eq => {
-            totalDayOccLocal += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0) * (parseFloat(eq.taux) || 16.95);
+            totalDayOccLocal += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0) * (parseFloat(eq.taux) || 17.92);
           });
         }
       });
@@ -2257,9 +2257,9 @@ const App = {
       this.saveData();
     }
     
-    // Patch: Force taux horaire occasionnel à 16.95
-    if (this.data.parametres && (this.data.parametres.salaireHoraireOcc === 17 || this.data.parametres.salaireHoraireOcc === 16.8)) {
-      this.data.parametres.salaireHoraireOcc = 16.95;
+    // Patch: Force taux horaire occasionnel à 17.92
+    if (this.data.parametres && (this.data.parametres.salaireHoraireOcc === 17 || this.data.parametres.salaireHoraireOcc === 16.8 || this.data.parametres.salaireHoraireOcc === 16.95 || !this.data.parametres.salaireHoraireOcc)) {
+      this.data.parametres.salaireHoraireOcc = 17.92;
       this.saveData();
     }
 
@@ -2463,14 +2463,16 @@ const App = {
         hasError = true;
       }
 
-      // 2. Pointage
+      // 2. Pointage (flat legacy format: pointage[YYYY-MM-DD][empId] = hours)
+      // NOTE: pointage also contains month-summary keys (YYYY-MM) created by Personnel.getPointageData().
+      // These are NOT sync targets — only YYYY-MM-DD keys are flat pointage entries.
       if (this.data.pointage) {
         try {
           const pointages = [];
           const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
           for (const date in this.data.pointage) {
             if (!dateRegex.test(date)) {
-              console.warn(`⚠️ Clé de pointage ignorée (format de date invalide) : '${date}'`);
+              // Silently skip month-summary keys (YYYY-MM) — they are not flat pointage entries
               continue;
             }
             for (const empId in this.data.pointage[date]) {
@@ -2555,6 +2557,14 @@ const App = {
                 ...c,
                 id: c.id || (index + 1)
               }));
+              // Deduplicate by id to avoid 'ON CONFLICT DO UPDATE cannot affect row a second time'
+              const seenIds = new Set();
+              payload = payload.filter(c => {
+                const key = String(c.id);
+                if (seenIds.has(key)) return false;
+                seenIds.add(key);
+                return true;
+              });
             }
             
             let attempts = 0;
@@ -2593,6 +2603,11 @@ const App = {
                     payload = { ...payload };
                     delete payload[columnName];
                   }
+                } else if (error.message.toLowerCase().includes('row-level security') || error.message.toLowerCase().includes('rls') || error.code === '42501') {
+                  // RLS policy violation — server-side config issue, skip gracefully
+                  console.warn(`🔒 Table '${table}' : Politique RLS (Row Level Security) bloquante sur Supabase. L'insertion nécessite une politique INSERT/UPDATE pour le rôle 'anon'. Les données locales restent intactes.`);
+                  // Don't mark as critical error — data is safe locally
+                  break;
                 } else {
                   // Autre type d'erreur non auto-guérissable
                   console.error(`❌ Erreur critique non auto-guérissable pour la table '${table}':`, error.message);

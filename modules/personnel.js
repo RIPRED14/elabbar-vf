@@ -15,63 +15,90 @@ const Personnel = {
 
   applyAIData(data) {
     if (!data) return;
-    
-    // On bascule sur l'onglet journalier
+
+    // 1. Détecter et Normaliser le format de date
+    const finalDate = data.date ? App.formatDateISO(data.date) : (this.selectedDay || new Date().toISOString().split('T')[0]);
+    const finalActivite = data.activite || 'Traitement';
+    const finalTitre = data.titre || `Scan ${finalActivite} — ${new Date(finalDate).toLocaleDateString('fr-FR')}`;
+
+    // Extraire les lignes brutes (soit presences, soit lignes, soit employes)
+    const rawLines = data.presences || data.lignes || data.employes || [];
+
+    // Formater et filtrer les lignes
+    const cleanedPresences = [];
+    rawLines.forEach(line => {
+      const nomRaw = line.nom || line.nomPrenom || '';
+      const nom = nomRaw.trim();
+      const nomUpper = nom.toUpperCase();
+
+      // Ignorer les lignes vides ou avec des en-têtes/totaux
+      if (!nom || 
+          nomUpper === 'TOTAL' || 
+          nomUpper === '0' || 
+          nomUpper.includes('PAGE') || 
+          nomUpper.includes('TOTAL') || 
+          nomUpper === 'NOM ET PRENOM' || 
+          nomUpper === 'NOM ET PRENOMS' || 
+          nomUpper === 'NOM & PRENOM' || 
+          nomUpper.includes('QUINZAINE') || 
+          nomUpper.includes('POINTAGE') || 
+          nomUpper === 'NOM' || 
+          nomUpper === 'PRENOM') {
+        return; // Ignorer les lignes indésirables
+      }
+
+      let hMatin = parseFloat(line.matinHeures);
+      let hSoir = parseFloat(line.soirHeures);
+      let hTotal = parseFloat(line.totalHeures || line.heures);
+
+      if (isNaN(hTotal)) hTotal = 0;
+
+      if (isNaN(hMatin) && isNaN(hSoir)) {
+        hMatin = hTotal;
+        hSoir = 0;
+      } else {
+        if (isNaN(hMatin)) hMatin = 0;
+        if (isNaN(hSoir)) hSoir = 0;
+      }
+
+      cleanedPresences.push({
+        nom: nom,
+        matinEntree: line.matinEntree || '',
+        matinSortie: line.matinSortie || '',
+        matinHeures: hMatin,
+        soirEntree: line.soirEntree || '',
+        soirSortie: line.soirSortie || '',
+        soirHeures: hSoir,
+        totalHeures: hTotal
+      });
+    });
+
+    if (cleanedPresences.length === 0) {
+      App.toast("Aucun employé valide trouvé dans les données scannées.", "warning");
+      return;
+    }
+
+    // Préparer pendingScanData unifié
+    this.pendingScanData = {
+      date: finalDate,
+      activite: finalActivite,
+      titre: finalTitre,
+      presences: cleanedPresences
+    };
+
+    // 2. Basculer sur l'onglet journalier et configurer la vue
     this.currentTab = 'daily';
-    const fallbackDate = this.selectedDay || new Date().toISOString().split('T')[0];
-    const finalDate = data.date ? App.formatDateISO(data.date) : fallbackDate;
-    
     this.selectedDay = finalDate;
     const parts = this.selectedDay.split('-');
     this.selectedYear = parseInt(parts[0]);
     this.selectedMonth = parseInt(parts[1]) - 1;
     this.viewType = 'day';
     this.updatePeriodISO();
-    
-    const activite = data.activite || 'Traitement';
-    const dateAffichage = data.date || new Date().toLocaleDateString('fr-FR');
-    const titre = `Fiche ${activite} — ${dateAffichage}`;
-    
-    // Créer la fiche
-    this.addNewFiche(activite, titre);
-    
-    const employesIA = data.lignes || data.employes || [];
-    if (employesIA.length > 0) {
-      const fiche = this.getFiche(this.currentFicheId);
-      if (!fiche) return;
 
-      // 1. Initialiser TOUS les ouvriers actifs à 0 (évite les cases vides)
-      const ouvriers = App.data.personnel.filter(p => (p.type === 'ouvrier_fixe' || p.type === 'occasionnel') && p.actif);
-      fiche.presences = ouvriers.map(emp => ({ personnelId: emp.id, heures: 0, matinHeures: 0, soirHeures: 0 }));
+    this.render();
 
-      // 2. Matching intelligent des heures extraites
-      let matchCount = 0;
-      employesIA.forEach(aiEmp => {
-        const nameToMatch = (aiEmp.nom || aiEmp.nomPrenom || "").toUpperCase().trim();
-        if (!nameToMatch) return;
-
-        const pres = fiche.presences.find(p => {
-          const emp = App.data.personnel.find(e => e.id === p.personnelId);
-          return emp && emp.nom.toUpperCase().includes(nameToMatch);
-        });
-
-        if (pres) {
-          const hours = parseFloat(aiEmp.heures) || 0;
-          pres.matinHeures = hours;
-          pres.heures = hours;
-          matchCount++;
-        }
-      });
-
-      this.recalcPointageMensuel(this.selectedPeriod);
-      this.render();
-      
-      if (matchCount > 0) {
-        App.toast(`${matchCount} employés pointés automatiquement via le scan.`, "success");
-      } else {
-        App.toast("Le scan a été importé, mais aucun nom n'a pu être matché avec la base de données.", "warning");
-      }
-    }
+    // 3. Ouvrir systématiquement la modale de validation
+    this.showScanValidationModal();
   },
   
   // Onglets disponibles
@@ -90,7 +117,7 @@ const Personnel = {
     if (!App.data.pointage[monthStr]) {
       App.data.pointage[monthStr] = {
         mois: monthStr,
-        tauxHoraireOcc: App.data.parametres.salaireHoraireOcc || 16.95,
+        tauxHoraireOcc: App.data.parametres.salaireHoraireOcc || 17.92,
         jours: {},
         totalHeuresOcc: 0,
         totalMontantOcc: 0,
@@ -100,7 +127,28 @@ const Personnel = {
         totalHeuresOuvriersFixe: 0
       };
     }
-    return App.data.pointage[monthStr];
+    const ptg = App.data.pointage[monthStr];
+
+    // Hydrater/synchroniser ptg.jours depuis App.data.fiches_pointage
+    if (App.data.fiches_pointage && Array.isArray(App.data.fiches_pointage)) {
+      const monthFiches = App.data.fiches_pointage.filter(f => f.date && f.date.substring(0, 7) === monthStr);
+      monthFiches.forEach(fiche => {
+        const dateStr = fiche.date;
+        if (!ptg.jours[dateStr]) {
+          ptg.jours[dateStr] = { date: dateStr, fiches: [] };
+        }
+        const day = ptg.jours[dateStr];
+        if (!day.fiches) day.fiches = [];
+        
+        // Éviter les doublons
+        const exists = day.fiches.some(f => f.id === fiche.id);
+        if (!exists) {
+          day.fiches.push(fiche);
+        }
+      });
+    }
+
+    return ptg;
   },
 
   recalcPointageMensuel(monthStr) {
@@ -189,6 +237,35 @@ const Personnel = {
   },
 
   render() {
+    // Nettoyage automatique des ouvriers "fantômes" ou "headers/totals" importés par erreur
+    if (App.data.personnel && Array.isArray(App.data.personnel)) {
+      const junkEmps = App.data.personnel.filter(p => {
+        const nom = (p.nom || '').toUpperCase().trim();
+        return nom === 'NOM ET PRENOM' || 
+               nom === 'NOM ET PRENOMS' || 
+               nom === 'NOM & PRENOM' || 
+               nom === 'TOTAL' || 
+               nom.includes('TOTAL') || 
+               nom.includes('QUINZAINE') ||
+               nom.includes('POINTAGE') ||
+               nom === '0' ||
+               nom === 'NOM' ||
+               nom === 'PRENOM';
+      });
+
+      if (junkEmps.length > 0) {
+        App.data.personnel = App.data.personnel.filter(p => !junkEmps.includes(p));
+        // Supprimer du cloud si possible
+        junkEmps.forEach(emp => {
+          if (emp.id) {
+            App.deleteFromCloud('personnel', emp.id);
+          }
+        });
+        App.saveData();
+        App.toast(`${junkEmps.length} entrées erronées (ex: TOTAL, NOM ET PRENOM) ont été nettoyées de la base de données.`, "info");
+      }
+    }
+
     this.updatePeriodISO();
     this.recalcPointageMensuel(this.selectedPeriod);
     const content = document.getElementById('pageContent');
@@ -753,36 +830,8 @@ const Personnel = {
     return dayData.presences || [];
   },
 
-  processDailyScan(results) {
-    const dateStr = this.selectedDayISO;
-    const monthStr = this.selectedPeriod;
-    const ptg = this.getPointageData(monthStr);
-    if (!ptg.jours[dateStr]) ptg.jours[dateStr] = { date: dateStr, fiches: [] };
-    const day = ptg.jours[dateStr];
-    
-    // Pour chaque scan, on crée une nouvelle fiche
-    results.forEach((scanData, index) => {
-      const newId = day.fiches.length > 0 ? Math.max(...day.fiches.map(f => f.id)) + 1 : 1;
-      day.fiches.push({
-        id: newId,
-        titre: `Scan ${new Date().toLocaleTimeString()}`,
-        activite: 'Traitement',
-        presences: scanData
-      });
-    });
-
-    this.recalcPointageMensuel(monthStr);
-    this.render();
-    App.toast("Scan traité et ajouté.", "success");
-  },
-
   renderListe(type, title, subtitle) {
-    let list = App.data.personnel.filter(p => p.type === type || (type === 'fixe_admin' && p.type === 'fixe_autre'));
     const ptg = this.getPointageData(this.selectedPeriod);
-    const HEURES_BASE_FIXE = 191;
-    const isFixe = type === 'ouvrier_fixe';
-    const isOcc = type === 'occasionnel';
-    const isAdmin = type === 'fixe_admin';
     
     // Calculate hours per employee this month
     const empHoursMap = {};
@@ -792,6 +841,18 @@ const Personnel = {
         empHoursMap[p.personnelId] = (empHoursMap[p.personnelId] || 0) + (p.heures || 0);
       });
     });
+
+    // Filtrer la liste : actifs pour la période sélectionnée OU ayant des heures travaillées dans ce mois
+    let list = App.data.personnel.filter(p => {
+      if (p.type !== type && !(type === 'fixe_admin' && p.type === 'fixe_autre')) return false;
+      if (this.isPersonnelActiveInMonth(p, this.selectedPeriod)) return true;
+      return (empHoursMap[p.id] || 0) > 0;
+    });
+
+    const HEURES_BASE_FIXE = 191;
+    const isFixe = type === 'ouvrier_fixe';
+    const isOcc = type === 'occasionnel';
+    const isAdmin = type === 'fixe_admin';
 
     // Totals
     const totalSalaire = list.filter(p => p.actif).reduce((s, p) => s + (p.salaire || 0), 0);
@@ -852,9 +913,23 @@ const Personnel = {
                       ${isAdmin ? `<td class="td-right" style="font-family:var(--font-mono);">${h > 0 ? h + 'h' : '-'}</td>` : ''}
                       <td class="td-right td-bold">${p.salaire ? App.formatNumber(p.salaire, 0) : '-'}</td>
                       <td class="td-center">
-                        <button class="btn-icon" onclick="Personnel.editModal(${p.id})" title="Modifier">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                        </button>
+                        <div style="display:flex; justify-content:center; gap:6px; align-items:center;">
+                          <button class="btn-icon" onclick="Personnel.editModal(${p.id})" title="Modifier">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                          </button>
+                          ${p.actif ? `
+                            <button class="btn-icon warning" onclick="Personnel.toggleActif(${p.id})" title="Résilier le contrat (Rendre inactif)" style="color:var(--accent-warning, #f59e0b);">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                            </button>
+                          ` : `
+                            <button class="btn-icon success" onclick="Personnel.toggleActif(${p.id})" title="Réactiver l'employé" style="color:var(--accent-success, #10b981);">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="16" y1="11" x2="22" y2="11"/></svg>
+                            </button>
+                          `}
+                          <button class="btn-icon danger" onclick="Personnel.deletePersonnel(${p.id})" title="Supprimer définitivement" style="color:var(--accent-danger, #ef4444);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   `;}).join('')}
@@ -888,7 +963,21 @@ const Personnel = {
     }
 
     // Récupérer les employés concernés par le pointage (ouvrier_fixe, occasionnel, fixe_admin et fixe_autre)
-    const empList = App.data.personnel.filter(p => p.type === 'ouvrier_fixe' || p.type === 'occasionnel' || p.type === 'fixe_admin' || p.type === 'fixe_autre');
+    // On ne garde que ceux actifs durant le mois ou ayant déjà des heures de pointage enregistrées dans ce mois
+    const empList = App.data.personnel.filter(p => {
+      if (p.type !== 'ouvrier_fixe' && p.type !== 'occasionnel' && p.type !== 'fixe_admin' && p.type !== 'fixe_autre') return false;
+      if (this.isPersonnelActiveInMonth(p, this.selectedPeriod)) return true;
+      
+      // Vérifier s'ils ont déjà des heures dans ce mois
+      let hasHours = false;
+      Object.values(ptg.jours).forEach(jour => {
+        const presences = this.getDayPresences(jour);
+        if (presences.some(pr => pr.personnelId === p.id && pr.heures > 0)) {
+          hasHours = true;
+        }
+      });
+      return hasHours;
+    });
     // Trier : Ouvriers Fixes d'abord, puis Admin, puis Support, puis Occasionnels, puis par nom
     const typeOrder = {
       'ouvrier_fixe': 1,
@@ -1165,44 +1254,70 @@ const Personnel = {
           const sheet = wb.Sheets[sheetName];
           const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
           
-          // --- Cas 1: Feuille de Pointage ---
-          let headerIdx = -1;
-          for(let i=0; i<Math.min(15, rows.length); i++) {
-             if(String(rows[i][0] || '').toUpperCase().includes('NOM ET PRENOM')) {
-               headerIdx = i; break;
-             }
-          }
-
-          if(headerIdx !== -1) {
-            const headers = rows[headerIdx];
-            const dateCols = [];
-            for(let c=1; c<headers.length; c++) {
-              let val = headers[c];
-              if(typeof val === 'number' && val > 40000) { // Probablement une date Excel serial
-                const dateObj = new Date((val - 25569) * 86400 * 1000);
-                dateCols.push({ col: c, date: dateObj.toISOString().split('T')[0] });
+          let currentDateCols = null;
+          
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+            
+            // Check if this row is a header row
+            let nameColIdx = -1;
+            for (let c = 0; c < Math.min(10, row.length); c++) {
+              const cellVal = String(row[c] || '').toUpperCase().trim();
+              if (cellVal.includes('NOM ET PRENOM') || cellVal.includes('NOM ET PRENOMS') || cellVal.includes('NOM & PRENOM')) {
+                nameColIdx = c;
+                break;
               }
             }
-
-            for(let i=headerIdx+1; i<rows.length; i++) {
-               let nom = String(rows[i][0] || '').trim().toUpperCase();
-               if(!nom || nom === 'TOTAL' || nom === '0' || nom.includes('PAGE')) continue;
-               if(!pointages[nom]) pointages[nom] = {};
-               
-               dateCols.forEach(dc => {
-                 const v = rows[i][dc.col];
-                 if(typeof v === 'number' && v > 0) {
-                   // Si c'est une fraction < 1, c'est une fraction de jour (ex: 0.33 = 8h)
-                   // Si c'est > 1, c'est peut-être déjà en heures.
-                   let h = v < 1 ? Math.round(v * 24 * 10) / 10 : v;
-                   pointages[nom][dc.date] = h;
-                 }
-               });
+            
+            if (nameColIdx !== -1) {
+              // Found a new header section!
+              currentDateCols = [];
+              for (let c = nameColIdx + 1; c < row.length; c++) {
+                let val = row[c];
+                if (typeof val === 'number' && val > 40000) { // Excel serial date
+                  const dateObj = new Date((val - 25569) * 86400 * 1000);
+                  currentDateCols.push({ col: c, date: dateObj.toISOString().split('T')[0] });
+                }
+              }
+              continue;
+            }
+            
+            if (currentDateCols) {
+              // We are inside a section, parse pointage of employee
+              let nom = String(row[0] || '').trim().toUpperCase();
+              if (!nom || 
+                  nom === 'TOTAL' || 
+                  nom === '0' || 
+                  nom.includes('PAGE') || 
+                  nom.includes('TOTAL') || 
+                  nom === 'NOM ET PRENOM' || 
+                  nom === 'NOM ET PRENOMS' || 
+                  nom === 'NOM & PRENOM' || 
+                  nom.includes('QUINZAINE') || 
+                  nom.includes('POINTAGE') || 
+                  nom === 'NOM' || 
+                  nom === 'PRENOM') {
+                continue;
+              }
+              
+              if (!pointages[nom]) pointages[nom] = {};
+              
+              currentDateCols.forEach(dc => {
+                const v = row[dc.col];
+                if (typeof v === 'number' && v > 0) {
+                  // Si c'est une fraction < 1, c'est une fraction de jour (ex: 0.33 = 8h)
+                  // Si c'est > 1, c'est peut-être déjà en heures.
+                  let h = v < 1 ? Math.round(v * 24 * 10) / 10 : v;
+                  // Map to the date (sum hours in case employee name appears twice in the same section/sheet)
+                  pointages[nom][dc.date] = (pointages[nom][dc.date] || 0) + h;
+                }
+              });
             }
           }
 
           // --- Cas 2: Feuille Récap (TOTAL) ---
-          if(sheetName.toUpperCase().includes('TOTAL')) {
+          if (sheetName.toUpperCase().includes('TOTAL')) {
             rows.forEach(row => {
                // Chercher le taux horaire via MONTANT / TOTALE HEURE
                const mIdx = row.findIndex(c => String(c).toUpperCase() === 'MONTANT');
@@ -1358,6 +1473,7 @@ LIVRABLE JSON :
 }
 
 RÈGLES CRUCIALES :
+- Ne récupère JAMAIS les lignes contenant "NOM ET PRENOM" ou "TOTAL".
 - L'activité est obligatoire. Si tu vois "EMBALLAGE", mets "EMBALLAGE".
 - Si une ligne est vide (pas d'heures), ne l'inclus pas ou mets des heures à 0.
 - Si tu vois une croix ou un trait dans "Nbr Heures", cela signifie généralement 4h pour la session (8h total).
@@ -1367,13 +1483,12 @@ RÈGLES CRUCIALES :
       const result = await App.AI.analyzeImage(file, prompt);
       App.AI.hideOverlay();
       
-      if (!result || !result.presences) {
-        throw new Error("Aucune donnée de présence trouvée.");
+      if (!result) {
+        throw new Error("Aucune donnée reçue de l'IA.");
       }
 
-      const scanData = result;
-      this.pendingScanData = scanData;
-      this.showScanValidationModal();
+      // Passer systématiquement par applyAIData pour filtrer, normaliser, basculer sur l'onglet daily et ouvrir la modale de validation
+      this.applyAIData(result);
     } catch (error) {
       App.AI.hideOverlay();
       console.error(error);
@@ -1483,8 +1598,9 @@ RÈGLES CRUCIALES :
     const day = ptg.jours[targetDate];
     if (!day.fiches) day.fiches = [];
 
-    const newId = day.fiches.length > 0 ? Math.max(...day.fiches.map(f => f.id)) + 1 : 1;
-    const fiche = { id: newId, activite: targetActivite, titre, presences: [] };
+    // Générer un ID global sécurisé pour éviter tout conflit de clés primaires
+    const newId = App.nextId(App.data.fiches_pointage || []);
+    const fiche = { id: newId, date: targetDate, activite: targetActivite, titre, presences: [] };
 
     let matchedCount = 0;
     data.presences.forEach(pScan => {
@@ -1504,11 +1620,22 @@ RÈGLES CRUCIALES :
       }
     });
 
+    // Pousser dans la structure imbriquée locale
     day.fiches.push(fiche);
+    
+    // Pousser dans la table à plat locale pour synchronisation Supabase !
+    if (!App.data.fiches_pointage) App.data.fiches_pointage = [];
+    App.data.fiches_pointage.push(fiche);
+
     this.currentFicheId = newId;
     this.currentDailyDate = targetDate;
+    this.selectedDay = targetDate;
+    this.selectedDayISO = targetDate;
     
+    // Enregistrer localement et envoyer au Cloud Supabase !
+    App.saveData('fiches_pointage', fiche);
     this.recalcPointageMensuel(monthStr);
+    
     App.closeModal();
     this.pendingScanData = null;
     this.render();
@@ -1524,5 +1651,53 @@ RÈGLES CRUCIALES :
       const pNomInvers = `${pPrenom} ${pNom}`.trim().replace(/\s+/g, ' ');
       return pNom === excelNom || pNomComplet === excelNom || pNomInvers === excelNom || pNom.includes(excelNom) || excelNom.includes(pNomComplet);
     });
+  },
+
+  async toggleActif(id) {
+    const p = App.data.personnel.find(emp => emp.id === id);
+    if (!p) return;
+    
+    if (p.actif) {
+      if (!confirm(`Voulez-vous vraiment résilier le contrat de ${p.nom} ${p.prenom || ''} ? Il n'apparaîtra plus dans les mois suivants.`)) return;
+      p.actif = false;
+      if (!p.dateDepart) {
+        const today = new Date();
+        p.dateDepart = today.toISOString().substring(0, 10);
+      }
+      App.toast(`Contrat résilié pour ${p.nom} ${p.prenom || ''}.`, "warning");
+    } else {
+      p.actif = true;
+      p.dateDepart = null;
+      App.toast(`Employé ${p.nom} ${p.prenom || ''} réactivé.`, "success");
+    }
+    
+    App.saveData();
+    if (App.supabase) {
+      try {
+        const { error } = await App.supabase.from('personnel').upsert(p);
+        if (error) console.error("Error syncing status to Supabase:", error);
+      } catch (err) {
+        console.error("Supabase exception during status sync:", err);
+      }
+    }
+    
+    this.recalcPointageMensuel(this.selectedPeriod);
+    this.render();
+  },
+
+  async deletePersonnel(id) {
+    const p = App.data.personnel.find(emp => emp.id === id);
+    if (!p) return;
+    
+    if (!confirm(`⚠️ ATTENTION : Voulez-vous vraiment supprimer définitivement l'employé ${p.nom} ${p.prenom || ''} ? Cette action est irréversible et supprimera l'employé de la base de données.`)) return;
+    
+    App.data.personnel = App.data.personnel.filter(emp => emp.id !== id);
+    App.saveData();
+    
+    await App.deleteFromCloud('personnel', id);
+    
+    App.toast(`Employé ${p.nom} ${p.prenom || ''} a été supprimé définitivement.`, "success");
+    this.recalcPointageMensuel(this.selectedPeriod);
+    this.render();
   }
 };
