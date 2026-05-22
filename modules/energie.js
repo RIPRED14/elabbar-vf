@@ -285,9 +285,6 @@ const Energie = {
     `;
     if (this.activeTab === 'electricity' && this.viewType === 'month') this.updateKPI();
   },
-    `;
-    if (this.viewType === 'month') this.updateKPI();
-  },
 
   renderDayView(computedZones) {
     return `
