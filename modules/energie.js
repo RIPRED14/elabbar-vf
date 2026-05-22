@@ -157,7 +157,7 @@ const Energie = {
                   <span>Enregistrer Électricité</span>
                 </button>
               ` : `
-                <button class="btn btn-primary" style="background:#0ea5e9; box-shadow: 0 4px 12px rgba(14,165,233,0.25);" onclick="Energie.saveWaterManual()">
+                <button class="btn btn-primary" onclick="Energie.saveWaterManual()">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   <span>Enregistrer Eau</span>
                 </button>
@@ -170,29 +170,29 @@ const Energie = {
             <div class="tab ${this.activeTab === 'electricity' ? 'active' : ''}" onclick="Energie.setActiveTab('electricity')" style="display:flex; align-items:center; gap:8px;">
               <span>⚡ Électricité & Froid</span>
             </div>
-            <div class="tab ${this.activeTab === 'water' ? 'active' : ''}" onclick="Energie.setActiveTab('water')" style="display:flex; align-items:center; gap:8px; border-bottom-color: ${this.activeTab === 'water' ? '#0ea5e9 !important' : 'transparent'}; color: ${this.activeTab === 'water' ? '#0ea5e9 !important' : ''}">
+            <div class="tab ${this.activeTab === 'water' ? 'active' : ''}" onclick="Energie.setActiveTab('water')" style="display:flex; align-items:center; gap:8px;">
               <span>💧 Fluides & Eau</span>
             </div>
           </div>
 
-          <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:12px 20px; border-radius:var(--radius-lg); border:1px solid rgba(255,255,255,0.05); backdrop-filter:blur(10px);">
+          <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:12px 20px; border-radius:var(--radius-lg); border:1px solid var(--border-color); box-shadow: var(--shadow-sm);">
             <div style="display:flex; gap:12px; align-items:flex-end;">
               ${this.activeTab === 'electricity' ? `
-                <div style="display:flex; background:rgba(0,0,0,0.2); padding:4px; border-radius:10px; display:flex; gap:4px; margin-bottom:2px;">
+                <div style="display:flex; background:var(--bg-app); padding:4px; border-radius:10px; display:flex; gap:4px; border:1px solid var(--border-color); margin-bottom:2px;">
                   <button onclick="Energie.onViewTypeChange('day')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'day' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'day' ? 'white' : 'var(--text-muted)'};">Simulation Jour</button>
                   <button onclick="Energie.onViewTypeChange('month')" style="padding:6px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.75rem; font-weight:600; transition:all 0.2s; background:${this.viewType === 'month' ? 'var(--accent-blue)' : 'transparent'}; color:${this.viewType === 'month' ? 'white' : 'var(--text-muted)'};">Facturation Mois</button>
                 </div>
               ` : `
-                <div style="padding: 8px 12px; font-size:0.75rem; font-weight:700; background:rgba(14, 165, 233, 0.1); border:1px solid rgba(14, 165, 233, 0.2); border-radius:8px; color:#0ea5e9; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">
-                  Facturation Eau SRM
+                <div class="badge badge-info" style="padding: 10px 16px; font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">
+                  💧 Facturation Eau SRM
                 </div>
               `}
 
               <div class="form-group" style="margin:0;">
                 <label class="form-label" style="font-size:0.72rem; margin-bottom:4px; opacity:0.8; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Période d'analyse</label>
                 ${this.activeTab === 'electricity' && this.viewType === 'day' 
-                  ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Energie.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:rgba(255,255,255,0.05); border-color:var(--accent-blue); font-weight:600; color:white;">`
-                  : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Energie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; background:rgba(255,255,255,0.05); border-color:${this.activeTab === 'water' ? '#0ea5e9' : 'var(--accent-blue)'}; font-weight:600; color:white;">`
+                  ? `<input type="date" class="form-input" value="${this.selectedDay}" onchange="Energie.onDayChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; border-color:var(--accent-blue); font-weight:600;">`
+                  : `<input type="month" class="form-input" value="${this.selectedYear}-${String(this.selectedMonth + 1).padStart(2, '0')}" onchange="Energie.onPeriodChange(event)" style="padding:8px 12px; font-size:0.85rem; width:160px; height:38px; border-color:var(--accent-blue); font-weight:600;">`
                 }
               </div>
             </div>
@@ -206,7 +206,7 @@ const Energie = {
                 <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); font-weight:700; margin-bottom:2px;">
                   Période d'Analyse
                 </div>
-                <div style="font-size:1.1rem; font-weight:800; color:${this.activeTab === 'water' ? '#0ea5e9' : 'var(--accent-blue)'};">
+                <div style="font-size:1.1rem; font-weight:800; color:var(--accent-blue);">
                   ${this.activeTab === 'water' || this.viewType === 'month' ? App.formatMonthFR(this.selectedPeriod) : App.formatDateFR(this.selectedDayISO)}
                 </div>
               </div>
@@ -251,26 +251,26 @@ const Energie = {
           </div>
         ` : `
           <div class="kpi-grid" style="margin-bottom:24px;">
-            <div class="kpi-card cyan" style="border-color: rgba(14, 165, 233, 0.2);">
-              <div class="kpi-icon cyan" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9;">💧</div>
+            <div class="kpi-card cyan">
+              <div class="kpi-icon cyan">💧</div>
               <div class="kpi-label">Volume Consommé</div>
               <div class="kpi-value">${App.formatNumber(w.consommation || 0, 0)} <span class="kpi-unit">m³</span></div>
               <div class="kpi-change">Volume facturé SRM</div>
             </div>
-            <div class="kpi-card blue" style="border-color: rgba(14, 165, 233, 0.2);">
-              <div class="kpi-icon blue" style="background: rgba(14, 165, 233, 0.1); color: #3b82f6;">📈</div>
+            <div class="kpi-card blue">
+              <div class="kpi-icon blue">📈</div>
               <div class="kpi-label">Relevé Index</div>
               <div class="kpi-value" style="font-size:1.4rem; padding-top: 8px;">${w.indexAncien || 0} ➡️ ${w.indexNouveau || 0}</div>
               <div class="kpi-change">Ancien vs Nouveau</div>
             </div>
-            <div class="kpi-card yellow" style="border-color: rgba(14, 165, 233, 0.2);">
-              <div class="kpi-icon yellow" style="background: rgba(14, 165, 233, 0.1); color: #f59e0b;">💰</div>
+            <div class="kpi-card yellow">
+              <div class="kpi-icon yellow">💰</div>
               <div class="kpi-label">Facturation Réelle</div>
               <div class="kpi-value">${App.formatNumber(w.montantTTC || 0, 2)} <span class="kpi-unit">DH</span></div>
               <div class="kpi-change">Net à payer TTC</div>
             </div>
-            <div class="kpi-card red" style="border-color: rgba(14, 165, 233, 0.2);">
-              <div class="kpi-icon red" style="background: rgba(14, 165, 233, 0.1); color: #ef4444;">⚖️</div>
+            <div class="kpi-card red">
+              <div class="kpi-icon red">⚖️</div>
               <div class="kpi-label">Coût Moyen Unitaire</div>
               <div class="kpi-value">${w.consommation > 0 ? App.formatNumber(w.montantTTC / w.consommation, 2) : 0} <span class="kpi-unit">DH/m³</span></div>
               <div class="kpi-change">Rendement de fluide</div>
@@ -359,14 +359,14 @@ const Energie = {
               <div class="form-group"><label class="form-label">TVA (%)</label><input type="number" step="0.1" class="form-input" id="eTva" value="${(p.tvaEnergetique||0.14)*100}" onchange="Energie.updateKPI()"></div>
             </div>
 
-            <div class="summary-box" style="margin-top:24px; padding:20px; background:rgba(0,0,0,0.2); border-radius:12px;">
-              <h3 style="margin-bottom:16px; font-size: 1rem; color: var(--accent-blue);">Détail de la Facture Estimée</h3>
-              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="summary-label">Montant Consommation</span><span class="summary-value" id="eFactConso">0 DH</span></div>
-              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="summary-label">Redevances HT</span><span class="summary-value" id="eFactRedev">0 DH</span></div>
-              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px;"><span class="summary-label">TVA & Taxes</span><span class="summary-value" id="eFactTaxes">0 DH</span></div>
-              <div class="summary-row" style="margin-top:12px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center;">
-                <span class="summary-label" style="font-weight:700; color:white;">TOTAL TTC ESTIMÉ</span>
-                <span class="summary-value summary-total" id="eFactTotal" style="font-size:1.6rem; color:var(--accent-red); font-weight:800;">0 DH</span>
+            <div class="summary-box" style="margin-top:24px; padding:20px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:12px;">
+              <h3 style="margin-bottom:16px; font-size: 1rem; color: var(--accent-blue); font-weight:700;">Détail de la Facture Estimée</h3>
+              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-weight:500; color:var(--text-muted);"><span class="summary-label">Montant Consommation</span><span class="summary-value" id="eFactConso" style="color:var(--text-main); font-weight:600;">0 DH</span></div>
+              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-weight:500; color:var(--text-muted);"><span class="summary-label">Redevances HT</span><span class="summary-value" id="eFactRedev" style="color:var(--text-main); font-weight:600;">0 DH</span></div>
+              <div class="summary-row" style="display:flex; justify-content:space-between; margin-bottom:8px; font-weight:500; color:var(--text-muted);"><span class="summary-label">TVA & Taxes</span><span class="summary-value" id="eFactTaxes" style="color:var(--text-main); font-weight:600;">0 DH</span></div>
+              <div class="summary-row" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <span class="summary-label" style="font-weight:700; color:var(--primary-color);">TOTAL TTC ESTIMÉ</span>
+                <span class="summary-value summary-total" id="eFactTotal" style="font-size:1.6rem; color:var(--status-danger); font-weight:800;">0 DH</span>
               </div>
             </div>
           </div>
@@ -698,10 +698,10 @@ const Energie = {
           <tbody>
             ${w.lignes.map(line => `
               <tr>
-                <td style="color:#e2e8f0; font-weight:500;">${line.designation}</td>
+                <td style="color:var(--text-main); font-weight:600;">${line.designation}</td>
                 <td class="td-right">${App.formatNumber(line.quantite || 0, 1)}</td>
                 <td class="td-right">${App.formatNumber(line.prixUnitaire || 0, 2)}</td>
-                <td class="td-right td-bold" style="color:#0ea5e9;">${App.formatNumber(line.totalLigne || 0, 2)} DH</td>
+                <td class="td-right td-bold" style="color:var(--accent-blue);">${App.formatNumber(line.totalLigne || 0, 2)} DH</td>
               </tr>
             `).join('')}
           </tbody>
@@ -709,10 +709,10 @@ const Energie = {
       `;
     } else {
       tranchesHTML = `
-        <div style="text-align:center; padding: 40px 20px; background: rgba(255, 255, 255, 0.02); border-radius:12px; border:1px dashed rgba(255,255,255,0.1);">
+        <div style="text-align:center; padding: 40px 20px; background: var(--bg-tertiary); border-radius:12px; border:1.5px dashed var(--border-color);">
           <div style="font-size:2.5rem; margin-bottom:12px; filter: grayscale(0.3);">📄</div>
-          <h4 style="color:#cbd5e1; font-size:0.95rem; margin-bottom:6px;">Aucun détail de tranche disponible</h4>
-          <p style="color:#64748b; font-size:0.8rem; max-width:280px; margin:0 auto;">Scannez une facture avec l'IA Gemini pour extraire automatiquement les tranches d'eau et d'assainissement.</p>
+          <h4 style="color:var(--primary-color); font-size:0.95rem; margin-bottom:6px; font-weight:600;">Aucun détail de tranche disponible</h4>
+          <p style="color:var(--text-muted); font-size:0.8rem; max-width:280px; margin:0 auto;">Scannez une facture avec l'IA Gemini pour extraire automatiquement les tranches d'eau et d'assainissement.</p>
         </div>
       `;
     }
@@ -720,18 +720,18 @@ const Energie = {
     return `
       <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:24px;">
         <!-- Colonne Gauche: Saisie & OCR -->
-        <div class="card" style="border-color: rgba(14, 165, 233, 0.15); background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(16px); border-radius: var(--radius-xl);">
-          <div class="card-header" style="border-bottom: 1px solid rgba(14, 165, 233, 0.1); padding: 16px 20px;">
-            <span class="card-title" style="color:#0ea5e9; display:flex; align-items:center; gap:8px; font-weight:700;">
-              <span style="font-size:1.2rem;">💧</span> Saisie Facture SRM
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title" style="display:flex; align-items:center; gap:8px; font-weight:700;">
+              <span>💧</span> Saisie Facture SRM
             </span>
           </div>
           <div class="card-body" style="padding: 20px;">
             <!-- Zone OCR Premium -->
-            <div style="margin-bottom: 24px; padding: 20px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(59, 130, 246, 0.04)); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 12px; text-align:center; box-shadow: 0 8px 32px rgba(14, 165, 233, 0.05);">
-              <h4 style="color:white; font-size:1rem; margin-bottom:6px; font-weight:700; letter-spacing:0.5px;">Scanner avec Gemini AI</h4>
-              <p style="color:#94a3b8; font-size:0.8rem; margin-bottom:16px; line-height:1.4;">Téléversez votre facture d'eau SRM pour que l'IA Gemini la scanne, la lise et insère directement les données.</p>
-              <button class="btn" style="background:#0ea5e9; box-shadow: 0 4px 14px rgba(14,165,233,0.3); border:none; display:inline-flex; align-items:center; gap:8px; margin:0 auto; padding: 10px 20px; font-weight:700; color:white; border-radius:8px; transition: all 0.2s;" onclick="App.AiEngine.openScanner('eau', data => Energie.applyAIEauData(data))">
+            <div style="margin-bottom: 24px; padding: 24px; background: linear-gradient(135deg, rgba(37, 99, 255, 0.04) 0%, rgba(77, 163, 255, 0.02) 100%); border: 1.5px dashed rgba(37, 99, 255, 0.35); border-radius: 12px; text-align:center; box-shadow: 0 4px 12px rgba(37, 99, 255, 0.02);">
+              <h4 style="color:var(--primary-color); font-size:1rem; margin-bottom:6px; font-weight:700; letter-spacing:0.5px;">Scanner avec Gemini AI</h4>
+              <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:16px; line-height:1.4;">Téléversez votre facture d'eau SRM pour que l'IA Gemini la scanne, la lise et insère directement les données.</p>
+              <button class="btn btn-primary" style="display:inline-flex; align-items:center; gap:8px; margin:0 auto; padding: 10px 20px; font-weight:700;" onclick="App.AiEngine.openScanner('eau', data => Energie.applyAIEauData(data))">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 <span>DÉPOSER ET SCANNER LA FACTURE</span>
               </button>
@@ -741,38 +741,38 @@ const Energie = {
             <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:16px;">
               <div class="form-group" style="grid-column: span 2; margin-bottom:4px;">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Mois facturé</label>
-                <input type="month" class="form-input" id="wMois" value="${w.mois || this.selectedPeriod}" onchange="Energie.selectedYear=parseInt(this.value.split('-')[0]); Energie.selectedMonth=parseInt(this.value.split('-')[1]); Energie.updatePeriodISO(); Energie.render();" style="height:42px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:10px 14px;">
+                <input type="month" class="form-input" id="wMois" value="${w.mois || this.selectedPeriod}" onchange="Energie.selectedYear=parseInt(this.value.split('-')[0]); Energie.selectedMonth=parseInt(this.value.split('-')[1]); Energie.updatePeriodISO(); Energie.render();" style="height:42px; font-weight:600;">
               </div>
               
               <div class="form-group">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Index Ancien (m³)</label>
-                <input type="number" class="form-input" id="wIndexAncien" value="${w.indexAncien || 0}" oninput="Energie.calcWaterManualVolume()" style="height:42px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:10px 14px;">
+                <input type="number" class="form-input" id="wIndexAncien" value="${w.indexAncien || 0}" oninput="Energie.calcWaterManualVolume()" style="height:42px; font-weight:600;">
               </div>
               <div class="form-group">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Index Nouveau (m³)</label>
-                <input type="number" class="form-input" id="wIndexNouveau" value="${w.indexNouveau || 0}" oninput="Energie.calcWaterManualVolume()" style="height:42px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:10px 14px;">
+                <input type="number" class="form-input" id="wIndexNouveau" value="${w.indexNouveau || 0}" oninput="Energie.calcWaterManualVolume()" style="height:42px; font-weight:600;">
               </div>
               
               <div class="form-group" style="grid-column: span 2; margin-bottom:4px;">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Volume Consommé Calculé (m³)</label>
-                <input type="number" class="form-input" id="wConsommation" value="${w.consommation || 0}" readonly style="height:42px; border-radius:8px; background:rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.25); color:#0ea5e9; font-weight:700; padding:10px 14px;">
+                <input type="number" class="form-input form-computed" id="wConsommation" value="${w.consommation || 0}" readonly style="height:42px; font-weight:700; background:rgba(37, 99, 255, 0.05); border:1px dashed rgba(37, 99, 255, 0.3); color:var(--accent-blue);">
               </div>
 
               <div class="form-group">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Montant HT (DH)</label>
-                <input type="number" step="0.01" class="form-input" id="wMontantHT" value="${w.montantHT || 0}" style="height:42px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:10px 14px;">
+                <input type="number" step="0.01" class="form-input" id="wMontantHT" value="${w.montantHT || 0}" style="height:42px; font-weight:600;">
               </div>
               <div class="form-group">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">TVA (DH)</label>
-                <input type="number" step="0.01" class="form-input" id="wTva" value="${w.tva || 0}" style="height:42px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:10px 14px;">
+                <input type="number" step="0.01" class="form-input" id="wTva" value="${w.tva || 0}" style="height:42px; font-weight:600;">
               </div>
               <div class="form-group">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Droit de Timbre (DH)</label>
-                <input type="number" step="0.01" class="form-input" id="wTimbre" value="${w.timbre || 0}" style="height:42px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:10px 14px;">
+                <input type="number" step="0.01" class="form-input" id="wTimbre" value="${w.timbre || 0}" style="height:42px; font-weight:600;">
               </div>
               <div class="form-group">
                 <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Net à Payer TTC (DH)</label>
-                <input type="number" step="0.01" class="form-input" id="wMontantTTC" value="${w.montantTTC || 0}" style="height:42px; border-radius:8px; background:rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.25); color:#ef4444; font-weight:700; padding:10px 14px;">
+                <input type="number" step="0.01" class="form-input" id="wMontantTTC" value="${w.montantTTC || 0}" style="height:42px; font-weight:700; background:rgba(255, 77, 79, 0.05); border: 1px solid rgba(255, 77, 79, 0.25); color:var(--status-danger);">
               </div>
             </div>
           </div>
@@ -780,43 +780,43 @@ const Energie = {
 
         <!-- Colonne Droite: Infos SRM & Tranches -->
         <div style="display:flex; flex-direction:column; gap:24px;">
-          <div class="card" style="border-color: rgba(255, 255, 255, 0.08); background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(16px); border-radius: var(--radius-xl);">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <div class="card">
+            <div class="card-header">
               <span class="card-title" style="font-weight:700;">🧾 Détails & Références Administratives</span>
-              <span class="badge" style="background:rgba(14, 165, 233, 0.1); color:#0ea5e9; border:1px solid rgba(14, 165, 233, 0.2); padding:4px 8px; font-weight:700; font-size:0.7rem; border-radius:6px;">SOUSS MASSA</span>
+              <span class="badge badge-info">SOUSS MASSA</span>
             </div>
             <div class="card-body" style="padding:20px;">
               <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap:16px;">
                 <div class="form-group">
                   <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">N° Facture</label>
-                  <input type="text" class="form-input" id="wFactureNo" value="${w.factureNo || ''}" placeholder="Ex: 55387371" style="height:40px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:8px 12px;">
+                  <input type="text" class="form-input" id="wFactureNo" value="${w.factureNo || ''}" placeholder="Ex: 55387371" style="height:40px; font-weight:600;">
                 </div>
                 <div class="form-group">
                   <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">N° Police</label>
-                  <input type="text" class="form-input" id="wPoliceNo" value="${w.policeNo || ''}" placeholder="Ex: 553856" style="height:40px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:8px 12px;">
+                  <input type="text" class="form-input" id="wPoliceNo" value="${w.policeNo || ''}" placeholder="Ex: 553856" style="height:40px; font-weight:600;">
                 </div>
                 <div class="form-group">
                   <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Référence SRM</label>
-                  <input type="text" class="form-input" id="wReference" value="${w.reference || ''}" placeholder="Ex: 50 G 001 006 023" style="height:40px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:8px 12px;">
+                  <input type="text" class="form-input" id="wReference" value="${w.reference || ''}" placeholder="Ex: 50 G 001 006 023" style="height:40px; font-weight:600;">
                 </div>
                 <div class="form-group">
                   <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Date de Facturation</label>
-                  <input type="date" class="form-input" id="wDateFacture" value="${w.dateFacture || ''}" style="height:40px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:8px 12px;">
+                  <input type="date" class="form-input" id="wDateFacture" value="${w.dateFacture || ''}" style="height:40px; font-weight:600;">
                 </div>
                 <div class="form-group">
                   <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Raison Sociale</label>
-                  <input type="text" class="form-input" id="wClientNom" value="${w.clientNom || 'STE FISH AND FOOD PROCESS'}" style="height:40px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:8px 12px;">
+                  <input type="text" class="form-input" id="wClientNom" value="${w.clientNom || 'STE FISH AND FOOD PROCESS'}" style="height:40px; font-weight:600;">
                 </div>
                 <div class="form-group">
                   <label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">ICE Client</label>
-                  <input type="text" class="form-input" id="wIceClient" value="${w.iceClient || '003047045000044'}" style="height:40px; border-radius:8px; background:rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); color:white; font-weight:600; padding:8px 12px;">
+                  <input type="text" class="form-input" id="wIceClient" value="${w.iceClient || '003047045000044'}" style="height:40px; font-weight:600;">
                 </div>
               </div>
             </div>
           </div>
 
-          <div class="card" style="border-color: rgba(255, 255, 255, 0.08); background: rgba(15, 23, 42, 0.4); backdrop-filter: blur(16px); border-radius: var(--radius-xl);">
-            <div class="card-header" style="padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <div class="card">
+            <div class="card-header">
               <span class="card-title" style="font-weight:700;">📊 Ventilation des Tranches SRM</span>
             </div>
             <div class="card-body" style="padding:0;">
@@ -949,9 +949,9 @@ const Energie = {
     if (data.lignes && data.lignes.length > 0) {
       linesSummaryHTML = `
         <div style="margin-top:16px;">
-          <h4 style="font-size:0.85rem; font-weight:700; color:#0ea5e9; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Détail des Tranches Détectées</h4>
-          <div class="table-container" style="max-height: 200px; overflow-y: auto;">
-            <table class="table" style="font-size:0.8rem; background:rgba(0,0,0,0.25); border-radius:8px;">
+          <h4 style="font-size:0.85rem; font-weight:700; color:var(--primary-color); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Détail des Tranches Détectées</h4>
+          <div class="table-container" style="max-height: 200px; overflow-y: auto; border:1px solid var(--border-color); border-radius:8px;">
+            <table class="table" style="font-size:0.8rem; background:var(--bg-card);">
               <thead>
                 <tr>
                   <th>Tranche / Rubrique</th>
@@ -963,10 +963,10 @@ const Energie = {
               <tbody>
                 ${data.lignes.map(line => `
                   <tr>
-                    <td style="color:#e2e8f0; font-weight:500;">${line.designation}</td>
+                    <td style="color:var(--text-main); font-weight:600;">${line.designation}</td>
                     <td class="td-right">${line.quantite || 0}</td>
                     <td class="td-right">${App.formatNumber(line.prixUnitaire || 0, 2)}</td>
-                    <td class="td-right td-bold" style="color:#0ea5e9;">${App.formatNumber(line.totalLigne || 0, 2)} DH</td>
+                    <td class="td-right td-bold" style="color:var(--accent-blue);">${App.formatNumber(line.totalLigne || 0, 2)} DH</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -977,26 +977,26 @@ const Energie = {
     }
 
     App.showModal("💧 Facture Eau SRM (Analyse IA)", `
-      <div style="margin-bottom:16px; padding:12px; background:rgba(14,165,233,0.1); border:1px solid rgba(14,165,233,0.2); border-radius:8px; font-size:0.82rem; color:#e2e8f0; line-height:1.4;">
-        <strong style="color:#0ea5e9;">Extraction réussie !</strong> Veuillez valider les détails extraits de la facture d'eau SRM Souss Massa avant de l'enregistrer dans les calculs et le tableau de bord.
+      <div style="margin-bottom:16px; padding:14px; background:rgba(37, 99, 255, 0.06); border:1px solid rgba(37, 99, 255, 0.15); border-radius:10px; font-size:0.85rem; color:var(--text-main); line-height:1.45;">
+        <strong style="color:var(--accent-blue);">Extraction réussie !</strong> Veuillez valider les détails extraits de la facture d'eau SRM Souss Massa avant de l'enregistrer dans les calculs et le tableau de bord.
       </div>
       <div class="form-grid" style="grid-template-columns: 1fr 1fr; max-height:400px; overflow-y:auto; padding-right:8px; gap:12px;">
-        <div class="form-group"><label class="form-label">Mois Facturation</label><input type="month" id="ai_wMois" value="${period}" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Date Émission</label><input type="date" id="ai_wDate" value="${data.dateFacture || ''}" class="form-input"></div>
-        <div class="form-group"><label class="form-label">N° Facture</label><input type="text" id="ai_wNo" value="${data.factureNo || ''}" class="form-input"></div>
-        <div class="form-group"><label class="form-label">N° Police</label><input type="text" id="ai_wPolice" value="${data.policeNo || ''}" class="form-input"></div>
-        <div class="form-group" style="grid-column: span 2;"><label class="form-label">Référence SRM</label><input type="text" id="ai_wRef" value="${data.reference || ''}" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Index Ancien (m³)</label><input type="number" id="ai_wAnc" value="${data.indexAncien || 0}" oninput="Energie.calcWaterAIModalVolume()" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Index Nouveau (m³)</label><input type="number" id="ai_wNouv" value="${data.indexNouveau || 0}" oninput="Energie.calcWaterAIModalVolume()" class="form-input"></div>
-        <div class="form-group" style="grid-column: span 2;"><label class="form-label">Volume Consommé (m³)</label><input type="number" id="ai_wConso" value="${data.consommation || 0}" readonly style="background:rgba(14, 165, 233, 0.05); color:#0ea5e9; font-weight:700;" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Montant HT (DH)</label><input type="number" step="0.01" id="ai_wHT" value="${data.montantHT || 0}" class="form-input"></div>
-        <div class="form-group"><label class="form-label">TVA (DH)</label><input type="number" step="0.01" id="ai_wTva" value="${data.tva || 0}" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Timbre (DH)</label><input type="number" step="0.01" id="ai_wTimbre" value="${data.timbre || 0}" class="form-input"></div>
-        <div class="form-group"><label class="form-label">Net à Payer TTC (DH)</label><input type="number" step="0.01" id="ai_wTTC" value="${data.montantTTC || 0}" style="color:#ef4444; font-weight:700;" class="form-input"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Mois Facturation</label><input type="month" id="ai_wMois" value="${period}" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Date Émission</label><input type="date" id="ai_wDate" value="${data.dateFacture || ''}" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">N° Facture</label><input type="text" id="ai_wNo" value="${data.factureNo || ''}" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">N° Police</label><input type="text" id="ai_wPolice" value="${data.policeNo || ''}" class="form-input" style="height:38px;"></div>
+        <div class="form-group" style="grid-column: span 2;"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Référence SRM</label><input type="text" id="ai_wRef" value="${data.reference || ''}" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Index Ancien (m³)</label><input type="number" id="ai_wAnc" value="${data.indexAncien || 0}" oninput="Energie.calcWaterAIModalVolume()" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Index Nouveau (m³)</label><input type="number" id="ai_wNouv" value="${data.indexNouveau || 0}" oninput="Energie.calcWaterAIModalVolume()" class="form-input" style="height:38px;"></div>
+        <div class="form-group" style="grid-column: span 2;"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Volume Consommé (m³)</label><input type="number" id="ai_wConso" value="${data.consommation || 0}" readonly style="height:38px; background:rgba(37, 99, 255, 0.05); color:var(--accent-blue); font-weight:700; border:1px dashed rgba(37, 99, 255, 0.3);" class="form-input"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Montant HT (DH)</label><input type="number" step="0.01" id="ai_wHT" value="${data.montantHT || 0}" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">TVA (DH)</label><input type="number" step="0.01" id="ai_wTva" value="${data.tva || 0}" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Timbre (DH)</label><input type="number" step="0.01" id="ai_wTimbre" value="${data.timbre || 0}" class="form-input" style="height:38px;"></div>
+        <div class="form-group"><label class="form-label" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;">Net à Payer TTC (DH)</label><input type="number" step="0.01" id="ai_wTTC" value="${data.montantTTC || 0}" style="height:38px; color:var(--status-danger); font-weight:700; background:rgba(255, 77, 79, 0.03); border:1px solid rgba(255, 77, 79, 0.2);" class="form-input"></div>
       </div>
       ${linesSummaryHTML}
     `, `
-      <button class="btn" style="background:#0ea5e9; box-shadow:0 4px 12px rgba(14,165,233,0.3); border:none; font-weight:700; color:white;" onclick="Energie.saveAIEau()">Valider et Enregistrer</button>
+      <button class="btn btn-primary" style="font-weight:700; padding:10px 24px;" onclick="Energie.saveAIEau()">Valider et Enregistrer</button>
     `);
   },
 

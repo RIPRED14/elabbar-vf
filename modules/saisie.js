@@ -1181,144 +1181,144 @@ const Saisie = {
     const equivalentHourlyRate = proratedHours > 0 ? (allocatedFixedCost / proratedHours) : 0;
 
     container.innerHTML = `
-      <div class="labor-analysis-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px; font-family:'Outfit', 'Inter', sans-serif;">
+      <div class="labor-analysis-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:16px; font-family:'Poppins', 'Inter', sans-serif;">
         
         <!-- Panel 1: Partie Mensuelle -->
-        <div class="labor-card glass" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 14px; padding: 18px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); backdrop-filter: blur(8px); transition: transform 0.2s, border-color 0.2s;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+        <div class="labor-card" style="background: linear-gradient(135deg, rgba(37, 99, 255, 0.04) 0%, rgba(37, 99, 255, 0.01) 100%); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; box-shadow: var(--shadow-sm); transition: var(--transition);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom: 1px solid var(--border-color); padding-bottom:10px;">
             <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width: 8px; height: 8px; background: #6366f1; border-radius: 50%;"></div>
-              <span style="font-weight: 700; color: #e2e8f0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Partie Mensuelle (Mois)</span>
+              <div style="width: 8px; height: 8px; background: var(--accent-blue); border-radius: 50%;"></div>
+              <span style="font-weight: 700; color: var(--primary-color); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Partie Mensuelle (Mois)</span>
             </div>
-            <span style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 0.75rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;">Indicateur Global</span>
+            <span style="background: rgba(37, 99, 255, 0.08); color: var(--accent-blue); font-size: 0.75rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;">Indicateur Global</span>
           </div>
 
           <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="color: #94a3b8; font-size: 0.82rem;">Tonnage Mensuel Final</span>
-              <span style="color: #f8fafc; font-weight: 700; font-size: 0.88rem;">${App.formatNumber(totalTonnageMonth, 1)} kg</span>
+              <span style="color: var(--text-muted); font-size: 0.82rem;">Tonnage Mensuel Final</span>
+              <span style="color: var(--primary-color); font-weight: 700; font-size: 0.88rem;">${App.formatNumber(totalTonnageMonth, 1)} kg</span>
             </div>
 
             <!-- Table of ratios -->
-            <div style="background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px; display:flex; flex-direction:column; gap:8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
-                <span style="color: #94a3b8;">Admin & Autre</span>
-                <span style="font-weight:600; color: #cbd5e1;">${App.formatNumber(adminMonthlyRatio, 4)} DH/kg</span>
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed var(--border-color); padding-bottom:6px;">
+                <span style="color: var(--text-muted);">Admin & Autre</span>
+                <span style="font-weight:600; color: var(--text-main);">${App.formatNumber(adminMonthlyRatio, 4)} DH/kg</span>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
-                <span style="color: #94a3b8;">Ouvriers Fixes</span>
-                <span style="font-weight:600; color: #cbd5e1;">${App.formatNumber(fixesMonthlyRatio, 4)} DH/kg</span>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed var(--border-color); padding-bottom:6px;">
+                <span style="color: var(--text-muted);">Ouvriers Fixes</span>
+                <span style="font-weight:600; color: var(--text-main);">${App.formatNumber(fixesMonthlyRatio, 4)} DH/kg</span>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; padding-bottom:2px;">
-                <span style="color: #94a3b8;">Ouvriers Occas.</span>
-                <span style="font-weight:600; color: #cbd5e1;">${App.formatNumber(occasMonthlyRatio, 4)} DH/kg</span>
+                <span style="color: var(--text-muted);">Ouvriers Occas.</span>
+                <span style="font-weight:600; color: var(--text-main);">${App.formatNumber(occasMonthlyRatio, 4)} DH/kg</span>
               </div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:10px; background: rgba(99, 102, 241, 0.08); border-radius: 8px; border: 1px solid rgba(99, 102, 241, 0.15);">
-              <span style="color: #c7d2fe; font-size: 0.85rem; font-weight: 600;">Coût Unitaire Moyen</span>
-              <span style="color: #818cf8; font-weight: 800; font-size: 1.05rem;">${App.formatNumber(totalMonthlyRatio, 4)} DH/kg</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:10px; background: rgba(37, 99, 255, 0.06); border-radius: 8px; border: 1px solid rgba(37, 99, 255, 0.15);">
+              <span style="color: var(--primary-color); font-size: 0.85rem; font-weight: 600;">Coût Unitaire Moyen</span>
+              <span style="color: var(--accent-blue); font-weight: 800; font-size: 1.05rem;">${App.formatNumber(totalMonthlyRatio, 4)} DH/kg</span>
             </div>
           </div>
         </div>
 
         <!-- Panel 2: Partie Journalière -->
-        <div class="labor-card glass" style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 14px; padding: 18px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); backdrop-filter: blur(8px); transition: transform 0.2s, border-color 0.2s;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+        <div class="labor-card" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.04) 0%, rgba(245, 158, 11, 0.01) 100%); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px; box-shadow: var(--shadow-sm); transition: var(--transition);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom: 1px solid var(--border-color); padding-bottom:10px;">
             <div style="display:flex; align-items:center; gap:8px;">
-              <div style="width: 8px; height: 8px; background: #f59e0b; border-radius: 50%;"></div>
-              <span style="font-weight: 700; color: #e2e8f0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Partie Journalière (Prorata)</span>
+              <div style="width: 8px; height: 8px; background: var(--status-warning); border-radius: 50%;"></div>
+              <span style="font-weight: 700; color: var(--primary-color); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px;">Partie Journalière (Prorata)</span>
             </div>
-            <span style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; font-size: 0.75rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;">Ventilé sans doublon</span>
+            <span style="background: rgba(245, 158, 11, 0.1); color: var(--status-warning); font-size: 0.75rem; font-weight: 600; padding: 3px 8px; border-radius: 20px;">Ventilé sans doublon</span>
           </div>
 
           <div style="display:flex; flex-direction:column; gap:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; font-size: 0.82rem;">
-              <span style="color: #94a3b8;">Tonnage Journalier Final</span>
-              <span style="color: #f8fafc; font-weight: 700;">${App.formatNumber(totalTonnageDay, 1)} kg</span>
+              <span style="color: var(--text-muted);">Tonnage Journalier Final</span>
+              <span style="color: var(--primary-color); font-weight: 700;">${App.formatNumber(totalTonnageDay, 1)} kg</span>
             </div>
 
             <!-- Table of ratios and costs -->
-            <div style="background: rgba(0, 0, 0, 0.2); border-radius: 8px; padding: 10px; display:flex; flex-direction:column; gap:8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
+            <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed var(--border-color); padding-bottom:6px;">
                 <div style="display:flex; flex-direction:column;">
-                  <span style="color: #cbd5e1; font-weight:600;">Admin</span>
-                  <span style="color: #64748b; font-size:0.7rem;">(${App.formatNumber(monthlyAdmin / 26, 0)} DH / 26)</span>
+                  <span style="color: var(--text-main); font-weight:600;">Admin</span>
+                  <span style="color: var(--text-muted); font-size:0.7rem;">(${App.formatNumber(monthlyAdmin / 26, 0)} DH / 26)</span>
                 </div>
                 <div style="text-align:right;">
-                  <div style="font-weight:700; color: #f8fafc;">${App.formatNumber(adminDailyAllocated, 2)} DH</div>
-                  <div style="color: #94a3b8; font-size:0.75rem;">${App.formatNumber(adminDailyRatio, 4)} DH/kg</div>
+                  <div style="font-weight:700; color: var(--primary-color);">${App.formatNumber(adminDailyAllocated, 2)} DH</div>
+                  <div style="color: var(--text-muted); font-size:0.75rem;">${App.formatNumber(adminDailyRatio, 4)} DH/kg</div>
                 </div>
               </div>
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed rgba(255,255,255,0.05); padding-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; border-bottom: 1px dashed var(--border-color); padding-bottom:6px;">
                 <div style="display:flex; flex-direction:column;">
-                  <span style="color: #cbd5e1; font-weight:600;">Fixes</span>
-                  <span style="color: #64748b; font-size:0.7rem;">(${App.formatNumber(monthlyFixes / 26, 0)} DH / 26)</span>
+                  <span style="color: var(--text-main); font-weight:600;">Fixes</span>
+                  <span style="color: var(--text-muted); font-size:0.7rem;">(${App.formatNumber(monthlyFixes / 26, 0)} DH / 26)</span>
                 </div>
                 <div style="text-align:right;">
-                  <div style="font-weight:700; color: #f8fafc;">${App.formatNumber(fixesDailyAllocated, 2)} DH</div>
-                  <div style="color: #94a3b8; font-size:0.75rem;">${App.formatNumber(fixesDailyRatio, 4)} DH/kg</div>
+                  <div style="font-weight:700; color: var(--primary-color);">${App.formatNumber(fixesDailyAllocated, 2)} DH</div>
+                  <div style="color: var(--text-muted); font-size:0.75rem;">${App.formatNumber(fixesDailyRatio, 4)} DH/kg</div>
                 </div>
               </div>
               <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; padding-bottom:2px;">
                 <div style="display:flex; flex-direction:column;">
-                  <span style="color: #cbd5e1; font-weight:600;">Occasionnels</span>
-                  <span style="color: #64748b; font-size:0.7rem;">(${App.formatNumber(totalOccHoursDay, 1)} h × ${App.formatNumber(App.data.parametres.salaireHoraireOcc || 17.92, 2)})</span>
+                  <span style="color: var(--text-main); font-weight:600;">Occasionnels</span>
+                  <span style="color: var(--text-muted); font-size:0.7rem;">(${App.formatNumber(totalOccHoursDay, 1)} h × ${App.formatNumber(App.data.parametres.salaireHoraireOcc || 17.92, 2)})</span>
                 </div>
                 <div style="text-align:right;">
-                  <div style="font-weight:700; color: #f8fafc;">${App.formatNumber(occasDailyAllocated, 2)} DH</div>
-                  <div style="color: #94a3b8; font-size:0.75rem;">${App.formatNumber(occasDailyRatio, 4)} DH/kg</div>
+                  <div style="font-weight:700; color: var(--primary-color);">${App.formatNumber(occasDailyAllocated, 2)} DH</div>
+                  <div style="color: var(--text-muted); font-size:0.75rem;">${App.formatNumber(occasDailyRatio, 4)} DH/kg</div>
                 </div>
               </div>
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:10px; background: rgba(245, 158, 11, 0.08); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.15);">
-              <span style="color: #fde68a; font-size: 0.85rem; font-weight: 600;">Ratio Journalier</span>
-              <span style="color: #fbbf24; font-weight: 800; font-size: 1.05rem;">${App.formatNumber(totalDailyRatio, 4)} DH/kg</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px; padding:10px; background: rgba(245, 158, 11, 0.06); border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.15);">
+              <span style="color: var(--primary-color); font-size: 0.85rem; font-weight: 600;">Ratio Journalier</span>
+              <span style="color: var(--status-warning); font-weight: 800; font-size: 1.05rem;">${App.formatNumber(totalDailyRatio, 4)} DH/kg</span>
             </div>
           </div>
         </div>
 
         <!-- Panel 3: Explication détaillée & réconciliation -->
-        <div class="labor-card glass" style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.9)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 14px; padding: 20px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); backdrop-filter: blur(8px);">
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
-            <span style="font-weight: 700; color: #f8fafc; font-size: 1.05rem; letter-spacing: 0.5px; text-transform: uppercase;">🔍 Détail & Source des Calculs (Registre M.O. Fixe)</span>
+        <div class="labor-card" style="grid-column: 1 / -1; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 20px; box-shadow: var(--shadow-sm); transition: var(--transition);">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; border-bottom: 1px solid var(--border-color); padding-bottom:10px;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--status-success)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+            <span style="font-weight: 700; color: var(--primary-color); font-size: 1.05rem; letter-spacing: 0.5px; text-transform: uppercase;">🔍 Détail & Source des Calculs (Registre M.O. Fixe)</span>
           </div>
           
-          <div style="font-size:0.88rem; color:#cbd5e1; line-height:1.6; display:flex; flex-direction:column; gap:12px;">
+          <div style="font-size:0.88rem; color:var(--text-main); line-height:1.6; display:flex; flex-direction:column; gap:12px;">
             <p>
               Le coût du <strong>Personnel Fixe</strong> ci-dessus est entièrement automatisé et réconcilié avec le <strong>Registre de Paie</strong> mensuel. 
               Pour éviter tout doublon, le coût journalier est réparti proportionnellement au <strong>Tonnage produit aujourd'hui</strong> :
             </p>
             
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px; margin-top:6px;">
-              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #6366f1;">
-                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">1. PRORATA DU TONNAGE</div>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(proportion * 100, 2)}% du jour</div>
-                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">Fiche (${App.formatNumber(currentPoidsPF, 1)} kg) / Total jour (${App.formatNumber(totalTonnageDay, 1)} kg)</div>
+              <div style="background:var(--bg-tertiary); border: 1px solid var(--border-color); padding:12px; border-radius:8px; border-left:3px solid var(--accent-blue);">
+                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:4px;">1. PRORATA DU TONNAGE</div>
+                <div style="font-weight:700; color:var(--primary-color); font-size:0.95rem;">${App.formatNumber(proportion * 100, 2)}% du jour</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Fiche (${App.formatNumber(currentPoidsPF, 1)} kg) / Total jour (${App.formatNumber(totalTonnageDay, 1)} kg)</div>
               </div>
 
-              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #10b981;">
-                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">2. HEURES M.O. FIXE ALLOUÉES</div>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(proratedHours, 1)} Heures</div>
-                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">${totalFixeH} ouvriers nominal (${nominalFixedHours}h/jour) × ${App.formatNumber(proportion * 100, 1)}% prorata</div>
+              <div style="background:var(--bg-tertiary); border: 1px solid var(--border-color); padding:12px; border-radius:8px; border-left:3px solid var(--status-success);">
+                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:4px;">2. HEURES M.O. FIXE ALLOUÉES</div>
+                <div style="font-weight:700; color:var(--primary-color); font-size:0.95rem;">${App.formatNumber(proratedHours, 1)} Heures</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">${totalFixeH} ouvriers nominal (${nominalFixedHours}h/jour) × ${App.formatNumber(proportion * 100, 1)}% prorata</div>
               </div>
 
-              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #f59e0b;">
-                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">3. COÛT PERSONNEL FIXE</div>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(allocatedFixedCost, 2)} DH</div>
-                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">(Admin journalier ${App.formatNumber(monthlyAdmin/26, 0)} DH + Ouvriers ${App.formatNumber(monthlyFixes/26, 0)} DH) × ${App.formatNumber(proportion * 100, 1)}%</div>
+              <div style="background:var(--bg-tertiary); border: 1px solid var(--border-color); padding:12px; border-radius:8px; border-left:3px solid var(--status-warning);">
+                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:4px;">3. COÛT PERSONNEL FIXE</div>
+                <div style="font-weight:700; color:var(--primary-color); font-size:0.95rem;">${App.formatNumber(allocatedFixedCost, 2)} DH</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">(Admin journalier ${App.formatNumber(monthlyAdmin/26, 0)} DH + Ouvriers ${App.formatNumber(monthlyFixes/26, 0)} DH) × ${App.formatNumber(proportion * 100, 1)}%</div>
               </div>
 
-              <div style="background:rgba(0,0,0,0.25); padding:12px; border-radius:8px; border-left:3px solid #84cc16;">
-                <div style="font-size:0.75rem; color:#94a3b8; font-weight:600; margin-bottom:4px;">4. SALAIRE HORAIRE MOYEN</div>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.95rem;">${App.formatNumber(equivalentHourlyRate, 2)} DH / H</div>
-                <div style="font-size:0.72rem; color:#64748b; margin-top:2px;">Coût Fixe alloué (${App.formatNumber(allocatedFixedCost, 2)} DH) / Heures M.O. Fixe (${App.formatNumber(proratedHours, 1)}h)</div>
+              <div style="background:var(--bg-tertiary); border: 1px solid var(--border-color); padding:12px; border-radius:8px; border-left:3px solid var(--status-purple);">
+                <div style="font-size:0.75rem; color:var(--text-muted); font-weight:600; margin-bottom:4px;">4. SALAIRE HORAIRE MOYEN</div>
+                <div style="font-weight:700; color:var(--primary-color); font-size:0.95rem;">${App.formatNumber(equivalentHourlyRate, 2)} DH / H</div>
+                <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">Coût Fixe alloué (${App.formatNumber(allocatedFixedCost, 2)} DH) / Heures M.O. Fixe (${App.formatNumber(proratedHours, 1)}h)</div>
               </div>
             </div>
 
-            <div style="margin-top:8px; font-size:0.78rem; color:#10b981; display:flex; align-items:center; gap:6px; background:rgba(16,185,129,0.06); padding:8px 12px; border-radius:6px; border: 1px solid rgba(16,185,129,0.15); line-height: 1.4;">
+            <div style="margin-top:8px; font-size:0.78rem; color:var(--status-success); display:flex; align-items:center; gap:6px; background:rgba(22, 199, 132, 0.05); padding:8px 12px; border-radius:6px; border: 1px solid rgba(22, 199, 132, 0.15); line-height: 1.4;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
               <span><strong>Mode Automatique Activé :</strong> Les champs de saisie du <em>Personnel Fixe (Allocation mensuelle)</em> en haut ont été pré-remplis avec ces valeurs calculées pour correspondre exactement à votre Registre RH.</span>
             </div>
@@ -1329,7 +1329,7 @@ const Saisie = {
       <style>
         .labor-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+          box-shadow: var(--shadow-md);
         }
       </style>
     `;
