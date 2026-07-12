@@ -538,77 +538,107 @@ const Dashboard = {
     const totalPoidsPI = prod.reduce((s, p) => s + (p.poidsBrutPI || p.poidsMP || 0), 0);
     const totalPoidsPF = prod.reduce((s, p) => s + (p.poidsBrutPF || 0), 0);
     
-    let totalHeures = 0, totalCoutMOO = 0, totalCoutMOF = 0, totalHeuresTotales = 0;
+    let totalHeures = 0, totalCoutMOO = 0, totalCoutMOF = 0, totalHeuresTotales = 0, totalCoutMO = 0;
     
-    // Dynamic Labor Cost Per Kg based on period
-    const coutMOParKg = App.getPeriodLaborCostPerKg(this.view, this.selectedDate);
-    const totalCoutMO = totalPoidsPF * coutMOParKg;
+    // 1. Calcul des coûts de M.O. réels depuis les fiches de production
+    const actualCoutMOJ = prod.reduce((s, p) => s + (parseFloat(p.coutMOJ) || 0), 0);
+    const actualCoutMOO = prod.reduce((s, p) => s + (parseFloat(p.coutMOO) || 0), 0);
     
-    // Split occasional vs fixed based on period ratio
-    const occasionalRatio = App.getPeriodOccasionalRatio(this.view, this.selectedDate);
-    totalCoutMOO = totalCoutMO * occasionalRatio;
-    totalCoutMOF = totalCoutMO * (1 - occasionalRatio);
+    if (actualCoutMOJ > 0) {
+      totalCoutMO = actualCoutMOJ;
+      totalCoutMOO = actualCoutMOO;
+      totalCoutMOF = Math.max(0, totalCoutMO - totalCoutMOO);
+    } else {
+      // Fallback historique sur les allocations mensuelles
+      const coutMOParKg = App.getPeriodLaborCostPerKg(this.view, this.selectedDate);
+      totalCoutMO = totalPoidsPF * coutMOParKg;
+      const occasionalRatio = App.getPeriodOccasionalRatio(this.view, this.selectedDate);
+      totalCoutMOO = totalCoutMO * occasionalRatio;
+      totalCoutMOF = totalCoutMO * (1 - occasionalRatio);
+    }
 
-    // Dynamic hour tabulation based on pointage logs for attendance tracking
-    let monthsList = [];
-    const d = new Date(this.selectedDate);
-    const year = d.getFullYear();
-    if (this.view === 'quarterly') {
-      const q = Math.floor(d.getMonth() / 3);
-      monthsList = [
-        `${year}-${String(q * 3 + 1).padStart(2, '0')}`,
-        `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
-        `${year}-${String(q * 3 + 3).padStart(2, '0')}`
-      ];
-    } else if (this.view === 'yearly') {
-      for (let m = 1; m <= 12; m++) {
-        monthsList.push(`${year}-${String(m).padStart(2, '0')}`);
+    // 2. Calcul des heures de travail réelles depuis les fiches de production
+    let actualOccHours = 0;
+    let actualFixedHours = 0;
+    prod.forEach(p => {
+      let occH = 0;
+      if (p.equipesMO && Array.isArray(p.equipesMO)) {
+        p.equipesMO.forEach(eq => {
+          occH += (parseFloat(eq.nb) || 0) * (parseFloat(eq.heures) || 0);
+        });
+      } else if (p.heuresMOO) {
+        occH = parseFloat(p.heuresMOO) || 0;
       }
-    } else if (this.view === 'custom') {
-      const startVal = document.getElementById('rapportDateDebut')?.value;
-      const endVal = document.getElementById('rapportDateFin')?.value;
-      if (startVal && endVal) {
-        const startD = new Date(startVal);
-        const endD = new Date(endVal);
-        let curr = new Date(startD.getFullYear(), startD.getMonth(), 1);
-        const endLimit = new Date(endD.getFullYear(), endD.getMonth(), 1);
-        while (curr <= endLimit) {
-          monthsList.push(`${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`);
-          curr.setMonth(curr.getMonth() + 1);
+      actualOccHours += occH;
+      actualFixedHours += parseFloat(p.heuresMOF) || 0;
+    });
+
+    if (actualOccHours > 0 || actualFixedHours > 0) {
+      totalHeures = actualOccHours;
+      totalHeuresTotales = actualOccHours + actualFixedHours;
+    } else {
+      // Fallback historique sur le pointage mensuel
+      let monthsList = [];
+      const d = new Date(this.selectedDate);
+      const year = d.getFullYear();
+      if (this.view === 'quarterly') {
+        const q = Math.floor(d.getMonth() / 3);
+        monthsList = [
+          `${year}-${String(q * 3 + 1).padStart(2, '0')}`,
+          `${year}-${String(q * 3 + 2).padStart(2, '0')}`,
+          `${year}-${String(q * 3 + 3).padStart(2, '0')}`
+        ];
+      } else if (this.view === 'yearly') {
+        for (let m = 1; m <= 12; m++) {
+          monthsList.push(`${year}-${String(m).padStart(2, '0')}`);
+        }
+      } else if (this.view === 'custom') {
+        const startVal = document.getElementById('rapportDateDebut')?.value;
+        const endVal = document.getElementById('rapportDateFin')?.value;
+        if (startVal && endVal) {
+          const startD = new Date(startVal);
+          const endD = new Date(endVal);
+          let curr = new Date(startD.getFullYear(), startD.getMonth(), 1);
+          const endLimit = new Date(endD.getFullYear(), endD.getMonth(), 1);
+          while (curr <= endLimit) {
+            monthsList.push(`${curr.getFullYear()}-${String(curr.getMonth() + 1).padStart(2, '0')}`);
+            curr.setMonth(curr.getMonth() + 1);
+          }
+        } else {
+          monthsList = [this.selectedDate.substring(0, 7)];
         }
       } else {
         monthsList = [this.selectedDate.substring(0, 7)];
       }
-    } else {
-      monthsList = [this.selectedDate.substring(0, 7)];
-    }
 
-    monthsList.forEach(m => {
-      const ptg = (App.data.pointage && App.data.pointage[m]) ? App.data.pointage[m] : null;
-      if (ptg) {
-        if (this.view === 'daily') {
-          const dayData = ptg.jours?.[this.selectedDate];
-          const presences = (typeof Personnel !== 'undefined' && Personnel.getDayPresences) 
-                            ? Personnel.getDayPresences(dayData) 
-                            : (dayData?.presences || []);
-          presences.forEach(pt => {
-            const emp = App.data.personnel.find(e => e.id === pt.personnelId);
-            if (emp && (emp.type === 'occasionnel' || emp.type === 'ouvrier_fixe')) {
-              totalHeuresTotales += (pt.heures || 0);
-              if (emp.type === 'occasionnel') {
-                totalHeures += (pt.heures || 0);
+      monthsList.forEach(m => {
+        const ptg = (App.data.pointage && App.data.pointage[m]) ? App.data.pointage[m] : null;
+        if (ptg) {
+          if (this.view === 'daily') {
+            const dayData = ptg.jours?.[this.selectedDate];
+            const presences = (typeof Personnel !== 'undefined' && Personnel.getDayPresences) 
+                              ? Personnel.getDayPresences(dayData) 
+                              : (dayData?.presences || []);
+            presences.forEach(pt => {
+              const emp = App.data.personnel.find(e => e.id === pt.personnelId);
+              if (emp && (emp.type === 'occasionnel' || emp.type === 'ouvrier_fixe')) {
+                totalHeuresTotales += (pt.heures || 0);
+                if (emp.type === 'occasionnel') {
+                  totalHeures += (pt.heures || 0);
+                }
               }
-            }
-          });
-        } else {
-          totalHeures += (ptg.totalHeuresOcc || 0);
-          totalHeuresTotales += (ptg.totalHeuresOcc || 0) + (ptg.totalHeuresOuvriersFixe || 0);
+            });
+          } else {
+            totalHeures += (ptg.totalHeuresOcc || 0);
+            totalHeuresTotales += (ptg.totalHeuresOcc || 0) + (ptg.totalHeuresOuvriersFixe || 0);
+          }
         }
-      }
-    });
+      });
+    }
 
     const totalCoutEmballage = prod.reduce((s, p) => s + (p.coutCarton || 0) + (p.coutSachet || 0) + (p.coutEtiquetteNoir || 0) + (p.coutEtiquette5075 || 0) + (p.coutScotch || 0), 0);
     const productivite = totalHeuresTotales > 0 ? totalPoidsPF / totalHeuresTotales : 0;
+    const coutMOParKg = totalPoidsPF > 0 ? totalCoutMO / totalPoidsPF : 0;
     const coutEmballageParKg = totalPoidsPF > 0 ? totalCoutEmballage / totalPoidsPF : 0;
     const coutDirectParKg = coutMOParKg + coutEmballageParKg;
     const rendement = totalPoidsPI > 0 ? (totalPoidsPF / totalPoidsPI * 100) : 0;

@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEA PECHE ERP - Logiciel de Gestion Maritime & Pêche</title>
-    <meta name="description" content="Gérez toute votre activité de pêche simplement. SEA PECHE ERP centralise et optimise la gestion de votre flotte, captures, stocks et ventes.">
+    <title>SEA PECHE ERP - Solutions ERP sur mesure pour chaque secteur</title>
+    <meta name="description" content="Découvrez nos ERP puissants pour des métiers exigeants : Pêche & Maritime, Location de voiture, Agriculture et Pharmacie.">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Material Symbols -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
@@ -24,37 +24,29 @@
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                        display: ['Poppins', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
                     },
                     colors: {
-                        ocean: {
-                            50: '#eef4ff',
-                            100: '#e0ebff',
-                            200: '#c7d9ff',
-                            300: '#a3c0ff',
-                            400: '#7aa0ff',
-                            500: '#2563FF', // Electric Blue (Accent)
-                            600: '#1b4ce6',
-                            700: '#1539bf',
-                            800: '#153099',
-                            900: '#0B2D6B', // Ocean Blue (Primary)
-                            950: '#0a1d47',
+                        brand: {
+                            50: '#f0f4ff',
+                            100: '#e1e9fe',
+                            500: '#3b82f6', // Bright Blue
+                            600: '#2563eb',
+                            900: '#090d16', // Deep dark space background
+                            950: '#05070b',
                         },
-                        soft: '#F7F9FC', // Light Background
-                        success: '#16C784',
-                        warning: '#F5A623',
-                        danger: '#FF4D4F',
-                        info: '#4DA3FF',
-                        purple: '#7B61FF',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        info: '#3b82f6',
                     },
                     boxShadow: {
-                        'soft': '0 10px 40px -10px rgba(11, 45, 107, 0.08)',
-                        'float': '0 20px 40px -20px rgba(37, 99, 255, 0.15)',
-                        'glass': '0 8px 32px 0 rgba(11, 45, 107, 0.05)',
-                    },
-                    backgroundImage: {
-                        'gradient-primary': 'linear-gradient(135deg, #2563FF 0%, #0B2D6B 100%)',
-                        'gradient-ocean': 'linear-gradient(180deg, rgba(247,249,252,0) 0%, rgba(224,235,255,0.4) 100%)',
+                        'neon-blue': '0 0 30px rgba(59, 130, 246, 0.15)',
+                        'neon-indigo': '0 0 30px rgba(99, 102, 241, 0.15)',
+                        'neon-emerald': '0 0 30px rgba(16, 185, 129, 0.15)',
+                        'neon-rose': '0 0 30px rgba(244, 63, 94, 0.15)',
+                        'float': '0 30px 60px -15px rgba(0, 0, 0, 0.5)',
+                        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
                     }
                 }
             }
@@ -63,46 +55,38 @@
 
     <style>
         body {
-            background-color: #F7F9FC;
-            color: #334155;
+            background-color: #080C14;
+            color: #94a3b8;
             -webkit-font-smoothing: antialiased;
         }
 
         .glass-nav {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(229, 234, 242, 0.6);
-        }
-
-        .hero-pattern {
-            background-image: radial-gradient(#2563FF 1px, transparent 1px);
-            background-size: 40px 40px;
-            opacity: 0.05;
-        }
-
-        .card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px -20px rgba(37, 99, 255, 0.15);
+            background: rgba(8, 12, 20, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #2563FF 0%, #1b4ce6 100%);
-            box-shadow: 0 4px 14px 0 rgba(37, 99, 255, 0.39);
-            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(37, 99, 255, 0.4);
-            background: linear-gradient(135deg, #3b74ff 0%, #2563FF 100%);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.45);
+            background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
         }
 
         .text-gradient {
-            background: linear-gradient(135deg, #0B2D6B 0%, #2563FF 100%);
+            background: linear-gradient(135deg, #ffffff 40%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .text-gradient-cyan {
+            background: linear-gradient(135deg, #38bdf8 30%, #818cf8 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -110,12 +94,12 @@
 
         /* Animations */
         @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         .animate-fade-up {
-            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
             opacity: 0;
         }
         
@@ -125,45 +109,72 @@
         .delay-400 { animation-delay: 400ms; }
     </style>
 </head>
-<body class="relative overflow-x-hidden selection:bg-ocean-500 selection:text-white">
+<body class="relative overflow-x-hidden selection:bg-brand-500 selection:text-white">
 
-    <!-- Background Pattern -->
-    <div class="fixed inset-0 z-[-1] hero-pattern"></div>
-    <div class="fixed inset-0 z-[-1] bg-gradient-ocean"></div>
+    <!-- Premium Grid Background for Dark Mode -->
+    <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-20 z-0 pointer-events-none"></div>
+    
+    <!-- Ultra Vibrant Neon Auroras -->
+    <div class="absolute top-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-blue-500/10 to-indigo-500/20 blur-[130px] pointer-events-none z-0"></div>
+    <div class="absolute top-[25%] left-[-15%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 blur-[130px] pointer-events-none z-0"></div>
+    <div class="absolute top-[65%] right-[-15%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-emerald-500/10 to-teal-500/10 blur-[130px] pointer-events-none z-0"></div>
 
     <!-- Navigation -->
     <nav class="fixed w-full z-50 glass-nav transition-all duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-20">
                 <!-- Logo -->
-                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-lg">
-                        <span class="material-symbols-outlined text-white text-2xl">sailing</span>
+                <div class="flex-shrink-0 flex items-center gap-2.5 cursor-pointer">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                        <span class="material-symbols-outlined text-white text-2xl font-bold">sailing</span>
                     </div>
                     <div>
-                        <h1 class="font-display font-bold text-xl text-ocean-900 leading-none tracking-tight">SEA PECHE</h1>
-                        <span class="text-[10px] font-semibold text-ocean-500 tracking-widest uppercase">ERP System</span>
+                        <h1 class="font-display font-bold text-base text-white leading-none tracking-tight">SEA PECHE</h1>
+                        <span class="text-[8px] font-bold text-blue-400 tracking-widest uppercase mt-1 block">ERP System</span>
                     </div>
                 </div>
 
-                <!-- Desktop Menu -->
-                <div class="hidden md:flex items-center space-x-8">
-                    <a href="#features" class="text-sm font-medium text-slate-600 hover:text-ocean-500 transition-colors">Fonctionnalités</a>
-                    <a href="#modules" class="text-sm font-medium text-slate-600 hover:text-ocean-500 transition-colors">Modules</a>
-                    <a href="#analytics" class="text-sm font-medium text-slate-600 hover:text-ocean-500 transition-colors">Analytiques</a>
+                <!-- Center Menu: ERP Solutions horizontally -->
+                <div class="hidden lg:flex items-center space-x-1 bg-slate-900/60 p-1.5 rounded-full border border-white/5 shadow-inner">
+                    <!-- Pêche -->
+                    <a href="#peche" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold bg-white/10 text-white border border-white/5 shadow-sm transition-all hover:text-blue-400">
+                        <span class="material-symbols-outlined text-[15px] text-blue-400 font-bold">sailing</span>
+                        <span>Pêche</span>
+                    </a>
+                    <!-- Voiture -->
+                    <a href="#voiture" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-slate-400 hover:text-indigo-400 transition-all">
+                        <span class="material-symbols-outlined text-[15px] text-slate-500 font-bold">directions_car</span>
+                        <span>Voiture</span>
+                    </a>
+                    <!-- Agriculture -->
+                    <a href="#agriculture" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-slate-400 hover:text-emerald-400 transition-all">
+                        <span class="material-symbols-outlined text-[15px] text-slate-500 font-bold">agriculture</span>
+                        <span>Agriculture</span>
+                    </a>
+                    <!-- Pharmacie -->
+                    <a href="#pharmacie" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-bold text-slate-400 hover:text-rose-400 transition-all">
+                        <span class="material-symbols-outlined text-[15px] text-slate-500 font-bold">medical_services</span>
+                        <span>Pharmacie</span>
+                    </a>
                 </div>
 
-                <!-- Auth Buttons -->
-                <div class="hidden md:flex items-center space-x-4">
-                    <a href="app.html" class="text-sm font-medium text-slate-600 hover:text-ocean-900 transition-colors">Se connecter</a>
-                    <a href="app.html" class="btn-primary text-white px-6 py-2.5 rounded-full text-sm font-semibold tracking-wide">
-                        Demander une démo
-                    </a>
+                <!-- Right Side Actions & Standard Links -->
+                <div class="hidden md:flex items-center space-x-6">
+                    <div class="flex items-center space-x-4 border-r border-white/10 pr-4">
+                        <a href="#features" class="text-xs font-bold text-slate-400 hover:text-white transition-colors">Fonctionnalités</a>
+                        <a href="#modules" class="text-xs font-bold text-slate-400 hover:text-white transition-colors">Modules</a>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="app.html" class="text-xs font-bold text-slate-400 hover:text-white transition-colors">Se connecter</a>
+                        <a href="app.html" class="btn-primary text-white px-5 py-2.5 rounded-full text-xs font-bold tracking-wide">
+                            Demander une démo
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Mobile Menu Button -->
                 <div class="md:hidden flex items-center">
-                    <button id="mobile-menu-btn" class="text-slate-600 hover:text-ocean-900 focus:outline-none p-2">
+                    <button id="mobile-menu-btn" class="text-slate-400 hover:text-white focus:outline-none p-2">
                         <span class="material-symbols-outlined text-2xl">menu</span>
                     </button>
                 </div>
@@ -172,74 +183,66 @@
     </nav>
 
     <!-- Main Content -->
-    <main>
+    <main class="relative z-10">
         <!-- Hero Section -->
-        <section class="pt-32 pb-20 lg:pt-48 lg:pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
-            <div class="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+        <section class="pt-32 pb-24 lg:pt-44 lg:pb-36 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto relative">
+            <div class="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
                 <!-- Text Content -->
-                <div class="max-w-2xl animate-fade-up">
-                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-ocean-50 border border-ocean-100 text-ocean-600 text-xs font-semibold uppercase tracking-wider mb-6 shadow-sm">
-                        <span class="material-symbols-outlined text-[16px]">verified</span>
-                        ERP spécialisé pour le secteur de la pêche
+                <div class="lg:col-span-5 max-w-2xl animate-fade-up">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[11px] font-bold uppercase tracking-wider mb-6 shadow-sm">
+                        <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping"></span>
+                        ERP SPÉCIALISÉS POUR CHAQUE SECTEUR
                     </div>
-                    <h1 class="font-display text-5xl lg:text-6xl font-extrabold text-ocean-900 leading-[1.1] tracking-tight mb-6">
-                        Gérez toute votre activité de pêche, <span class="text-gradient">simplement.</span>
+                    <h1 class="font-display text-4xl sm:text-5xl lg:text-[3.2rem] lg:leading-[1.1] font-extrabold text-white tracking-tight mb-6">
+                        Des ERP puissants<br>
+                        pour <span class="text-gradient-cyan">des métiers</span><br>
+                        exigeants
                     </h1>
-                    <p class="text-lg text-slate-500 mb-10 leading-relaxed font-normal max-w-lg">
-                        SEA PECHE ERP centralise et optimise la gestion de votre flotte, vos captures, vos stocks, vos ventes et toute votre chaîne de valeur sur une plateforme unique.
+                    <p class="text-base text-slate-400 mb-10 leading-relaxed font-normal max-w-md">
+                        SEA PECHE conçoit des solutions ERP sur mesure pour digitaliser et optimiser la gestion de votre activité.
                     </p>
                     
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="app.html" class="btn-primary text-white px-8 py-4 rounded-full text-base font-semibold flex items-center justify-center gap-2 w-full sm:w-auto">
-                            Découvrir SEA PECHE ERP
-                            <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+                        <a href="#solutions" class="btn-primary text-white px-7 py-4 rounded-full text-sm font-bold flex items-center justify-center gap-2 w-full sm:w-auto">
+                            Découvrir nos solutions
+                            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
                         </a>
-                        <a href="#video" class="bg-white text-ocean-900 border border-slate-200 hover:border-ocean-200 hover:bg-ocean-50 px-8 py-4 rounded-full text-base font-semibold transition-all flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto">
-                            <span class="material-symbols-outlined text-[20px] text-ocean-500">play_circle</span>
-                            Voir la vidéo en 1 min
+                        <a href="app.html" class="bg-slate-900/60 hover:bg-slate-800/80 text-white border border-slate-700/50 hover:border-slate-600 px-7 py-4 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto">
+                            Demander une démo
                         </a>
-                    </div>
-                    
-                    <!-- Social Proof -->
-                    <div class="mt-12 pt-8 border-t border-slate-200/60 flex items-center gap-8">
-                        <div>
-                            <p class="text-3xl font-display font-bold text-ocean-900">200+</p>
-                            <p class="text-sm text-slate-500 font-medium">Bateaux gérés</p>
-                        </div>
-                        <div class="w-px h-12 bg-slate-200/60"></div>
-                        <div>
-                            <p class="text-3xl font-display font-bold text-ocean-900">1.2k</p>
-                            <p class="text-sm text-slate-500 font-medium">Tonnes/mois</p>
-                        </div>
-                        <div class="w-px h-12 bg-slate-200/60"></div>
-                        <div>
-                            <p class="text-3xl font-display font-bold text-ocean-900">98%</p>
-                            <p class="text-sm text-slate-500 font-medium">Satisfaction</p>
-                        </div>
                     </div>
                 </div>
 
                 <!-- Visual Content / Mockup -->
-                <div class="relative lg:ml-auto animate-fade-up delay-200">
-                    <!-- Dashboard Mockup Image -->
-                    <div class="relative rounded-2xl overflow-hidden shadow-float bg-white border border-slate-100/50 p-2">
-                        <!-- Mac OS window dots -->
-                        <div class="flex gap-1.5 px-3 py-2 border-b border-slate-50">
-                            <div class="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
-                            <div class="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
-                            <div class="w-2.5 h-2.5 rounded-full bg-slate-200"></div>
+                <div class="lg:col-span-7 relative lg:ml-auto animate-fade-up delay-200 w-full">
+                    <!-- Premium Glassmorphic Image Frame -->
+                    <div class="relative rounded-[2.5rem] overflow-hidden shadow-float bg-slate-900/40 backdrop-blur-md border border-white/10 p-3 max-w-[620px] mx-auto z-10">
+                        <div class="relative rounded-[2rem] overflow-hidden aspect-[16/10] shadow-inner">
+                            <img src="https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2070&auto=format&fit=crop" alt="SEA PECHE Maritime ERP" class="w-full h-full object-cover">
+                            <!-- Overlay gradient -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent"></div>
                         </div>
-                        <!-- UI Preview Image -->
-                        <img src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=2070&auto=format&fit=crop" alt="SEA PECHE Dashboard Interface" class="w-full h-auto rounded-xl object-cover object-center max-h-[400px] opacity-90">
-                        
-                        <!-- Floating Glass Card -->
-                        <div class="absolute -bottom-6 -left-6 bg-white/90 backdrop-blur-md border border-white/40 p-4 rounded-xl shadow-soft flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-success">trending_up</span>
+
+                        <!-- Floating Stats Card -->
+                        <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[92%] bg-slate-900/90 backdrop-blur-lg border border-white/10 p-5 sm:p-6 rounded-[2rem] shadow-float flex justify-between items-center gap-2 text-center text-white">
+                            <div class="flex-1">
+                                <p class="text-xl sm:text-2xl font-display font-extrabold text-white">12+</p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-wider">ERP développés</p>
                             </div>
-                            <div>
-                                <p class="text-xs text-slate-500 font-medium mb-0.5">Captures du jour</p>
-                                <p class="text-lg font-bold text-ocean-900">8,450 <span class="text-sm font-medium text-slate-400">kg</span></p>
+                            <div class="w-px h-8 bg-white/10"></div>
+                            <div class="flex-1">
+                                <p class="text-xl sm:text-2xl font-display font-extrabold text-white">250+</p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-wider">Clients satisfaits</p>
+                            </div>
+                            <div class="w-px h-8 bg-white/10"></div>
+                            <div class="flex-1">
+                                <p class="text-xl sm:text-2xl font-display font-extrabold text-white">98%</p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-wider">Satisfaction</p>
+                            </div>
+                            <div class="w-px h-8 bg-white/10"></div>
+                            <div class="flex-1">
+                                <p class="text-xl sm:text-2xl font-display font-extrabold text-white">24/7</p>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-wider">Support</p>
                             </div>
                         </div>
                     </div>
@@ -247,104 +250,270 @@
             </div>
         </section>
 
-        <!-- Features Grid -->
-        <section id="features" class="py-20 bg-white/50 border-y border-slate-100">
+        <!-- Grid of 4 Sectorial ERP Solutions -->
+        <section id="solutions" class="py-28 bg-slate-950/50 border-y border-white/5 relative">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="text-center max-w-3xl mx-auto mb-16 animate-fade-up">
-                    <h2 class="font-display text-3xl md:text-4xl font-bold text-ocean-900 mb-4">Des modules pensés pour votre métier</h2>
-                    <p class="text-slate-500 text-lg">Une suite complète d'outils interconnectés pour piloter chaque étape de votre activité maritime.</p>
+                <!-- 4 ERP Cards Grid -->
+                <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-7 mb-20">
+                    
+                    <!-- Card 1: Pêche & Maritime -->
+                    <div id="peche" class="group relative rounded-[2.2rem] overflow-hidden bg-slate-900/30 backdrop-blur-md border border-white/5 shadow-soft flex flex-col h-[340px] justify-between p-8 transition-all duration-300 hover:-translate-y-2.5 hover:shadow-neon-blue hover:border-blue-500/30">
+                        <div class="absolute inset-0 z-0 opacity-[0.08] group-hover:opacity-[0.12] transition-opacity duration-300 pointer-events-none">
+                            <img src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?q=80&w=1000&auto=format&fit=crop" alt="Pêche" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/20 to-slate-950/60 z-0 pointer-events-none"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center mb-6 shadow-md shadow-blue-500/20">
+                                <span class="material-symbols-outlined text-2xl font-bold">sailing</span>
+                            </div>
+                            <h3 class="text-base font-extrabold text-white mb-3 tracking-tight">ERP Pêche & Maritime</h3>
+                            <p class="text-xs text-slate-400 leading-relaxed font-medium">Gérez votre flotte, vos captures, vos ventes et vos stocks en temps réel.</p>
+                        </div>
+                        
+                        <div class="relative z-10">
+                            <a href="app.html" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-slate-900/80 text-blue-400 border border-white/5 shadow-sm hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-md transition-all group/btn">
+                                Découvrir
+                                <span class="material-symbols-outlined text-[14px] transition-transform duration-200 group-hover/btn:translate-x-1">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Location Voiture -->
+                    <div id="voiture" class="group relative rounded-[2.2rem] overflow-hidden bg-slate-900/30 backdrop-blur-md border border-white/5 shadow-soft flex flex-col h-[340px] justify-between p-8 transition-all duration-300 hover:-translate-y-2.5 hover:shadow-neon-indigo hover:border-indigo-500/30">
+                        <div class="absolute inset-0 z-0 opacity-[0.06] group-hover:opacity-[0.1] transition-opacity duration-300 pointer-events-none">
+                            <img src="https://images.unsplash.com/photo-1563720223185-11003d516935?q=80&w=1000&auto=format&fit=crop" alt="Car Rental" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/20 to-slate-950/60 z-0 pointer-events-none"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center mb-6 shadow-md shadow-indigo-500/20">
+                                <span class="material-symbols-outlined text-2xl font-bold">directions_car</span>
+                            </div>
+                            <h3 class="text-base font-extrabold text-white mb-3 tracking-tight">ERP Location de Voiture</h3>
+                            <p class="text-xs text-slate-400 leading-relaxed font-medium">Réservations, contrats, entretien et gestion de votre parc auto.</p>
+                        </div>
+                        
+                        <div class="relative z-10">
+                            <a href="#" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-slate-900/80 text-indigo-400 border border-white/5 shadow-sm hover:bg-indigo-600 hover:text-white hover:border-indigo-600 hover:shadow-md transition-all group/btn">
+                                Découvrir
+                                <span class="material-symbols-outlined text-[14px] transition-transform duration-200 group-hover/btn:translate-x-1">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Agriculture -->
+                    <div id="agriculture" class="group relative rounded-[2.2rem] overflow-hidden bg-slate-900/30 backdrop-blur-md border border-white/5 shadow-soft flex flex-col h-[340px] justify-between p-8 transition-all duration-300 hover:-translate-y-2.5 hover:shadow-neon-emerald hover:border-emerald-500/30">
+                        <div class="absolute inset-0 z-0 opacity-[0.06] group-hover:opacity-[0.1] transition-opacity duration-300 pointer-events-none">
+                            <img src="https://images.unsplash.com/photo-1500937386664-56d1dfef3854?q=80&w=1000&auto=format&fit=crop" alt="Agriculture" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/20 to-slate-950/60 z-0 pointer-events-none"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-600 text-white flex items-center justify-center mb-6 shadow-md shadow-emerald-500/20">
+                                <span class="material-symbols-outlined text-2xl font-bold">agriculture</span>
+                            </div>
+                            <h3 class="text-base font-extrabold text-white mb-3 tracking-tight">ERP Agriculture</h3>
+                            <p class="text-xs text-slate-400 leading-relaxed font-medium">Suivi des cultures, gestion des parcelles, récoltes et ressources humaines.</p>
+                        </div>
+                        
+                        <div class="relative z-10">
+                            <a href="#" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-slate-900/80 text-emerald-400 border border-white/5 shadow-sm hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-md transition-all group/btn">
+                                Découvrir
+                                <span class="material-symbols-outlined text-[14px] transition-transform duration-200 group-hover/btn:translate-x-1">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Pharmacie -->
+                    <div id="pharmacie" class="group relative rounded-[2.2rem] overflow-hidden bg-slate-900/30 backdrop-blur-md border border-white/5 shadow-soft flex flex-col h-[340px] justify-between p-8 transition-all duration-300 hover:-translate-y-2.5 hover:shadow-neon-rose hover:border-rose-500/30">
+                        <div class="absolute inset-0 z-0 opacity-[0.06] group-hover:opacity-[0.1] transition-opacity duration-300 pointer-events-none">
+                            <img src="https://images.unsplash.com/photo-1587854692152-cbe660dbbab9?q=80&w=1000&auto=format&fit=crop" alt="Pharmacy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-950/20 to-slate-950/60 z-0 pointer-events-none"></div>
+                        
+                        <div class="relative z-10 flex flex-col items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-rose-500 to-red-600 text-white flex items-center justify-center mb-6 shadow-md shadow-rose-500/20">
+                                <span class="material-symbols-outlined text-2xl font-bold">medical_services</span>
+                            </div>
+                            <h3 class="text-base font-extrabold text-white mb-3 tracking-tight">ERP Pharmacie</h3>
+                            <p class="text-xs text-slate-400 leading-relaxed font-medium">Gestion des ventes, ordonnances, stocks et approvisionnements.</p>
+                        </div>
+                        
+                        <div class="relative z-10">
+                            <a href="#" class="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold bg-slate-900/80 text-rose-400 border border-white/5 shadow-sm hover:bg-rose-500 hover:text-white hover:border-rose-500 hover:shadow-md transition-all group/btn">
+                                Découvrir
+                                <span class="material-symbols-outlined text-[14px] transition-transform duration-200 group-hover/btn:translate-x-1">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+
                 </div>
 
-                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    
+                <!-- Horizontal Features Band -->
+                <div class="bg-slate-900/40 backdrop-blur-md rounded-[2.2rem] border border-white/5 p-7 sm:p-8 shadow-float grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 text-center sm:text-left">
                     <!-- Feature 1 -->
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 card-hover animate-fade-up delay-100">
-                        <div class="w-12 h-12 rounded-xl bg-ocean-50 text-ocean-600 flex items-center justify-center mb-6">
-                            <span class="material-symbols-outlined text-2xl">directions_boat</span>
+                    <div class="flex flex-col sm:flex-row items-center gap-4 px-4">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-500/10">
+                            <span class="material-symbols-outlined text-2xl font-bold">extension</span>
                         </div>
-                        <h3 class="text-lg font-bold text-ocean-900 mb-2">Gestion de flotte</h3>
-                        <p class="text-sm text-slate-500 mb-4 leading-relaxed">Suivez vos bateaux, équipages et sorties en mer en temps réel avec des indicateurs précis.</p>
-                        <a href="#" class="inline-flex items-center text-sm font-semibold text-ocean-500 hover:text-ocean-600 transition-colors">
-                            En savoir plus <span class="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
-                        </a>
+                        <div>
+                            <h4 class="text-sm font-bold text-white">Solutions sur mesure</h4>
+                            <p class="text-[11px] text-slate-400 mt-0.5 font-medium">Adaptées à votre métier</p>
+                        </div>
                     </div>
-
                     <!-- Feature 2 -->
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 card-hover animate-fade-up delay-200">
-                        <div class="w-12 h-12 rounded-xl bg-success/10 text-success flex items-center justify-center mb-6">
-                            <span class="material-symbols-outlined text-2xl">set_meal</span>
+                    <div class="flex flex-col sm:flex-row items-center gap-4 px-4 sm:border-l border-white/5">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-500/10">
+                            <span class="material-symbols-outlined text-2xl font-bold">verified_user</span>
                         </div>
-                        <h3 class="text-lg font-bold text-ocean-900 mb-2">Captures & Production</h3>
-                        <p class="text-sm text-slate-500 mb-4 leading-relaxed">Enregistrez et analysez vos captures par espèces, calibres et zones géographiques.</p>
-                        <a href="#" class="inline-flex items-center text-sm font-semibold text-ocean-500 hover:text-ocean-600 transition-colors">
-                            En savoir plus <span class="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
-                        </a>
+                        <div>
+                            <h4 class="text-sm font-bold text-white">Technologie moderne</h4>
+                            <p class="text-[11px] text-slate-400 mt-0.5 font-medium">Sécurisée et évolutive</p>
+                        </div>
                     </div>
-
                     <!-- Feature 3 -->
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 card-hover animate-fade-up delay-300">
-                        <div class="w-12 h-12 rounded-xl bg-warning/10 text-warning flex items-center justify-center mb-6">
-                            <span class="material-symbols-outlined text-2xl">inventory_2</span>
+                    <div class="flex flex-col sm:flex-row items-center gap-4 px-4 lg:border-l border-white/5">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-500/10">
+                            <span class="material-symbols-outlined text-2xl font-bold">cloud</span>
                         </div>
-                        <h3 class="text-lg font-bold text-ocean-900 mb-2">Stocks & Appro.</h3>
-                        <p class="text-sm text-slate-500 mb-4 leading-relaxed">Gérez vos chambres froides, inventaires produits et approvisionnements automatiquement.</p>
-                        <a href="#" class="inline-flex items-center text-sm font-semibold text-ocean-500 hover:text-ocean-600 transition-colors">
-                            En savoir plus <span class="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
-                        </a>
+                        <div>
+                            <h4 class="text-sm font-bold text-white">Accessibles partout</h4>
+                            <p class="text-[11px] text-slate-400 mt-0.5 font-medium">Web, mobile & cloud</p>
+                        </div>
                     </div>
-
                     <!-- Feature 4 -->
-                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 card-hover animate-fade-up delay-400">
-                        <div class="w-12 h-12 rounded-xl bg-purple/10 text-purple flex items-center justify-center mb-6">
-                            <span class="material-symbols-outlined text-2xl">monitoring</span>
+                    <div class="flex flex-col sm:flex-row items-center gap-4 px-4 lg:border-l border-white/5">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-400 flex items-center justify-center flex-shrink-0 shadow-sm border border-blue-500/10">
+                            <span class="material-symbols-outlined text-2xl font-bold">support_agent</span>
                         </div>
-                        <h3 class="text-lg font-bold text-ocean-900 mb-2">Analyses & Rapports</h3>
-                        <p class="text-sm text-slate-500 mb-4 leading-relaxed">Des tableaux de bord interactifs et rapports pour prendre des décisions en toute confiance.</p>
-                        <a href="#" class="inline-flex items-center text-sm font-semibold text-ocean-500 hover:text-ocean-600 transition-colors">
-                            En savoir plus <span class="material-symbols-outlined text-[18px] ml-1">arrow_forward</span>
-                        </a>
+                        <div>
+                            <h4 class="text-sm font-bold text-white">Accompagnement</h4>
+                            <p class="text-[11px] text-slate-400 mt-0.5 font-medium">De l'implémentation au support</p>
+                        </div>
                     </div>
-
                 </div>
             </div>
         </section>
 
-        <!-- CTA Section -->
-        <section class="py-20 px-4 sm:px-6 lg:px-8">
-            <div class="max-w-5xl mx-auto bg-ocean-900 rounded-[2rem] p-10 md:p-16 text-center relative overflow-hidden shadow-float">
-                <!-- Background decoration -->
-                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-ocean-500 rounded-full mix-blend-multiply filter blur-3xl opacity-50"></div>
-                <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-64 h-64 bg-info rounded-full mix-blend-multiply filter blur-3xl opacity-30"></div>
-                
-                <div class="relative z-10">
-                    <h2 class="font-display text-3xl md:text-5xl font-bold text-white mb-6">Prêt à moderniser votre gestion ?</h2>
-                    <p class="text-ocean-100 text-lg mb-10 max-w-2xl mx-auto">Rejoignez les entreprises maritimes qui font confiance à SEA PECHE ERP pour optimiser leur rentabilité quotidienne.</p>
-                    <a href="app.html" class="inline-flex items-center justify-center px-8 py-4 text-base font-bold rounded-full text-ocean-900 bg-white hover:bg-slate-50 hover:shadow-xl transition-all gap-2">
-                        Commencer maintenant
-                        <span class="material-symbols-outlined">rocket_launch</span>
-                    </a>
+        <!-- Demos in Action Section (Dark Mode Premium) -->
+        <section id="demos" class="py-32 bg-slate-950 text-white relative overflow-hidden">
+            <!-- Dark Mode Background Auroras -->
+            <div class="absolute top-1/2 left-1/4 w-[40vw] h-[40vw] rounded-full bg-indigo-500/10 blur-[100px] pointer-events-none"></div>
+            <div class="absolute bottom-0 right-1/4 w-[40vw] h-[40vw] rounded-full bg-emerald-500/10 blur-[100px] pointer-events-none"></div>
+            
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="grid lg:grid-cols-12 gap-16 items-center">
+                    <!-- Text Content -->
+                    <div class="lg:col-span-4 animate-fade-up">
+                        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-blue-400 text-[11px] font-bold uppercase tracking-wider mb-6">
+                            <span class="material-symbols-outlined text-[16px]">play_circle</span>
+                            DÉCOUVREZ NOS ERP EN ACTION
+                        </div>
+                        <h2 class="font-display text-3xl md:text-4xl font-extrabold text-white mb-6 leading-tight tracking-tight">
+                            Des démonstrations claires<br>
+                            pour des décisions éclairées
+                        </h2>
+                        <p class="text-sm text-slate-400 mb-8 leading-relaxed">
+                            Explorez nos solutions à travers des démonstrations interactives et voyez comment nos ERP peuvent transformer votre quotidien.
+                        </p>
+                        <a href="#" class="btn-primary text-white px-6 py-3.5 rounded-full text-sm font-bold inline-flex items-center justify-center gap-2">
+                            Voir toutes les démos
+                            <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                        </a>
+                    </div>
+
+                    <!-- 4 Columns Video Previews -->
+                    <div class="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-5 animate-fade-up delay-200">
+                        
+                        <!-- Demo 1: Pêche -->
+                        <div class="flex flex-col group/demo">
+                            <div class="relative rounded-2xl overflow-hidden aspect-[9/12] shadow-float border border-white/5 bg-slate-900 mb-3.5">
+                                <img src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800&auto=format&fit=crop" alt="Demo Pêche" class="w-full h-full object-cover opacity-60 group-hover/demo:scale-105 transition-transform duration-500">
+                                <!-- Play Button with Pulse effect -->
+                                <button class="absolute inset-0 mx-auto my-auto w-11 h-11 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-lg group-hover/demo:scale-110 transition-all z-10">
+                                    <span class="material-symbols-outlined text-[22px] fill-current">play_arrow</span>
+                                </button>
+                                <div class="absolute inset-0 bg-slate-950/20 group-hover/demo:bg-slate-950/40 transition-colors pointer-events-none"></div>
+                            </div>
+                            <span class="text-xs font-bold text-slate-200 group-hover/demo:text-blue-400 transition-colors">ERP Pêche & Maritime</span>
+                            <a href="#" class="text-[10px] font-bold text-slate-400 group-hover/demo:text-slate-200 mt-1.5 flex items-center gap-0.5 transition-colors">
+                                Voir la démo
+                                <span class="material-symbols-outlined text-[12px] transition-transform duration-200 group-hover/demo:translate-x-0.5">chevron_right</span>
+                            </a>
+                        </div>
+
+                        <!-- Demo 2: Voiture -->
+                        <div class="flex flex-col group/demo">
+                            <div class="relative rounded-2xl overflow-hidden aspect-[9/12] shadow-float border border-white/5 bg-slate-900 mb-3.5">
+                                <img src="https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?q=80&w=800&auto=format&fit=crop" alt="Demo Voiture" class="w-full h-full object-cover opacity-60 group-hover/demo:scale-105 transition-transform duration-500">
+                                <button class="absolute inset-0 mx-auto my-auto w-11 h-11 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-lg group-hover/demo:scale-110 transition-all z-10">
+                                    <span class="material-symbols-outlined text-[22px] fill-current">play_arrow</span>
+                                </button>
+                                <div class="absolute inset-0 bg-slate-950/20 group-hover/demo:bg-slate-950/40 transition-colors pointer-events-none"></div>
+                            </div>
+                            <span class="text-xs font-bold text-slate-200 group-hover/demo:text-indigo-400 transition-colors">ERP Location Voiture</span>
+                            <a href="#" class="text-[10px] font-bold text-slate-400 group-hover/demo:text-slate-200 mt-1.5 flex items-center gap-0.5 transition-colors">
+                                Voir la démo
+                                <span class="material-symbols-outlined text-[12px] transition-transform duration-200 group-hover/demo:translate-x-0.5">chevron_right</span>
+                            </a>
+                        </div>
+
+                        <!-- Demo 3: Agriculture -->
+                        <div class="flex flex-col group/demo">
+                            <div class="relative rounded-2xl overflow-hidden aspect-[9/12] shadow-float border border-white/5 bg-slate-900 mb-3.5">
+                                <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800&auto=format&fit=crop" alt="Demo Agriculture" class="w-full h-full object-cover opacity-60 group-hover/demo:scale-105 transition-transform duration-500">
+                                <button class="absolute inset-0 mx-auto my-auto w-11 h-11 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-lg group-hover/demo:scale-110 transition-all z-10">
+                                    <span class="material-symbols-outlined text-[22px] fill-current">play_arrow</span>
+                                </button>
+                                <div class="absolute inset-0 bg-slate-950/20 group-hover/demo:bg-slate-950/40 transition-colors pointer-events-none"></div>
+                            </div>
+                            <span class="text-xs font-bold text-slate-200 group-hover/demo:text-emerald-400 transition-colors">ERP Agriculture</span>
+                            <a href="#" class="text-[10px] font-bold text-slate-400 group-hover/demo:text-slate-200 mt-1.5 flex items-center gap-0.5 transition-colors">
+                                Voir la démo
+                                <span class="material-symbols-outlined text-[12px] transition-transform duration-200 group-hover/demo:translate-x-0.5">chevron_right</span>
+                            </a>
+                        </div>
+
+                        <!-- Demo 4: Pharmacie -->
+                        <div class="flex flex-col group/demo">
+                            <div class="relative rounded-2xl overflow-hidden aspect-[9/12] shadow-float border border-white/5 bg-slate-900 mb-3.5">
+                                <img src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?q=80&w=800&auto=format&fit=crop" alt="Demo Pharmacie" class="w-full h-full object-cover opacity-60 group-hover/demo:scale-105 transition-transform duration-500">
+                                <button class="absolute inset-0 mx-auto my-auto w-11 h-11 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-lg group-hover/demo:scale-110 transition-all z-10">
+                                    <span class="material-symbols-outlined text-[22px] fill-current">play_arrow</span>
+                                </button>
+                                <div class="absolute inset-0 bg-slate-950/20 group-hover/demo:bg-slate-950/40 transition-colors pointer-events-none"></div>
+                            </div>
+                            <span class="text-xs font-bold text-slate-200 group-hover/demo:text-rose-400 transition-colors">ERP Pharmacie</span>
+                            <a href="#" class="text-[10px] font-bold text-slate-400 group-hover/demo:text-slate-200 mt-1.5 flex items-center gap-0.5 transition-colors">
+                                Voir la démo
+                                <span class="material-symbols-outlined text-[12px] transition-transform duration-200 group-hover/demo:translate-x-0.5">chevron_right</span>
+                            </a>
+                        </div>
+
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-100 pt-16 pb-8">
+    <footer class="bg-brand-950 border-t border-white/5 pt-20 pb-10 relative z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                <div class="flex items-center gap-2 opacity-80">
-                    <div class="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                        <span class="material-symbols-outlined text-white text-[18px]">sailing</span>
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6 pb-8 border-b border-white/5">
+                <div class="flex items-center gap-2.5 opacity-90">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-white text-[18px] font-bold">sailing</span>
                     </div>
-                    <span class="font-display font-bold text-ocean-900">SEA PECHE ERP</span>
+                    <span class="font-display font-bold text-white">SEA PECHE ERP</span>
                 </div>
-                <div class="flex gap-6 text-sm text-slate-500 font-medium">
-                    <a href="#" class="hover:text-ocean-600">Confidentialité</a>
-                    <a href="#" class="hover:text-ocean-600">Conditions</a>
-                    <a href="#" class="hover:text-ocean-600">Support</a>
+                <div class="flex gap-8 text-sm text-slate-400 font-semibold">
+                    <a href="#" class="hover:text-blue-400 transition-colors">Confidentialité</a>
+                    <a href="#" class="hover:text-blue-400 transition-colors">Conditions</a>
+                    <a href="#" class="hover:text-blue-400 transition-colors">Support</a>
                 </div>
             </div>
-            <div class="mt-8 text-center text-sm text-slate-400">
+            <div class="mt-8 text-center text-xs text-slate-500 font-medium">
                 &copy; 2026 SEA PECHE ERP. Tous droits réservés.
             </div>
         </div>
@@ -353,7 +522,6 @@
     <!-- Script for mobile menu -->
     <script>
         document.getElementById('mobile-menu-btn').addEventListener('click', () => {
-            // Toggle menu logic here (simplifié pour l'instant)
             alert('Menu mobile cliqué');
         });
 

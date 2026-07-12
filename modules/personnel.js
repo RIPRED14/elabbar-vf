@@ -1216,6 +1216,27 @@ const Personnel = {
 
     if (!nom) { App.toast('Le nom est requis pour la fiche', 'error'); return; }
 
+    // --- Validation anti-doublon ---
+    if (cin) {
+      const dupCin = App.data.personnel.find(p => p.id !== editId && p.cin && p.cin.toUpperCase() === cin);
+      if (dupCin) {
+        App.toast(`Un employé avec le CIN "${cin}" existe déjà (${dupCin.nom} ${dupCin.prenom || ''}) !`, 'error');
+        return;
+      }
+    }
+
+    const dupName = App.data.personnel.find(p => {
+      if (p.id === editId) return false;
+      const pNom = (p.nom || '').trim().toUpperCase();
+      const pPrenom = (p.prenom || '').trim().toUpperCase();
+      return pNom === nom && pPrenom === prenom.toUpperCase();
+    });
+    if (dupName) {
+      App.toast(`L'employé "${nom} ${prenom}" existe déjà dans la base de données !`, 'error');
+      return;
+    }
+    // ---------------------------------
+
     const data = { nom, prenom, cin, telephone, type, poste, dept, dateEmbauche, dateDepart, actif, salaire, cnss, observations };
 
     if (editId) {
